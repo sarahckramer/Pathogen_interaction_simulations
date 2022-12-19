@@ -8,6 +8,22 @@ using namespace Rcpp;
 // Based on code by: Sarah Kramer (https://github.com/sarahckramer/resp_virus_interactions/blob/main/src/resp_interaction_model.c)
 // Creation date: 19 December 2022
 
+
+//start_globs
+// specifying global functions required to make the code run 
+
+// Probability of transition for event of rate r during time step delta_t
+// p = 1 - exp(-r * delta_t)
+static double pTrans(double r, double delta_t) {
+  
+  // r: event (instantaneous rate)
+  // delta_t: time step
+  // Returns: probability of transition
+  double out = 1.0 - exp(-r * delta_t);
+  return out;
+}
+//end_globs
+
 // for the pomp model we want to have inputs for: 
 // rinit - inital conditions
 // rmeasure - simulation of f_{Y_n|X_n} for measurement model
@@ -120,12 +136,12 @@ n_P2 = rbinom(n_T, rho2_w); // virus 2
 double p1 = (X_IS + X_II + X_IT + X_IR) / N; // virus 1
 double p2 = (X_SI + X_II + X_TI + X_RI) / N; // virus 2
 
-// estimating the transmission rate for each virus taking into consideration climate forcing; eq (1) Kramer (2023)
+// calculate the transmission rate for each virus taking into consideration climate forcing; eq (1) Kramer (2023)
 // note: beta_i = Reff*gamma where Reff is the effective reproductive number at time i in a partially susceptible population  
 double beta1 = Ri1 / (1.0 - (R10 + R120)) * exp(eta_ah1 * ah + eta_temp1 * temp) * gamma1; // virus 1 
 double beta2 = Ri2 / (1.0 - (R20 + R120)) * exp(eta_ah2 * ah + eta_temp2 * temp) * gamma2; // virus 2 
 
-// estimating force of infection for each virus 
+// calculate force of infection for each virus 
 double lambda1 = beta1 * p1; // virus 1
 double lambda2 = beta2 * p2; // virus 2
 
@@ -160,6 +176,106 @@ DH2 = gamma2 * (X_SI + theta_rho1 * X_II + X_TI + X_RI) / N; // virus 2
 //end_skel
 
 //start_rsim
+// calculate prevalence of each virus 
+double p1 = (X_IS + X_II + X_IT + X_IR) / N; // virus 1
+double p2 = (X_SI + X_II + X_TI + X_RI) / N; // virus 2
 
+// calculate basic reproductive number R0 for each virus taking into consideration climatic forcing 
+double R0_1 = Ri1 / (1.0 - (R10 + R120)) * exp(eta_ah1 * ah + eta_temp1 * temp); // virus 1
+double R0_2 = Ri2 / (1.0 - (R20 + R120)) * exp(eta_ah2 * ah + eta_temp2 * temp); // virus 2
 
+// initialisation of the transmission terms 
+double beta1, beta2;
+// incorporate extra demographic stochasticity with the gamma distributed white noise process
+// dt is the time step hence it is not defined but is a variable created within pomp
+if (p1 > 0.0 && beta_sd1 > 0.0) { 
+  beta1 = rgammawn(sqrt(R0_1 / (p1 * N * beta_sd1 * dt)), R0_1 * gamma1);
+} else {
+  beta1 = R0_1 * gamma1;
+}
+if (p2 > 0.0 && beta_sd2 > 0.0) {
+  beta2 = rgammawn(sqrt(R0_2 / (p2 * N * beta_sd2 * dt)), R0_2 * gamma2);
+} else {
+  beta2 = R0_2 * gamma2;
+}
+
+// calculate force of infection for each virus 
+double lambda1 = beta1 * p1; // virus 1
+double lambda2 = beta2 * p2; // virus 2
+
+// Calculate duration of refractory period of virus 2:
+double delta2 = d2 * delta1; // 1 / duration of refractory period (virus2 -> virus1)
+
+// initalising transitions 
+double rates[18];// vector of length 18
+double fromSS[2], fromIS[2], fromTS[2], fromSI[2], fromII[2], fromTI[2], fromST[2], fromIT[2], fromTT[2]; // vectors of length 2
+double fromRS, fromRI, fromRT, fromSR, fromIR, fromTR; 
+
+// specifying rate for transition - note: vector indexing starts at 0 for C++ rather than 1 like R 
+rates[0] = lambda1; // stochastic force of infection virus 1 (X_SS -> X_IS)
+rates[1] = lambda2; // stochastic force of infection virus 2 (X_SS -> X_SI)
+rates[2] = gamma1; // rate of ending latent stage for virus 1 whilst susceptible to virus 2 (X_IS -> X_TS)
+rates[3] = theta_lambda1 * lambda2; // rate of infection for virus 2 when already infected with virus 1 (X_IS -> X_II)
+rates[4] = delta1; // rate of recovery virus 1 whilst susceptible to virus 2 (X_TS -> X_RS) 
+rates[5] = theta_lambda1 * lambda2; // rate of infection with virus 2 whilst in the latent stage of virus 1 infection (X_TS -> X_TI)
+rates[6] = theta_lambda2 * lambda1; // rate of infection with virus 1 whilst infected with virus 2 (X_SI -> X_II)
+rates[7] = gamma2; // rate of ending latent stage for virus 2 when susceptible to virus 1 (X_SI -> X_ST)
+rates[8] = gamma1; // rate of ending latent stage for virus 1 whilst co-infected with virus 2 (X_II -> X_TI)
+rates[9] = gamma2; // rate of ending latent stage for virus 2 whilst co-infected with virus 1 (X_II -> X_IT)
+rates[10] = delta1; // rate of recovery virus 2 whilst infected with virus 1 (X_TI -> X_RI)
+rates[11] = gamma2; // rate of ending latent stage for virus 2 whilst co-infected with virus 1 (X_II -> X_IT)
+rates[12] = theta_lambda2 * lambda1; // rate of infection with virus 1 whilst in latent infection with virus 2 (X_ST -> X_IT)
+rates[13] = delta2; // rate of recovery for virus 2 whilst susceptible to virus 1 (X_ST -> X_SR)
+rates[14] = gamma1; // rate of ending latent stage for virus 1 whilst in latent infection with virus 2 (X_IT -> X_TT)
+rates[15] = delta2; // recovery rate for virus 2 which co-infected with virus 1  (X_IT -> X_IR)
+rates[16] = delta1; // recovery rate of virus 1 whilst in latent infection with virus 2 (X_TT -> X_RT) 
+rates[17] = delta2; // recovery rate of virus 2 whilst in latent infection with virus 1 (X_TT -> X_TR)
+
+// drawing sample for each of the compartments from the Euler-multinomial distribution 
+// returns a length(rate[i]) by n matrix where in our case we have 2 columns c1 which we let represent 
+// transitions due to virus 1 (i.e. horizontally across compartments) and c2 the transitions
+// due to virus 2 (i.e. vertically down compartments)
+reulermultinom(2, X_SS, &rates[0], dt, &fromSS[0]);
+reulermultinom(2, X_IS, &rates[2], dt, &fromIS[0]);
+reulermultinom(2, X_TS, &rates[4], dt, &fromTS[0]);
+reulermultinom(2, X_SI, &rates[6], dt, &fromSI[0]);
+reulermultinom(2, X_II, &rates[8], dt, &fromII[0]);
+reulermultinom(2, X_TI, &rates[10], dt, &fromTI[0]);
+reulermultinom(2, X_ST, &rates[12], dt, &fromST[0]);
+reulermultinom(2, X_IT, &rates[14], dt, &fromIT[0]);
+reulermultinom(2, X_TT, &rates[16], dt, &fromTT[0]);
+
+// drawing samples for each of the recovered compartments from binomial distributions  
+fromRS = rbinom(X_RS, pTrans(lambda2, dt));
+fromRI = rbinom(X_RI, pTrans(gamma2, dt));
+fromRT = rbinom(X_RT, pTrans(delta2, dt));
+fromSR = rbinom(X_SR, pTrans(lambda1, dt));
+fromIR = rbinom(X_IR, pTrans(gamma1, dt));
+fromTR = rbinom(X_TR, pTrans(delta1, dt));
+
+// balance equations
+X_SS += -fromSS[0] - fromSS[1];
+X_IS += fromSS[0] - fromIS[0] - fromIS[1];
+X_TS += fromIS[0] - fromTS[0] - fromTS[1];
+X_RS += fromTS[0] - fromRS;
+
+X_SI += fromSS[1] - fromSI[0] - fromSI[1];
+X_II += fromIS[1] + fromSI[0] - fromII[0] - fromII[1];
+X_TI += fromTS[1] + fromII[0] - fromTI[0] - fromTI[1];
+X_RI += fromRS + fromTI[0] - fromRI;
+
+X_ST += fromSI[1] - fromST[0] - fromST[1];
+X_IT += fromII[1] + fromST[0] - fromIT[0] - fromIT[1];
+X_TT += fromTI[1] + fromIT[0] - fromTT[0] - fromTT[1];
+X_RT += fromRI + fromTT[0] - fromRT;
+
+X_SR += fromST[1] - fromSR;
+X_IR += fromIT[1] + fromSR - fromIR;
+X_TR += fromTT[1] + fromIR - fromTR;
+X_RR += fromRT + fromTR;
+
+H1_tot += (fromIS[0] + fromII[0] + fromIT[0] + fromIR) / N;
+H2_tot += (fromSI[1] + fromII[1] + fromTI[1] + fromRI) / N;
+H1 += (fromIS[0] + theta_rho2 * fromII[0] + fromIT[0] + fromIR) / N;
+H2 += (fromSI[1] + theta_rho1 * fromII[1] + fromTI[1] + fromRI) / N;
 //end_rsim
