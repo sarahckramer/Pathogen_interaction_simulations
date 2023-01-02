@@ -15,7 +15,8 @@ library(pomp)
 library(janitor)
 
 # read in the c code
-mod_code <- readLines('/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/sitr_x_sitr.cpp')
+mod_code <- readLines('/Users/spirikahu/Documents/Max planck/Project 1/Analysis/Simulation/sitr_x_sitr_basic.cpp')
+mod_code <- readLines('/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/sitr_x_sitr_basic.cpp')
 
 # pull out the various components of the C code ready to feed into pomp
 # components looking for
@@ -30,19 +31,11 @@ for (nm in components_nm) {
   components_l[[nm]] <- Csnippet(text = components_l[[nm]])
 }
 
-# load in HK data 
-data <- read_csv("/Volumes/Abt.Domenech/Sarah P/Data sources/Surveillance data/Hong Kong/dat_hk.csv")
-# clean names
-data <- clean_names(data)
-names(data)
-
 # create pomp object 
-po <- pomp(data = dat[, c('time', 'n_h1', 'n_rsv')],
-           times = 'time',
+po <- pomp(data = data.frame(time = seq(from = 0, to = 52, by = 1), n_P1 = NA, n_P2 = NA, n_T= NA),
+           times = "time",
            t0 = 0,
-           covar = covariate_table(dat[, c('time', 'i_ILI', 'n_T', 'temp', 'ah')], times = 'time'),
            accumvars = c('H1_tot', 'H2_tot', 'H1', 'H2'),
-           obsnames = c('n_h1', 'n_rsv'),
            statenames = c('X_SS', 'X_IS', 'X_TS', 'X_RS', 
                           'X_SI', 'X_II', 'X_TI', 'X_RI', 
                           'X_ST', 'X_IT', 'X_TT', 'X_RT',
@@ -74,7 +67,7 @@ po <- pomp(data = dat[, c('time', 'n_h1', 'n_rsv')],
                       eta_temp1 = 0, eta_temp2 = 0,
                       eta_ah1 = 0, eta_ah2 = 0,
                       beta_sd1 = 0, beta_sd2 = 0,
-                      N = unique(dat$pop),
+                      N = 10000,
                       I10 = 1e-5, I20 = 1e-5,
                       R10 = 0, R20 = 0, R120 = 0),
            globals = components_l[['globs']],
@@ -84,3 +77,18 @@ po <- pomp(data = dat[, c('time', 'n_h1', 'n_rsv')],
            rprocess = euler(step.fun = components_l[['rsim']], delta.t = 0.01),
            rinit = components_l[['rinit']]
 )
+
+sim <- simulate(po,nsim=1,format="data.frame",include.data=TRUE)
+ggplot(data=sims,
+       mapping=aes(x=year,y=pop))+
+  geom_line()+
+  facet_wrap(~.id,ncol=1,scales="free_y")
+
+t1 <- trajectory(object = po, format = 'data.frame')
+t1 %>% mutate_if(is.numeric, round) %>% View()
+# why are my accumulator variables all 0?? 
+
+
+t2 <- trajectory(object = po, format = 'data.frame') %>%
+  dplyr::select(H1:.id) %>%
+  pivot_longer(H1:H2, names_to = 'Vir', values_to = 'Inc')

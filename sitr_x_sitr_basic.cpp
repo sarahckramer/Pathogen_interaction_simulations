@@ -3,10 +3,11 @@ using namespace Rcpp;
 
 // Implementation of the SITR x SITR model for circulation of two respiratory 
 // viruses
+// simplifying first to do without seasonality in transmission and without incorporation of 
+// under reporting in measurement model 
 
 // Created by: Sarah Pirikahu
-// Based on code by: Sarah Kramer (https://github.com/sarahckramer/resp_virus_interactions/blob/main/src/resp_interaction_model.c)
-// Creation date: 19 December 2022
+// Creation date: 22 December 2022
 
 
 //start_globs
@@ -33,11 +34,11 @@ static double pTrans(double r, double delta_t) {
 
 //start_rinit
 // initalising each compartment 
-X_SS = nearbyint((1.0 - I10 - I20 - R10 - R20 - R120) * N);
-X_IS = nearbyint(I10 * N);
+X_SS = (1.0 - I10 - I20 - R10 - R20 - R120) * N;
+X_IS = I10 * N;
 X_TS = 0;
-X_RS = nearbyint(R10 * N);
-X_SI = nearbyint(I20 * N);
+X_RS = R10 * N;
+X_SI = I20 * N;
 X_II = 0;
 X_TI = 0;
 X_RI = 0;
@@ -45,10 +46,10 @@ X_ST = 0;
 X_IT = 0;
 X_TT = 0;
 X_RT = 0;
-X_SR = nearbyint(R20 * N);
+X_SR = R20 * N;
 X_IR = 0;
 X_TR = 0;
-X_RR = nearbyint(R120 * N);
+X_RR = R120 * N;
 
 // initalising accumulator variables 
 H1_tot = 0; // takes into consideration interaction  
@@ -60,50 +61,24 @@ H2 = 0;
 // N (likely due to rounding in the nearbyint function) print the values
 // then re calculate the inital value of X_SS by doing N - all other
 // inital values for the other compartments
-if ((X_SS + X_IS + X_RS + X_SI + X_SR + X_RR) != N) {
-  Rprintf("SS=%f, IS=%f, RS=%f, SI=%f, SR=%f, RR=%f, sum=%f, N=%f\n", X_SS, X_IS, X_RS, X_SI, X_SR, X_RR, X_SS + X_IS + X_RS + X_SI + X_SR + X_RR, N);
-  X_SS = nearbyint(N - X_IS - X_RS - X_SI - X_SR - X_RR);
-}
+//if ((X_SS + X_IS + X_RS + X_SI + X_SR + X_RR) != N) {
+//  Rprintf("SS=%f, IS=%f, RS=%f, SI=%f, SR=%f, RR=%f, sum=%f, N=%f\n", X_SS, X_IS, X_RS, X_SI, X_SR, X_RR, X_SS + X_IS + X_RS + X_SI + X_SR + X_RR, N);
+//  X_SS = nearbyint(N - X_IS - X_RS - X_SI - X_SR - X_RR);
+//}
 
-// for debugging - printing all variables to figure out what is going on 
-if(debug) {
-  Rprintf("%f, %f, %f, %f, %f, %f, %f\n", Ri1, Ri2, I10, I20, R10, R20, R120);
-}
 //end_rinit
 
 //start_dmeas
 // initalisation
 double fP1, fP2, ll;
-// defining the period 
-double omega = (2 * M_PI) / 52.25;
-
-// probability of detecting each virus; eqn (2) p24. Kramer (2023)
-double rho1_w = fmin2(1.0, rho1 * (1.0 + alpha * cos(omega * (t - phi))) * H1 / i_ILI); // virus 1
-double rho2_w = fmin2(1.0, rho2 * (1.0 + alpha * cos(omega * (t - phi))) * H2 / i_ILI); // virus 2
-
-// if probability of detection is less than 0 make it 0.
-if (rho1_w < 0) {  // for virus 1 
-  rho1_w = 0.0;
-}
-if (rho2_w < 0) {  // for virus 2 
-  rho2_w = 0.0;
-}
 
 // calculating components for the likelihood 
-fP1 = dbinom(n_P1, n_T, rho1_w, 1); // First likelihood component, natural scale
-fP2 = dbinom(n_P2, n_T, rho2_w, 1); // Second likelihood component, natural scale
+fP1 = dbinom(n_P1, n_T, rho1, 1); // First likelihood component, natural scale
+fP2 = dbinom(n_P2, n_T, rho2, 1); // Second likelihood component, natural scale
 
 // If rho_w == 1, the resulting observation probability might be 0 (-Inf on log-scale)
 // Replace by a big, but finite penalty if that's the case 
 ll = fmax2(fP1 + fP2, -1e3);
-
-// If data are NA, ll will be NA; in this case, set to zero
-ll = ISNA(ll) ? 0.0 : ll;
-
-// for debugging - printing all variables to figure out what is going on 
-if(debug) {
-  Rprintf("t=%.1f, rho1_w=%.1f, rho2_w=%.1f, n_T=%.1f, fP1=%.1f, fP2=%.1f, sum=%.1f, ll=%.f\n", t, rho1_w, rho2_w, n_T, fP1, fP2, fP1 + fP2, ll);
-} 
 
 // calculate likelihood by back transforming the log likelihood 
 lik = (give_log) ? ll : exp(ll);
@@ -111,24 +86,13 @@ lik = (give_log) ? ll : exp(ll);
 
 
 //start_rmeas
-// defining the period 
-double omega = (2 * M_PI) / 52.25;
-
-// probability of detecting each virus
-double rho1_w = fmin2(1.0, rho1 * (1.0 + alpha * cos(omega * (t - phi))) * H1 / i_ILI); //  virus 1
-double rho2_w = fmin2(1.0, rho2 * (1.0 + alpha * cos(omega * (t - phi))) * H2 / i_ILI); //  virus 2
-
-// if probability of detection is less than 0 make it 0
-if (rho1_w < 0) {  // for virus 1 
-  rho1_w = 0.0;
-}
-if (rho2_w < 0) {  // for virus 2 
-  rho2_w = 0.0;
-}
+//generate total number of specimens tested for each virus where r1 and r2 is the probability
+// of someone been sick and turning up for testing 
+n_T = rbinom(N, rho2);
 
 // generate the total number of tests positive to each virus 
-n_P1 = rbinom(n_T, rho1_w); // virus 1
-n_P2 = rbinom(n_T, rho2_w); // virus 2
+n_P1 = rbinom(n_T, rho1); // virus 1
+n_P2 = rbinom(n_T, rho2); // virus 2
 //end_rmeas
 
 //start_skel
@@ -138,8 +102,8 @@ double p2 = (X_SI + X_II + X_TI + X_RI) / N; // virus 2
 
 // calculate the transmission rate for each virus taking into consideration climate forcing; eq (1) Kramer (2023)
 // note: beta_i = Reff*gamma where Reff is the effective reproductive number at time i in a partially susceptible population  
-double beta1 = Ri1 / (1.0 - (R10 + R120)) * exp(eta_ah1 * ah + eta_temp1 * temp) * gamma1; // virus 1 
-double beta2 = Ri2 / (1.0 - (R20 + R120)) * exp(eta_ah2 * ah + eta_temp2 * temp) * gamma2; // virus 2 
+double beta1 = Ri1 / (1.0 - (R10 + R120)) * gamma1; // virus 1 
+double beta2 = Ri2 / (1.0 - (R20 + R120)) * gamma2; // virus 2 
 
 // calculate force of infection for each virus 
 double lambda1 = beta1 * p1; // virus 1
@@ -180,9 +144,9 @@ DH2 = gamma2 * (X_SI + theta_rho1 * X_II + X_TI + X_RI) / N; // virus 2
 double p1 = (X_IS + X_II + X_IT + X_IR) / N; // virus 1
 double p2 = (X_SI + X_II + X_TI + X_RI) / N; // virus 2
 
-// calculate basic reproductive number R0 for each virus taking into consideration climatic forcing 
-double R0_1 = Ri1 / (1.0 - (R10 + R120)) * exp(eta_ah1 * ah + eta_temp1 * temp); // virus 1
-double R0_2 = Ri2 / (1.0 - (R20 + R120)) * exp(eta_ah2 * ah + eta_temp2 * temp); // virus 2
+// calculate basic reproductive number R0 for each virus taking into consideration 
+double R0_1 = Ri1 / (1.0 - (R10 + R120)); // virus 1
+double R0_2 = Ri2 / (1.0 - (R20 + R120)); // virus 2
 
 // initialisation of the transmission terms 
 double beta1, beta2;
@@ -273,6 +237,8 @@ X_SR += fromST[1] - fromSR;
 X_IR += fromIT[1] + fromSR - fromIR;
 X_TR += fromTT[1] + fromIR - fromTR;
 X_RR += fromRT + fromTR;
+
+Rprintf("fIS=%f, fII=%f\n", fromIS[0], fromII[0]);
 
 H1_tot += (fromIS[0] + fromII[0] + fromIT[0] + fromIR) / N;
 H2_tot += (fromSI[1] + fromII[1] + fromTI[1] + fromRI) / N;
