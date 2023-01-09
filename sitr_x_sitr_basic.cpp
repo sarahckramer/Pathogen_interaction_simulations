@@ -34,11 +34,11 @@ static double pTrans(double r, double delta_t) {
 
 //start_rinit
 // initalising each compartment 
-X_SS = (1.0 - I10 - I20 - R10 - R20 - R120) * N;
-X_IS = I10 * N;
+X_SS = nearbyint((1.0 - I10 - I20 - R10 - R20 - R120) * N);
+X_IS = nearbyint(I10 * N);
 X_TS = 0;
-X_RS = R10 * N;
-X_SI = I20 * N;
+X_RS = nearbyint(R10 * N);
+X_SI = nearbyint(I20 * N);
 X_II = 0;
 X_TI = 0;
 X_RI = 0;
@@ -46,10 +46,10 @@ X_ST = 0;
 X_IT = 0;
 X_TT = 0;
 X_RT = 0;
-X_SR = R20 * N;
+X_SR = nearbyint(R20 * N);
 X_IR = 0;
 X_TR = 0;
-X_RR = R120 * N;
+X_RR = nearbyint(R120 * N);
 
 // initalising accumulator variables 
 H1_tot = 0; // takes into consideration interaction  
@@ -73,8 +73,8 @@ H2 = 0;
 double fP1, fP2, ll;
 
 // calculating components for the likelihood 
-fP1 = dbinom(n_P1, n_T, rho1, 1); // First likelihood component, natural scale
-fP2 = dbinom(n_P2, n_T, rho2, 1); // Second likelihood component, natural scale
+fP1 = dbinom(H1_obs, H1, rho1, 1); // First likelihood component, natural scale
+fP2 = dbinom(H1_obs, H2, rho2, 1); // Second likelihood component, natural scale
 
 // If rho_w == 1, the resulting observation probability might be 0 (-Inf on log-scale)
 // Replace by a big, but finite penalty if that's the case 
@@ -86,19 +86,19 @@ lik = (give_log) ? ll : exp(ll);
 
 
 //start_rmeas
-//generate total number of specimens tested for each virus where r1 and r2 is the probability
+//generate total number of specimens tested for each virus where r1 probability
 // of someone been sick and turning up for testing 
-n_T = rbinom(N, rho2);
+//n_T = rbinom(N, rho2);
 
 // generate the total number of tests positive to each virus 
-n_P1 = rbinom(n_T, rho1); // virus 1
-n_P2 = rbinom(n_T, rho2); // virus 2
+H1_obs = rbinom(H1, rho1); // virus 1
+H2_obs = rbinom(H2, rho2); // virus 2
 //end_rmeas
 
 //start_skel
 // calculating the prevelence of each infection 
-double p1 = (X_IS + X_II + X_IT + X_IR) / N; // virus 1
-double p2 = (X_SI + X_II + X_TI + X_RI) / N; // virus 2
+double p1 = (X_IS + X_II + X_IT + X_IR) ; // virus 1
+double p2 = (X_SI + X_II + X_TI + X_RI) ; // virus 2
 
 // calculate the transmission rate for each virus taking into consideration climate forcing; eq (1) Kramer (2023)
 // note: beta_i = Reff*gamma where Reff is the effective reproductive number at time i in a partially susceptible population  
@@ -106,8 +106,8 @@ double beta1 = Ri1 / (1.0 - (R10 + R120)) * gamma1; // virus 1
 double beta2 = Ri2 / (1.0 - (R20 + R120)) * gamma2; // virus 2 
 
 // calculate force of infection for each virus 
-double lambda1 = beta1 * p1; // virus 1
-double lambda2 = beta2 * p2; // virus 2
+double lambda1 = beta1 * (p1/N); // virus 1
+double lambda2 = beta2 * (p2/N); // virus 2
 
 // relative parameter to describe the rate of cross protection acheived after infection 
 double delta2 = d2 * delta1; // 1 / duration of refractory period (virus2 -> virus1)
@@ -135,8 +135,8 @@ DX_RR = delta2 * X_RT + delta1 * X_TR;
 DH1_tot = gamma1 * p1; // virus 1 
 DH2_tot = gamma2 * p2; // virus 2 
 // incidence rates of each virus taking into consideration interaction
-DH1 = gamma1 * (X_IS + theta_rho2 * X_II + X_IT + X_IR) / N; // virus 1
-DH2 = gamma2 * (X_SI + theta_rho1 * X_II + X_TI + X_RI) / N; // virus 2
+DH1 = gamma1 * (X_IS + theta_rho2 * X_II + X_IT + X_IR) ; // virus 1
+DH2 = gamma2 * (X_SI + theta_rho1 * X_II + X_TI + X_RI) ; // virus 2
 //end_skel
 
 //start_rsim
@@ -217,6 +217,8 @@ fromSR = rbinom(X_SR, pTrans(lambda1, dt));
 fromIR = rbinom(X_IR, pTrans(gamma1, dt));
 fromTR = rbinom(X_TR, pTrans(delta1, dt));
 
+Rprintf("first=%.1f, second=%.f, first=%.1f, second=%.f\n", fromSS[0], fromSS[1], fromIS[0], fromIS[1]);
+
 // balance equations
 X_SS += -fromSS[0] - fromSS[1];
 X_IS += fromSS[0] - fromIS[0] - fromIS[1];
@@ -237,11 +239,9 @@ X_SR += fromST[1] - fromSR;
 X_IR += fromIT[1] + fromSR - fromIR;
 X_TR += fromTT[1] + fromIR - fromTR;
 X_RR += fromRT + fromTR;
-
-Rprintf("fIS=%f, fII=%f\n", fromIS[0], fromII[0]);
-
-H1_tot += (fromIS[0] + fromII[0] + fromIT[0] + fromIR) / N;
-H2_tot += (fromSI[1] + fromII[1] + fromTI[1] + fromRI) / N;
-H1 += (fromIS[0] + theta_rho2 * fromII[0] + fromIT[0] + fromIR) / N;
-H2 += (fromSI[1] + theta_rho1 * fromII[1] + fromTI[1] + fromRI) / N;
+  
+H1_tot += (fromIS[0] + fromII[0] + fromIT[0] + fromIR);
+H2_tot += (fromSI[1] + fromII[1] + fromTI[1] + fromRI);
+H1 += (fromIS[0] + theta_rho2 * fromII[0] + fromIT[0] + fromIR);
+H2 += (fromSI[1] + theta_rho1 * fromII[1] + fromTI[1] + fromRI);
 //end_rsim

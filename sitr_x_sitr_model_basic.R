@@ -13,9 +13,13 @@
 library(tidyverse)
 library(pomp)
 library(janitor)
+library(ggfortify)
+library(ggpubr)
 
 # read in the c code
-mod_code <- readLines('/Users/spirikahu/Documents/Max planck/Project 1/Analysis/Simulation/sitr_x_sitr_basic.cpp')
+# home load
+#mod_code <- readLines('/Users/spirikahu/Documents/Max planck/Project 1/Analysis/Simulation/sitr_x_sitr_basic.cpp')
+# work load
 mod_code <- readLines('/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/sitr_x_sitr_basic.cpp')
 
 # pull out the various components of the C code ready to feed into pomp
@@ -32,7 +36,7 @@ for (nm in components_nm) {
 }
 
 # create pomp object 
-po <- pomp(data = data.frame(time = seq(from = 0, to = 52, by = 1), n_P1 = NA, n_P2 = NA, n_T= NA),
+po <- pomp(data = data.frame(time = seq(from = 0, to = 52, by = 1), H1_obs = NA, H2_obs = NA),
            times = "time",
            t0 = 0,
            accumvars = c('H1_tot', 'H2_tot', 'H1', 'H2'),
@@ -68,7 +72,7 @@ po <- pomp(data = data.frame(time = seq(from = 0, to = 52, by = 1), n_P1 = NA, n
                       eta_ah1 = 0, eta_ah2 = 0,
                       beta_sd1 = 0, beta_sd2 = 0,
                       N = 10000,
-                      I10 = 1e-5, I20 = 1e-5,
+                      I10 = 0.002, I20 = 0.002,
                       R10 = 0, R20 = 0, R120 = 0),
            globals = components_l[['globs']],
            dmeasure = components_l[['dmeas']],
@@ -78,17 +82,46 @@ po <- pomp(data = data.frame(time = seq(from = 0, to = 52, by = 1), n_P1 = NA, n
            rinit = components_l[['rinit']]
 )
 
-sim <- simulate(po,nsim=1,format="data.frame",include.data=TRUE)
-ggplot(data=sims,
-       mapping=aes(x=year,y=pop))+
-  geom_line()+
-  facet_wrap(~.id,ncol=1,scales="free_y")
 
 t1 <- trajectory(object = po, format = 'data.frame')
-t1 %>% mutate_if(is.numeric, round) %>% View()
-# why are my accumulator variables all 0?? 
+t1 %>% select("X_SS":"X_RR") %>% mutate_if(is.numeric, round) %>% View()
+
+# simulating multiple seasons and pulling them together to make a single timeseries
+s1 <- simulate(po, times=1:52)
+s2 <- simulate(po, times=1:52)
+s3 <- simulate(po, times=1:52)
+s4 <- simulate(po, times=1:52)
+s5 <- simulate(po, times=1:52)
+
+s1_states <- data.frame(t(s1@states))
+s2_states <- data.frame(t(s2@states))
+s3_states <- data.frame(t(s3@states))
+s4_states <- data.frame(t(s4@states))
+s5_states <- data.frame(t(s5@states))
+
+# combining the consecutive series so that I get a single series with 5 seasons
+d1 <- rbind(s1_states, s2_states, s3_states, s4_states, s5_states)
+dim(d1) # 260 x 20 (52*5 = 260 as expected)
+names(d1)
+# create a column for week number 
+d1$week <- 1:dim(d1)[1]
+head(d1)
+
+# plot out the data
+ggplot(aes(x=week,y=H1_tot),data=d1) + geom_line() + geom_point()
+ggplot(aes(x=week,y=H2_tot),data=d1) + geom_line() + geom_point()
+# plot of intetraction 
+ggplot(aes(x=H1,y=H2),data=d1) + geom_point() + stat_cor(method="spearman") # so much higher than I feel it should be... 
+# really don't trust this approach at all due to the lack of independence between observations
+# try out a linear model --- still not going to be good but lets see
+lm1 <- lm(H1 ~ H2, data=d1)
+summary(lm1)
+autoplot(lm1)
 
 
 t2 <- trajectory(object = po, format = 'data.frame') %>%
   dplyr::select(H1:.id) %>%
   pivot_longer(H1:H2, names_to = 'Vir', values_to = 'Inc')
+
+ggplot(aes(x=time,y=Inc, colour=Vir),data=t2) + geom_point() + geom_line() 
+
