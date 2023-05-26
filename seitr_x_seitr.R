@@ -9,7 +9,7 @@
 ##################################################################################################################
 
 # set seed:
-set.seed(2098)
+set.seed(2908)
 
 # load libraries
 library(tidyverse)
@@ -86,14 +86,13 @@ for (nm in components_nm) {
 # create dataframe of single set of parameter inputs
 true_params <- data.frame(Ri1=2, Ri2=5,
                           gamma1=7/5, gamma2=7/10,
-                          delta1=7/5, d2=1.0,
+                          delta1=1.0, delta2=1.0,
                           theta_lambda1=1, theta_lambda2=1, 
-                          rho1=0.15, rho2=0.5,
-                          theta_rho1=1, theta_rho2=1, 
+                          A=0, phi=0,
                           beta_sd1=0, beta_sd2=0, 
                           N=10000,
-                          I10=0.002, I20=0.002,
-                          R10=0, R20=0.02, R120=0)
+                          E01=0.002, E02=0.002,
+                          R01=0, R02=0.02, R12=0)
 
 #---- Create list to save the parameter sets and results of our different methods ---# 
 
@@ -109,10 +108,11 @@ po <- pomp(data = data.frame(time = seq(from = 0, to = 52, by = 1), H1_obs = NA,
            times = "time",
            t0 = 0,
            accumvars = c('H1_tot', 'H2_tot', 'H1', 'H2'),
-           statenames = c('X_SS', 'X_IS', 'X_TS', 'X_RS', 
-                          'X_SI', 'X_II', 'X_TI', 'X_RI', 
-                          'X_ST', 'X_IT', 'X_TT', 'X_RT',
-                          'X_SR', 'X_IR', 'X_TR', 'X_RR', 
+           statenames = c('X_SS', 'X_ES' ,'X_IS', 'X_TS', 'X_RS', 
+                          'X_SE', 'X_EE', 'X_IE', 'X_TE', 'X_RE',
+                          'X_SI', 'X_EI' ,'X_II', 'X_TI', 'X_RI', 
+                          'X_ST', 'X_ET' ,'X_IT', 'X_TT', 'X_RT',
+                          'X_SR', 'X_ER' ,'X_IR', 'X_TR', 'X_RR', 
                           'H1_tot', 'H2_tot', 
                           'H1', 'H2'),
            paramnames = names(true_params),

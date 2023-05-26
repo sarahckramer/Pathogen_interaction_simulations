@@ -135,51 +135,48 @@ double beta2 = Ri2 / (1.0 - (R02 + R12)) * gamma2; // virus 2
 
 // incorporate seasonality parameter for each virus 
 // where A = amplitude, omega = annual angular frequency, t = time and phi = phase
-double omgea = (2 * M_PI)/365 
-double s = 1 + A * cos(omega (t - phi))
+double omgea = (2 * M_PI)/52;
+double s = 1 + A * cos(omega * (t - phi));
 
 // calculate force of infection for each virus - note A = 0 means no seasonality component  
 double lambda1 = beta1 * (p1/N) * s; // virus 1
 double lambda2 = beta2 * (p2/N) * s; // virus 2
 
-// relative parameter to describe the rate of cross protection acheived after infection relative to delta1 
-double delta2 = d2 * delta1; // 1 / duration of refractory period (virus2 -> virus1)
-
 // ODEs
 // column 1 of schematic
 DX_SS = -(lambda1 + lambda2) * X_SS; 
-DX_SE = lambda2 * X_SS - (lambda1 + sigma1) * X_SE
-DX_SI = sigma2 * X_SE - (lambda1 * theta_lambda2) * X_SI
-DX_ST = gamma2 * X_SI - (lambda1 * theta_lambda2 + delta2) 
-DX_SR = delta2 * X_ST - lambda1 * X_SR
+DX_SE = lambda2 * X_SS - (lambda1 + sigma1) * X_SE;
+DX_SI = sigma2 * X_SE - (lambda1 * theta_lambda2) * X_SI;
+DX_ST = gamma2 * X_SI - (lambda1 * theta_lambda2 + delta2);
+DX_SR = delta2 * X_ST - lambda1 * X_SR;
   
 // column 2  of schematic
-DX_ES = lambda1 * X_SS - (sigma1 + lambda2) * X_ES
-DX_EE = lambda2 * X_ES + lambda1 * X_SE - (sigma1 + sigma2) * X_EE
-DX_EI = lambda1 * theta_lambda2 * X_SI + sigma2 * X_EE - (sigma1+ gamma2) * X_EI
-DX_ET = lambda2 * X_EI + lambda1 * theta_lambda2 * X_ST - (sigma1+ delta2) * X_ET
-DX_ER = lambda1 * X_SR + delta2 * X_ET - sigma1 * X_IR
+DX_ES = lambda1 * X_SS - (sigma1 + lambda2) * X_ES;
+DX_EE = lambda2 * X_ES + lambda1 * X_SE - (sigma1 + sigma2) * X_EE;
+DX_EI = lambda1 * theta_lambda2 * X_SI + sigma2 * X_EE - (sigma1+ gamma2) * X_EI;
+DX_ET = lambda2 * X_EI + lambda1 * theta_lambda2 * X_ST - (sigma1+ delta2) * X_ET;
+DX_ER = lambda1 * X_SR + delta2 * X_ET - sigma1 * X_IR;
   
 // column 3  of schematic
-DX_IS = sigma1 * X_ES - (gamma1 + lambda2 * theta_lambda1) * X_IS
-DX_IE = lambda * theta_lambda1 * X_IS + sigma1 * X_EE - (gamma1 + sigma2)  * X_IE
-DX_II = sigma1 * X_EI + sigma2 * X_IE - (gamma1 + gamma2) * X_II
-DX_IT = sigma1 * X_ET + gamma2 * X_II - (gamma1 + delta2) * X_IT
-DX_IR = delta2 * X_IT + sigma1 * X_ER - gamma_1 * X_IR
+DX_IS = sigma1 * X_ES - (gamma1 + lambda2 * theta_lambda1) * X_IS;
+DX_IE = lambda * theta_lambda1 * X_IS + sigma1 * X_EE - (gamma1 + sigma2)  * X_IE;
+DX_II = sigma1 * X_EI + sigma2 * X_IE - (gamma1 + gamma2) * X_II;
+DX_IT = sigma1 * X_ET + gamma2 * X_II - (gamma1 + delta2) * X_IT;
+DX_IR = delta2 * X_IT + sigma1 * X_ER - gamma_1 * X_IR;
 
 //column 4  of schematic
-DX_TS = gamma1 * X_IS - (delta1 + lambda2 * theta_lambda1) * X_TS
-DX_TE = lambda2 * theta_lambda1 * X_TS + gamma1 * X_IE - (gamma1 + sigam2) * X_TE  
-DX_TI = sigma2 * X_TE + gamma1 * X_II - (delta1 + gamma2) * X_TI
-DX_TT = gamma1 * X_IT + gamma2 * XTI - (delta1 + delta2)* X_TT
-DX_TR = gamma1 * X_IR + delta2 * X_TT - delta1 * X_TR
+DX_TS = gamma1 * X_IS - (delta1 + lambda2 * theta_lambda1) * X_TS;
+DX_TE = lambda2 * theta_lambda1 * X_TS + gamma1 * X_IE - (gamma1 + sigam2) * X_TE;  
+DX_TI = sigma2 * X_TE + gamma1 * X_II - (delta1 + gamma2) * X_TI;
+DX_TT = gamma1 * X_IT + gamma2 * XTI - (delta1 + delta2)* X_TT;
+DX_TR = gamma1 * X_IR + delta2 * X_TT - delta1 * X_TR;
 
 //column 5  of schematic
-DX_RS = delta1 * X_TS - lambda2 * X_RS 
-DX_RE = lambda2 * X_RS + delta1 * X_TE - sigma2 * X_RE
-DX_RI = sigma2 * X_RE + delta1 * X_TI - gamma2 * X_RI
-DX_RT = gamma2 * X_RI + delta1 * X_TT - sigma1* X_RT
-DX_RR = delta1 * X_RT + delta1  * X_TR
+DX_RS = delta1 * X_TS - lambda2 * X_RS;
+DX_RE = lambda2 * X_RS + delta1 * X_TE - sigma2 * X_RE;
+DX_RI = sigma2 * X_RE + delta1 * X_TI - gamma2 * X_RI;
+DX_RT = gamma2 * X_RI + delta1 * X_TT - sigma1* X_RT;
+DX_RR = delta1 * X_RT + delta1  * X_TR;
 
 // Accumulator variables
 // incidence rates of infection overall for each virus not taking into consideration interaction 
@@ -187,8 +184,8 @@ Dv1_tot = gamma1 * p1; // virus 1
 Dv2_tot = gamma2 * p2; // virus 2 
 
 // incidence rates of each virus taking into consideration interaction
-Dv1 = gamma1 * (X_IS + X_IE + theta_rho2 * X_II + X_IT + X_IR) ; // virus 1
-Dv2 = gamma2 * (X_SI + X_EI + theta_rho1 * X_II + X_TI + X_RI) ; // virus 2
+Dv1 = gamma1 * (X_IS + X_IE + theta_rho2 * X_II + X_IT + X_IR); // virus 1
+Dv2 = gamma2 * (X_SI + X_EI + theta_rho1 * X_II + X_TI + X_RI); // virus 2
 //end_skel
 
 
@@ -219,15 +216,12 @@ if (p2 > 0.0 && beta_sd2 > 0.0) {
 
 // incorporate seasonality parameter for each virus 
 // where A = amplitude, omega = annual angular frequency, t = time and phi = phase
-double omgea = (2 * M_PI)/365 
-double s = 1 + A * cos(omega (t - phi))
+double omgea = (2 * M_PI)/365;
+double s = 1 + A * cos(omega * (t - phi));
 
 // calculate force of infection for each virus 
 double lambda1 = beta1 * p1 * s; // virus 1
 double lambda2 = beta2 * p2 * s; // virus 2
-
-// Calculate duration of refractory period of virus 2:
-double delta2 = d2 * delta1; // 1 / duration of refractory period (virus2 -> virus1)
 
 // initalising transitions 
 double rates[32];// vector of length 40
@@ -248,7 +242,7 @@ rates[3] = lambda2; //(X_ES -> X_EE)
 rates[4] = gamma1; // (X_IS -> X_TS)
 rates[5] = lambda2; * theta_lambda1; // (X_IS -> X_IE)
 rates[6] = delta1; // (X_TS -> X_RS)
-rates[7] = lambda2; * theta_lambda1 // (X_TS -> X_TE)
+rates[7] = lambda2; * theta_lambda1; // (X_TS -> X_TE)
 
 // row 2 of schematic
 rates[8] = lambda1; // (X_SE -> X_EE)  
@@ -353,11 +347,12 @@ X_RT += fromRI + fromTT[0] - fromRT;
 
 // row 5
 X_SR += fromST[1] - fromER;
-X_ER += fromET[1] + fromSR[0] - fromER
+X_ER += fromET[1] + fromSR[0] - fromER;
 X_IR += fromIT[1] + fromER - fromIR;
 X_TR += fromTT[1] + fromIR - fromTR;
 X_RR += fromRT + fromTR;
 
+// Total number of cases of each virus in the population accounting and not accounting for interaction 
 v1_T += (fromIS[1] + fromIE[1] + fromII[1] + fromIT[1] + fromIR);
 v2_T += (fromSI[0] + fromEI[0] + fromII[0] + fromTI[0] + fromRI);
 v1 += (fromIS[1] + theta_rho2 * fromIE[1] + fromII[1] + fromIT[1] + fromIR);
