@@ -2,14 +2,13 @@
 # R code to run pomp model 
 # 
 # The C code for the pomp model is here: 
-# /Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/seitr_x_seitr.cpp
+# /Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/sitr_x_sitr_basic.cpp
+# The basic model does not incorporate seasonality in the transmission function and does not incorporate 
+# under-reporting
 #
 # Created by: Sarah Pirikahu 
-# Creation date: 22 May 2023
+# Creation date: 19 December 
 ##################################################################################################################
-
-# set seed:
-set.seed(2908)
 
 # load libraries
 library(tidyverse)
@@ -23,24 +22,8 @@ library(RTransferEntropy)
 library(vars)
 library(future) # allows for parallel processing
 
-#---- set up cluster ---# 
-# Get cluster environmental variables:
-jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid)
-no_jobs <- as.integer(Sys.getenv("NOJOBS")); print(no_jobs)
-sobol_size <- as.integer(Sys.getenv("SOBOLSIZE")); print(sobol_size)
-
-jobid <- (jobid - 1) %% no_jobs + 1; print(jobid) ## don't understand the point of this?
-
-# Set maximal execution times
-time_max <- 1.75 # Maximal execution time (in hours)
-nmins_exec <- time_max * 60 / (sobol_size / no_jobs) # maximal estimation time for each estimation
-
-# Get unique identifiers:
-unique_ids <- (1 + (jobid - 1) * sobol_size / no_jobs) : (jobid * sobol_size / no_jobs)
-
-#--- Setup pomp model and simulation ---# 
-# read in the C code for the pomp model 
-mod_code <- readLines('/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/seitr_x_seitr.cpp')
+# read in the c code for the pomp model 
+mod_code <- readLines('/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/old/sitr_x_sitr_basic.cpp')
 
 # pull out the various components of the C code ready to feed into pomp
 components_nm <- c('globs', 'dmeas', 'rmeas', 'rinit', 'skel', 'rsim')
@@ -58,43 +41,45 @@ for (nm in components_nm) {
 
 # specify ranges of all input variables - **Ask Mattheiu for thoughts on 
 # suitable ranges 
-# Ri1 <- 
-# Ri2 <-
-# gamma1 <- 
-# gamma2 <- 
-# sigma1 <- 
-# sigma2 <-
-# delta1 <- 
-# d2 <- 
-# theta_lambda1 <- 
-# theta_lambda2 <- 
-# beta_sd1 <- 0  
-# beta_sd2 <- 0 
-# N <- 10000 
-# R01 <- 
-# R02 <- 
-# R12 <- 
-# A <- 0
-# phi <- 0 
-
+# Ri1 <- c(1,2,3)
+# Ri2 <- c(1,2,3)
+# gamma1 <- c(0.5,1.0,1.5,2.0,2.5)
+# gamma2 <- c(0.5,1.0,1.5,2.0,2.5)
+# delta1 <- c(0.5,1.0,1.5,2.0,2.5)
+# d2 <- c(0.5,1.0,1.5,2.0,2.5)
+# theta_lambda1 <- c(0,0.25,0.5,0.75,1)
+# theta_lambda2 <- c(0,0.25,0.5,0.75,1)
+# rho1 <- c(0,0.05,0.1,0.25,0.5,0.75,1)
+# rho2 <- c(0,0.05,0.1,0.25,0.5,0.75,1)
+# theta_rho1 <- 1
+# theta_rho2 <- 1
+# beta_sd1 <- c(0,0.25,0.5,0.75,1)
+# beta_sd2 <- c(0,0.25,0.5,0.75,1)
+# N <- 10000 # change in future
+# I10 <- c(0,0.001,0.005,0.01)
+# I20 <- c(0,0.001,0.005,0.01)
+# R10 <- c(0,0.1,0.2,0.3)
+# R20 <- c(0,0.1,0.2,0.3)
+# R120 <- c(0,0.1,0.2,0.3)  
 
 # create a grid with all possible combinations of the above values
-#true_params <- expand.grid(Ri1, Ri2, gamma1, gamma2, sigma1, sigma2, delta1, d2, theta_lambda1, theta_lambda2, 
-#            theta_rho1, theta_rho2, beta_sd1, beta_sd2, N, R01, R02, R12)
-
+#true_params <- expand.grid(Ri1, Ri2, gamma1, gamma2, delta1, d2, theta_lambda1, theta_lambda2, rho1, rho2,
+#            theta_rho1, theta_rho2, beta_sd1, beta_sd2, N, I10, I20, R10, R20, R120)
+## this amount of parameter combos will not be feasible this alone is 220 billion combos. 
+## So are we going to keep the season specific parameters? Remove them? keep some parameters
+## fixed whilst others are allowed to vary? 
 
 # create dataframe of single set of parameter inputs
 true_params <- data.frame(Ri1=2, Ri2=5,
-                          sigma1=0.2, sigma2=0.2 ,
-                          gamma1=7/5, gamma2=7/10,
-                          delta1=0.5, delta2=0.5,
-                          rho1 = 0.5, rho2 = 0.5,
-                          theta_lambda1=1, theta_lambda2=1, 
-                          A=0, phi=0,
-                          beta_sd1=0, beta_sd2=0, 
-                          N=10000,
-                          E01=0.002, E02=0.002,
-                          R01=0.1, R02=0.02, R12=0.01)
+                           gamma1=7/5, gamma2=7/10,
+                           delta1=7/5, d2=1.0,
+                           theta_lambda1=1, theta_lambda2=1, 
+                           rho1=0.15, rho2=0.5,
+                           theta_rho1=1, theta_rho2=1, 
+                           beta_sd1=0, beta_sd2=0, 
+                           N=10000,
+                           I10=0.002, I20=0.002,
+                           R10=0, R20=0.02, R120=0)
 
 #---- Create list to save the parameter sets and results of our different methods ---# 
 
@@ -106,16 +91,16 @@ for (i in 1:dim(true_params)[1]){
 }
 
 #---- create pomp object ---# 
-po <- pomp(data = data.frame(time = seq(from = 0, to = 52, by = 1), v1_obs = NA, v2_obs = NA),
+po <- pomp(data = data.frame(time = seq(from = 0, to = 52, by = 1), H1_obs = NA, H2_obs = NA),
            times = "time",
            t0 = 0,
-           accumvars = c('v1_T', 'v2_T'),
-           statenames = c('X_SS', 'X_ES' , 'X_IS', 'X_TS', 'X_RS', 
-                          'X_SE', 'X_EE', 'X_IE', 'X_TE', 'X_RE',
-                          'X_SI', 'X_EI' ,'X_II', 'X_TI', 'X_RI', 
-                          'X_ST', 'X_ET' ,'X_IT', 'X_TT', 'X_RT',
-                          'X_SR', 'X_ER' ,'X_IR', 'X_TR', 'X_RR', 
-                          'v1_T', 'v2_T'),
+           accumvars = c('H1_tot', 'H2_tot', 'H1', 'H2'),
+           statenames = c('X_SS', 'X_IS', 'X_TS', 'X_RS', 
+                          'X_SI', 'X_II', 'X_TI', 'X_RI', 
+                          'X_ST', 'X_IT', 'X_TT', 'X_RT',
+                          'X_SR', 'X_IR', 'X_TR', 'X_RR', 
+                          'H1_tot', 'H2_tot', 
+                          'H1', 'H2'),
            paramnames = names(true_params),
            params = true_params,
            globals = components_l[['globs']],
@@ -253,8 +238,62 @@ wc.phasediff.image(my.wc, which.contour = "wc", use.sAngle = TRUE,
                    timelab = "")
 
 #------- Convergent Cross mapping analysis -------# 
+str(d1)
+names(d1)
 
-source("CCM.R")
+# determine embedding dimension 
+rho_E <- EmbedDimension(dataFrame = d1, columns = "H2", target = "H2",
+                        lib = "1 156", pred = "1 156", showPlot = TRUE)
+rho_E <- EmbedDimension(dataFrame = d1, columns = "H1", target = "H1",
+                        lib = "1 30", pred = "1 30", showPlot = TRUE)
+# E = 2 best embedding dimension for H2 and E = 4 based on H1
+E <- 4
+
+
+
+# test for non-linearity (this runs SMap under the hood)
+rho_theta_e3 = PredictNonlinear(dataFrame = d1, columns = "H2",
+                                target = "H2", lib = "1 156", pred = "1 156", E = E)
+rho_theta_e3 = PredictNonlinear(dataFrame = d1, columns = "H1",
+                                target = "H1", lib = "1 156", pred = "1 156", E = E)
+# both obviously non-linear
+
+# set up to do ccm for all pairs 
+vars = colnames(d_var)
+var_pairs = combn(vars, 2) # Combinations of vars, 2 at a time
+libSize = paste(NROW(d_var) - E, NROW(d_var) - E, 10, collapse = " ")
+ccm_matrix = array(NA, dim = c(length(vars), length(vars)), dimnames = list(vars,
+                                                                            vars))
+# do the ccm for all pairs of variables 
+for (i in 1:ncol(var_pairs)) {
+  ccm_out = CCM(dataFrame = d1, columns = var_pairs[1, i], 
+                target = var_pairs[2,i], libSizes = libSize, Tp = 0,
+                E = E, sample = 100)
+  outVars = names(ccm_out)
+  var_out = unlist(strsplit(outVars[2], ":"))
+  ccm_matrix[var_out[2], var_out[1]] = ccm_out[1, 2]
+  var_out = unlist(strsplit(outVars[3], ":"))
+  ccm_matrix[var_out[2], var_out[1]] = ccm_out[1, 3]
+}
+ccm_matrix
+
+# creating lagged cross-correlation for comparison 
+corr_matrix <- array(NA, dim = c(length(vars), length(vars)), dimnames = list(vars,
+                                                                              vars))
+for (ccm_from in vars) {
+  for (ccm_to in vars[vars != ccm_from]) {
+    ccf_out <- ccf(d1[, ccm_from], d1[, ccm_to], type = "correlation",
+                   lag.max = 6, plot = FALSE)$acf
+    corr_matrix[ccm_from, ccm_to] <- max(abs(ccf_out))
+  }
+}
+corr_matrix
+
+# look at convergence in the cross-map predictability (compare rho as a function of L, library size) 
+thrips_xmap_maxT <- CCM(dataFrame = d1, E = E, Tp = 0, columns = "H1",
+                        target = "H2", libSizes = "10 20 30 40", sample = 100, showPlot = TRUE)
+abline(h = corr_matrix["H1", "H2"], col = "black", lty = 2)
+
 
 #----- Bayesian multivariate autoregression -----# 
 
