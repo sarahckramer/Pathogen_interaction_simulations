@@ -75,11 +75,13 @@ v2_T = 0;
 // if the compartments that are assigned some initial value don't sum to
 // N (likely due to rounding in the nearbyint function) print the values
 // then re calculate the initial value of X_SS by doing N - all other
-// iniital values for the other compartments
+// inital values for the other compartments
 if ((X_SS + X_ES + X_RS + X_SE + X_SR + X_RR) != N) {
   Rprintf("SS=%f, ES=%f, RS=%f, SE=%f, SR=%f, RR=%f, sum=%f, N=%f\n", X_SS, X_ES, X_RS, X_SE, X_SR, X_RR, X_SS + X_ES + X_RS + X_SE + X_SR + X_RR, N);
   X_SS = nearbyint(N - X_ES - X_RS - X_SE - X_SR - X_RR);
 }
+
+Rprintf("E01=%f, E02=%f, R01=%f, R02=%f, R12=%f\n", E01, E02, R01, R02, R12);
 
 //end_rinit
 
@@ -186,8 +188,8 @@ Dv2_T = gamma2 * p2; // virus 2
 // SIMULATION - addition of stochasticity 
 //start_rsim
 // calculate prevalence of each virus 
-double p1 = (X_IS + X_IE +  X_II + X_IT + X_IR) / N; // virus 1
-double p2 = (X_SI + X_EI + X_II + X_TI + X_RI) / N; // virus 2
+double p1 = (X_IS + X_IE +  X_II + X_IT + X_IR); // virus 1
+double p2 = (X_SI + X_EI +  X_II + X_TI + X_RI); // virus 2
 
 // calculate basic reproductive number R0 for each virus taking into consideration 
 double R0_1 = Ri1 / (1.0 - (R01 + R12)); // virus 1
@@ -214,10 +216,12 @@ double omega = (2 * M_PI)/365;
 double s = 1 + A * cos(omega * (t - phi));
 
 // calculate force of infection for each virus 
-double lambda1 = beta1 * p1 * s; // virus 1
-double lambda2 = beta2 * p2 * s; // virus 2
+double lambda1 = beta1 * (p1/N) * s; // virus 1
+double lambda2 = beta2 * (p2/N) * s; // virus 2
 
-
+Rprintf("p1=%.2f, p2=%.2f, beta1=%.1f, beta2=%.1f lambda1=%.3f, lambda2=%.3f, dt=%.3f\n", 
+        p1, p2, beta1, beta2, lambda1, lambda2,dt);
+        
 // initalising transitions 
 double rates[32];// vector of length 32
 double fromSS[2], fromES[2], fromIS[2], fromTS[2];
@@ -241,7 +245,7 @@ rates[7] = lambda2 * theta_lambda1; // (X_TS -> X_TE)
  
 // row 2 of schematic
 rates[8] = lambda1; // (X_SE -> X_EE)
-rates[9] = sigma2; //  (X_SE -> X_SI)
+rates[9] = sigma2;  //  (X_SE -> X_SI)
 rates[10] = sigma1; // (X_EE -> X_IE)
 rates[11] = sigma2; // (X_EE -> X_EI)
 rates[12] = gamma1; // (X_IE -> X_TE)
@@ -311,6 +315,9 @@ fromER = rbinom(X_ER, pTrans(sigma1, dt));
 fromIR = rbinom(X_IR, pTrans(gamma1, dt));
 fromTR = rbinom(X_TR, pTrans(delta1, dt));
 
+//Rprintf("fromRS=%.1f, fromRE=%.1f, fromRI=%.1f, fromRT=%.1f\n",
+//        fromRS, fromRE, fromRI, fromRT);
+          
 // balance equations
 
 // row 1 of schmematic

@@ -25,17 +25,14 @@ library(future) # allows for parallel processing
 
 #---- set up cluster ---# 
 # Get cluster environmental variables:
-jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid)
+jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size 
 no_jobs <- as.integer(Sys.getenv("NOJOBS")); print(no_jobs)
-sobol_size <- as.integer(Sys.getenv("SOBOLSIZE")); print(sobol_size)
+sobol_size <- as.integer(Sys.getenv("SOBOLSIZE")); print(sobol_size) 
 
-jobid <- (jobid - 1) %% no_jobs + 1; print(jobid) ## don't understand the point of this?
+# determine which number job each original jobid, from the array, corresponds to
+jobid <- (jobid - 1) %% no_jobs + 1; print(jobid) 
 
-# Set maximal execution times
-time_max <- 1.75 # Maximal execution time (in hours)
-nmins_exec <- time_max * 60 / (sobol_size / no_jobs) # maximal estimation time for each estimation
-
-# Get unique identifiers:
+# Get unique identifiers for each repetition 
 unique_ids <- (1 + (jobid - 1) * sobol_size / no_jobs) : (jobid * sobol_size / no_jobs)
 
 #--- Setup pomp model and simulation ---# 
@@ -54,47 +51,19 @@ for (nm in components_nm) {
   components_l[[nm]] <- Csnippet(text = components_l[[nm]])
 }
 
-# create dataframe of input parameters which will be used to simulate data from our pomp model
-
-# specify ranges of all input variables - **Ask Mattheiu for thoughts on 
-# suitable ranges 
-# Ri1 <- 
-# Ri2 <-
-# gamma1 <- 
-# gamma2 <- 
-# sigma1 <- 
-# sigma2 <-
-# delta1 <- 
-# d2 <- 
-# theta_lambda1 <- 
-# theta_lambda2 <- 
-# beta_sd1 <- 0  
-# beta_sd2 <- 0 
-# N <- 10000 
-# R01 <- 
-# R02 <- 
-# R12 <- 
-# A <- 0
-# phi <- 0 
-
-
-# create a grid with all possible combinations of the above values
-#true_params <- expand.grid(Ri1, Ri2, gamma1, gamma2, sigma1, sigma2, delta1, d2, theta_lambda1, theta_lambda2, 
-#            theta_rho1, theta_rho2, beta_sd1, beta_sd2, N, R01, R02, R12)
-
 
 # create dataframe of single set of parameter inputs
-true_params <- data.frame(Ri1=2, Ri2=5,
-                          sigma1=0.2, sigma2=0.2 ,
+true_params <- data.frame(Ri1=2, Ri2=3,
+                          sigma1=1, sigma2=1 ,
                           gamma1=7/5, gamma2=7/10,
-                          delta1=0.5, delta2=0.5,
-                          rho1 = 0.5, rho2 = 0.5,
+                          delta1=0.7, delta2=0.6,
+                          rho1 = 0.5, rho2 = 0.2,
                           theta_lambda1=1, theta_lambda2=1, 
                           A=0, phi=0,
                           beta_sd1=0, beta_sd2=0, 
-                          N=10000,
-                          E01=0.002, E02=0.002,
-                          R01=0.1, R02=0.02, R12=0.01)
+                          N=1000000,
+                          E01=0.01, E02=0.01,
+                          R01=0.1, R02=0.1, R12=0.001)
 
 #---- Create list to save the parameter sets and results of our different methods ---# 
 
@@ -121,67 +90,58 @@ po <- pomp(data = data.frame(time = seq(from = 0, to = 52, by = 1), v1_obs = NA,
            globals = components_l[['globs']],
            dmeasure = components_l[['dmeas']],
            rmeasure = components_l[['rmeas']],
-           skeleton = vectorfield(components_l[['skel']]),
-           rprocess = euler(step.fun = components_l[['rsim']], delta.t = 0.01),
+           #skeleton = vectorfield(components_l[['skel']]),
+           rprocess = euler(step.fun = components_l[['rsim']], delta.t = 1),
            rinit = components_l[['rinit']]
 )
 
 
 # simulating multiple seasons and pulling them together to make a single timeseries
-s1 <- simulate(po, times=1:26)
-s2 <- simulate(po, times=1:26) 
+s1 <- simulate(po, times=1:52, nsim=2)
 
 # NOTE: H1_obs and H2_obs are the number of positive tests to each virus
 s1_states <- as(s1, "data.frame") 
-s2_states <- as(s2, "data.frame")
-
-# combining the consecutive series 
-d1 <- rbind(s1_states, s2_states)
-dim(d1) 
-names(d1)
-# create a column for week number 
-d1$week <- 1:dim(d1)[1]
-head(d1)
+d1 <- s1_states
 
 # normalise case data
-d1$H1_obs_NORM <- (d1$H1_obs - mean(d1$H1_obs))/sd(d1$H1_obs)
-d1$H2_obs_NORM <- (d1$H2_obs - mean(d1$H2_obs))/sd(d1$H2_obs)
+d1$v1_obs_NORM <- (d1$v1_obs - mean(d1$v1_obs))/sd(d1$v1_obs)
+d1$v2_obs_NORM <- (d1$v2_obs - mean(d1$v2_obs))/sd(d1$v2_obs)
 
 results[[i]]$data <- d1  
 
 #--- plotting the data---#
 # putting data into correct format to plot 
 # original simulated data
-d1_plot <- d1 %>%  dplyr::select(week,H1_obs, H2_obs) %>%
-  pivot_longer(H1_obs:H2_obs, names_to = 'Vir', values_to = 'Inc')
-d1_plot$Inc_percent <- (d1_plot$Inc/10000) * 100
+d1_plot <- d1 %>%  dplyr::select(time,v1_obs, v2_obs) %>%
+  pivot_longer(v1_obs:v2_obs, names_to = 'Vir', values_to = 'Inc')
+d1_plot$Inc_percent <- (d1_plot$Inc/1000000) * 100
 head(d1_plot)
 d1_plot$Vir <- as.factor(d1_plot$Vir)
 levels(d1_plot$Vir) <- c("virus 1", "virus 2")
 # plot out the data
-ggplot(aes(x=week,y=Inc_percent,colour=Vir),data=d1_plot) + geom_line() + 
+ggplot(aes(x=time,y=Inc_percent,colour=Vir),data=d1_plot) + geom_line() + 
   theme_classic() + theme(legend.position="bottom", legend.title=element_blank()) + labs(y="Incidence (%)")
 
 # Normalised data
-d1_plot <- d1 %>%  dplyr::select(week,H1_obs_NORM, H2_obs_NORM) %>%
-  pivot_longer(H1_obs_NORM:H2_obs_NORM, names_to = 'Vir', values_to = 'Inc')
-d1_plot$Inc_percent <- (d1_plot$Inc/10000) * 100
+d1_plot <- d1 %>%  dplyr::select(time,v1_obs_NORM, v2_obs_NORM) %>%
+  pivot_longer(v1_obs_NORM:v2_obs_NORM, names_to = 'Vir', values_to = 'Inc')
+d1_plot$Inc_percent <- (d1_plot$Inc/1000000) * 100
 head(d1_plot)
 d1_plot$Vir <- as.factor(d1_plot$Vir)
 levels(d1_plot$Vir) <- c("virus 1", "virus 2")
 # plot out the data
-ggplot(aes(x=week,y=Inc_percent,colour=Vir),data=d1_plot) + geom_line() + 
+ggplot(aes(x=time,y=Inc_percent,colour=Vir),data=d1_plot) + geom_line() + 
   theme_classic() + theme(legend.position="bottom", legend.title=element_blank()) + labs(y="Incidence (%)")
 
 # plotting H_obs v H (i.e. total positive tests vs total number of infections)
-d1_plot2 <- d1 %>%  dplyr::select(week,H1_obs, H2_obs, H1, H2) %>% 
-  pivot_longer(H1_obs:H2, names_to = 'Vir', values_to = 'Inc')
+d1_plot2 <- d1 %>%  dplyr::select(time,v1_obs, v2_obs, v1_T, v2_T) %>% 
+  pivot_longer(v1_obs:v2_T, names_to = 'Vir', values_to = 'Inc')
 head(d1_plot2)
-d1_plot2$Inc_percent <- (d1_plot2$Inc/10000) * 100
+d1_plot2$Inc_percent <- (d1_plot2$Inc/1000000) * 100
 head(d1_plot2)
 d1_plot2$Vir <- as.factor(d1_plot2$Vir)
 # plot 
-ggplot(aes(x=week, y=Inc_percent), data=d1_plot2) + geom_line() + facet_wrap(.~Vir) +
+ggplot(aes(x=time, y=Inc_percent), data=d1_plot2) + geom_line() + facet_wrap(.~Vir) +
   theme_bw()
 
 # remove datasets no longer going to use
@@ -193,25 +153,25 @@ rm(s1,s2,s1_states,s2_states,d1_plot2,d1_plot,components_l,po,
 ##########################################################
 
 # create dataset with just the observed cases
-d_var <- d1[,c("H1_obs", "H1_obs_NORM", "H2_obs", "H2_obs_NORM")]
+d_var <- d1[,c("v1_obs", "v1_obs_NORM", "v2_obs", "v2_obs_NORM")]
 
-# Automatically determine the best lag to use based on AIC
+# Automatically determine the best lag doing several models with lags
+# 1-10 then choose the best lag number  based on AIC
 lags <- lapply(d_var, VARselect) 
-# pull out the lag with best AIC. Lower AIC = better 
+# pull out the lag with best BIC. Lower BIC = better (not BIC is labeled SV)
 # regardless of whether raw of normalised data used the lag choosen is the same
-lag_h1 <- as.numeric(lags$H1_obs$selection[1])
-lag_h2 <- as.numeric(lags$H2_obs$selection[2])
+lag_h1 <- as.numeric(lags$v1_obs$selection[3])
+lag_h2 <- as.numeric(lags$v2_obs$selection[3])
 
 #---- Correlation coefficents --------# 
-cor_raw <- cor.test(d_var$H1_obs, d_var$H2_obs); cor_raw
-cor_NORM <- cor.test(d_var$H1_obs_NORM, d_var$H2_obs_NORM); cor_NORM
+cor_raw <- cor.test(d_var$v1_obs, d_var$v2_obs); cor_raw
 
 temp_res <- data.frame(cbind(as.numeric(cor_raw$estimate), cor_raw$conf.int[1], cor_raw$conf.int[2]), cor_raw$p.value)
 names(temp_res) <- c("cor", "CI_lower_95", "CI_upper_95", "p_value")
 results[[i]]$cor <- temp_res
 
 # plot of interaction 
-ggplot(aes(x=H1_obs,y=H2_obs),data=d1) + geom_point() + stat_cor()
+ggplot(aes(x=v1_obs,y=v2_obs),data=d1) + geom_point() + stat_cor()
 
 rm(temp_res)
 
@@ -226,8 +186,6 @@ source("granger_analysis.R")
 # Y is reduced by the addition of X, that is X causes Y.
 shannon_te <- transfer_entropy(d_var$H1_obs, d_var$H2_obs)
 shannon_te
-
-
 
 #---- Wavelets analysis  ----# 
 
@@ -253,7 +211,7 @@ wc.phasediff.image(my.wc, which.contour = "wc", use.sAngle = TRUE,
                    timelab = "")
 
 #------- Convergent Cross mapping analysis -------# 
-
+# separated this method out as a bit more code required
 source("CCM.R")
 
 #----- Bayesian multivariate autoregression -----# 
