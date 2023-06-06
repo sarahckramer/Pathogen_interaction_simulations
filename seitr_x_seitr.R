@@ -97,7 +97,7 @@ po <- pomp(data = data.frame(time = seq(from = 0, to = 52, by = 1), v1_obs = NA,
 
 
 # simulating multiple seasons and pulling them together to make a single timeseries
-s1 <- simulate(po, times=1:52, nsim=2)
+s1 <- simulate(po, times=1:52)
 
 # NOTE: H1_obs and H2_obs are the number of positive tests to each virus
 s1_states <- as(s1, "data.frame") 
@@ -157,7 +157,7 @@ d_var <- d1[,c("v1_obs", "v1_obs_NORM", "v2_obs", "v2_obs_NORM")]
 
 # Automatically determine the best lag doing several models with lags
 # 1-10 then choose the best lag number  based on AIC
-lags <- lapply(d_var, VARselect) 
+lags <- lapply(d_var, VARselect, lag.max=5) 
 # pull out the lag with best BIC. Lower BIC = better (not BIC is labeled SV)
 # regardless of whether raw of normalised data used the lag choosen is the same
 lag_h1 <- as.numeric(lags$v1_obs$selection[3])

@@ -121,6 +121,8 @@ lik = (give_log) ? ll : exp(ll);
 //---------- PROCESS MODEL ----------//
 
 // DETERMINISTIC SKELETON
+// Don't need this if we decide to only do stochastic models
+// remove before pushing to GIT if we go down this route. 
 //start_skel
 // calculating the prevalence of each infection 
 double p1 = (X_IS + X_IE + X_II + X_IT + X_IR); // virus 1
@@ -275,8 +277,8 @@ rates[31] = delta2; // (X_TT -> X_TR)
 
 // drawing sample for each of the compartments from the Euler-multinomial distribution
 // returns a length(rate[i]) by n matrix where in our case we have 2 columns c1 which we let represent
-// transitions due to virus 1 (i.e. horizontally across compartments) and c2 the transitions
-// due to virus 2 (i.e. vertically down compartments)
+// transitions due to virus 1 (i.e. vertically down compartments) and c2 the transitions
+// due to virus 2 (i.e. horizontally across compartments)
 
 // row 1
 reulermultinom(2, X_SS, &rates[0], dt, &fromSS[0]);
@@ -331,7 +333,7 @@ X_RS += fromTS[0] - fromRS;
 X_SE += fromSS[1] - fromSE[0] - fromSE[1];
 X_EE += fromES[1] + fromSE[0] - fromEE[0] - fromEE[1];
 X_IE += fromIS[1] + fromEE[0] - fromIE[0] - fromIE[1];
-X_TE += fromTS[1] + fromIE[0] - fromTE[0] - fromTE[0];
+X_TE += fromTS[1] + fromIE[0] - fromTE[0] - fromTE[1];
 X_RE += fromRS + fromTE[0] - fromRE;
 
 // row 3
