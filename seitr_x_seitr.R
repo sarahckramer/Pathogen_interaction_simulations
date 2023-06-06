@@ -155,14 +155,6 @@ rm(s1,s2,s1_states,s2_states,d1_plot2,d1_plot,components_l,po,
 # create dataset with just the observed cases
 d_var <- d1[,c("v1_obs", "v1_obs_NORM", "v2_obs", "v2_obs_NORM")]
 
-# Automatically determine the best lag doing several models with lags
-# 1-10 then choose the best lag number  based on AIC
-lags <- lapply(d_var, VARselect, lag.max=5) 
-# pull out the lag with best BIC. Lower BIC = better (not BIC is labeled SV)
-# regardless of whether raw of normalised data used the lag choosen is the same
-lag_h1 <- as.numeric(lags$v1_obs$selection[3])
-lag_h2 <- as.numeric(lags$v2_obs$selection[3])
-
 #---- Correlation coefficents --------# 
 cor_raw <- cor.test(d_var$v1_obs, d_var$v2_obs); cor_raw
 
@@ -172,6 +164,35 @@ results[[i]]$cor <- temp_res
 
 # plot of interaction 
 ggplot(aes(x=v1_obs,y=v2_obs),data=d1) + geom_point() + stat_cor()
+rm(temp_res)
+
+#----- Transfer entropy analysis ------# 
+
+# Automatically determine the best lag doing several models with lags
+# 1-10 then choose the best lag number  based on AIC
+lags <- lapply(d_var, VARselect, lag.max=5) 
+# pull out the lag with best BIC. Lower BIC = better (not BIC is labeled SV)
+# regardless of whether raw of normalised data used the lag chosen is the same
+lag_h1 <- as.numeric(lags$v1_obs$selection[3])
+lag_h2 <- as.numeric(lags$v2_obs$selection[3])
+
+# Interpreting transfer entropy (note: TE \in [0,1]):
+# If test significant suggests T_{X->Y} > 0 and the uncertainty about 
+# Y is reduced by the addition of X, that is X causes Y.
+
+# Output: provides not the transfer entropy and bias corrected effective transfer entropy  
+# Transfer entropy estimates are biased by small sample sizes. For large sample sizes TE and ETE 
+# will be approximately the same. For a single season the sample size is quite small so we want to 
+# go with ETE... see Behrendt et al. 2019 for more details
+shannon_te <- transfer_entropy(d_var$v1_obs, d_var$v2_obs)
+temp_res <- data.frame(coef(shannon_te))
+
+# creating the 95% CIs about ETE
+temp_res$lower95 <- temp_res$ete - 1.96*temp_res$se
+temp_res$upper95 <- temp_res$ete + 1.96*temp_res$se
+
+# add to the results list
+results[[i]]$transfer_entropy <- temp_res
 
 rm(temp_res)
 
@@ -179,13 +200,6 @@ rm(temp_res)
 # separated this method out as a bit more code required
 source("granger_analysis.R")
 
-#----- Transfer entropy analysis ------# 
-
-# determining the transfer entropy (note: TE \in [0,1] 
-# if significant suggests T_{X->Y} > 0 and the uncertainty about 
-# Y is reduced by the addition of X, that is X causes Y.
-shannon_te <- transfer_entropy(d_var$H1_obs, d_var$H2_obs)
-shannon_te
 
 #---- Wavelets analysis  ----# 
 
