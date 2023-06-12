@@ -16,6 +16,7 @@ library(forecast) # ndiff - check if differences in lags needed for stationary
 library(lmtest) # granger causality test
 library(vars) # VAR model - that which is underlying granger causality test
 library(boot)
+library(meboot)
 
 # checking stationary of time series
 
@@ -62,13 +63,18 @@ summary(var1)
 ar_v1=ar(d_var$v1_obs,order=var1$p,aic=F,method="ols")
 ar_v2=ar(d_var$v2_obs,order=var1$p,aic=F,method="ols")
 
-# Estimating the effect size using preventable fraction:
-# 1-(prediction estimate model with Y only/prediction estimate of model with X and Y)
+# Estimating the effect size using preventable fraction and log RSS
+
+# preventable fraction: 1-(prediction estimate model with Y only/prediction estimate of model with X and Y)
 # interpretation: 
 #   0 = no interaction 
 # -ve = strong negative interaction 
 # +ve = strong positive interaction 
 
+# log RSS = log(RSS_multivariate/RSS_univariate) interpretation: ** CHECK
+# 0 = no interaction
+# -ve = strong negative interaction 
+# +ve = strong positive interaction 
 
 # extracting model fit of simulated data for AR univariate model with Y only
 # i.e data - residuals for the model
@@ -120,9 +126,9 @@ meboot_v2out <- meboot(x=residuals_orig$v2_obs, reps=R, trim=0.10, elaps=TRUE)
 
 # estimating the statistics
 me_temp_res <- NULL
-for(i in 1:R){
-  meboot_data_v1 <- as.vector(orig_data$v1_obs[-c(1:p)] - residuals(var1)[,"v1_obs"] + meboot_v1out$ensemble[,i])
-  meboot_data_v2 <- as.vector(orig_data$v2_obs[-c(1:p)] - residuals(var1)[,"v2_obs"] + meboot_v1out$ensemble[,i])
+for(j in 1:R){
+  meboot_data_v1 <- as.vector(orig_data$v1_obs[-c(1:p)] - residuals(var1)[,"v1_obs"] + meboot_v1out$ensemble[,j])
+  meboot_data_v2 <- as.vector(orig_data$v2_obs[-c(1:p)] - residuals(var1)[,"v2_obs"] + meboot_v1out$ensemble[,j])
   meboot_data <- data.frame(cbind(v1_obs=meboot_data_v1, v2_obs=meboot_data_v2))
   
   # perform univariate AR models
@@ -137,13 +143,13 @@ for(i in 1:R){
   mefit_multi_v2 <- as.vector(meboot_VAR$varresult$v2_obs$fitted.values)
   
   # calculate statistics (prev frac and log RSS)
-  prev_frac_v1 <- 1-(sum(mefit_uni_v1, na.rm=T)/sum(mefit_multi_v1)) 
-  ratio_res_v1 <- log(sum(residuals(meboot_VAR)[,1]^2)/sum(residuals(meboot_AR_v1)^2,na.rm=T)) 
+  me_prev_frac_v1 <- 1-(sum(mefit_uni_v1, na.rm=T)/sum(mefit_multi_v1)) 
+  me_ratio_res_v1 <- log(sum(residuals(meboot_VAR)[,1]^2)/sum(residuals(meboot_AR_v1)^2,na.rm=T)) 
   
-  prev_frac_v2 <- 1-(sum(mefit_uni_v2, na.rm=T)/sum(mefit_multi_v2))
-  ratio_res_v2 <- log(sum(residuals(meboot_VAR)[,2]^2)/sum(residuals(meboot_AR_v2)^2,na.rm=T)) 
+  me_prev_frac_v2 <- 1-(sum(mefit_uni_v2, na.rm=T)/sum(mefit_multi_v2))
+  me_ratio_res_v2 <- log(sum(residuals(meboot_VAR)[,2]^2)/sum(residuals(meboot_AR_v2)^2,na.rm=T)) 
   # collect the results
-  res_out <- c(prev_frac_v1,ratio_res_v1,prev_frac_v2, ratio_res_v2)
+  res_out <- c(me_prev_frac_v1,me_ratio_res_v1,me_prev_frac_v2, me_ratio_res_v2)
   me_temp_res <- rbind(me_temp_res, res_out)
 }
 me_temp_res <- data.frame(me_temp_res, row.names=NULL)
@@ -152,12 +158,23 @@ names(me_temp_res) <- c("prev_frac_v1","ratio_res_v1","prev_frac_v2", "ratio_res
 # plot bootstrap replicates 
 # make data long 
 meboot_long <- me_temp_res %>% gather() 
-ggplot(aes(x=value),data=boot_long) + geom_histogram() + facet_grid(.~key, scales="free_x") 
+ggplot(aes(x=value),data=meboot_long) + geom_histogram() + facet_grid(.~key, scales="free_x") 
 
 # estimating ME 95% CIs 
+sd_meboot <- apply(me_temp_res, 2,sd)
+# original estimates
+orig_est <- c(prev_frac_v1, ratio_res_v1, prev_frac_v2, ratio_res_v2)
+# standard
+me_CI_lower95 <- orig_est - 1.96*sd_meboot
+me_CI_upper95 <- orig_est + 1.96*sd_meboot
+# percentile boot
+me_percCI_lower95 <- apply(me_temp_res, 2, quantile, prob=0.025)
+me_percCI_upper95 <- apply(me_temp_res, 2, quantile, prob=0.975)
 
-
-
+# rm unused variables now
+rm(meboot_VAR, mefit_multi_v1, mefit_multi_v2, meboot_AR_v1, meboot_AR_v2, meboot_data,
+   meboot_data_v1, meboot_data_v2,mefit_uni_v1, mefit_uni_v2, prev_frac_v1, prev_frac_v2, 
+   ratio_res_v1, ratio_res_v2, meboot_long)
 
 ##---- Block bootstrapping -----# 
 
@@ -192,8 +209,6 @@ boot_func <- function(tseries, orig_data, var_model,p) {
   return(res)
 }
 
-# number of bootstrap replicates
-R <- 300
 # implement the bootstrap - this approach is doing a block bootstrap with fixed 
 # blocks of size 4 weeks 
 boot_out <- tsboot(tseries=residuals_orig, statistic=boot_func, R = R, sim="fixed", l=4,
@@ -203,9 +218,8 @@ boot_out <- tsboot(tseries=residuals_orig, statistic=boot_func, R = R, sim="fixe
 bootstrap_samples <- data.frame(boot_out$t)
 names(bootstrap_samples) <- c("prev_frac_v1","ratio_res_v1","prev_frac_v2","ratio_res_v2")
 # make data long 
-boot_long <- bootstrap_samples %>% gather() 
+boot_long <- bootstrap_samples %>% tidyr::gather() 
 ggplot(aes(x=value),data=boot_long) + geom_histogram() + facet_grid(.~key, scales="free_x") 
-
 
 # calculate the 95% CI for each statistic
 # standard approach assuming normality of the sampling dist
@@ -219,20 +233,34 @@ CIperc_upper95 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.975)
 
 # output results 
 temp_res <- data.frame(cbind(original_estimate = summary(boot_out)$original,  
-             bootBias = summary(boot_out)$bootBias, # difference between mean estimate and the original
-             bootSE = summary(boot_out)$bootSE,
-             CI_lower95 = CI_lower95,
-             CI_upper95 = CI_upper95,
-             CIperc_lower95 = CIperc_lower95,
-             CIperc_upper95 = CIperc_upper95),
+             blockbootMean = apply(boot_out$t,2,mean),
+             blockbootBias = summary(boot_out)$bootBias, # difference between mean estimate and the original
+             blockbootSE = summary(boot_out)$bootSE,
+             blockboot_CI_lower95 = CI_lower95,
+             blockboot_CI_upper95 = CI_upper95,
+             blockboot_CIperc_lower95 = CIperc_lower95,
+             blockboot_CIperc_upper95 = CIperc_upper95,
+             mebootMean = apply(me_temp_res,2,mean),
+             mebootSE = sd_meboot,
+             me_CI_lower95 = me_CI_lower95,
+             me_CI_upper95 = me_CI_upper95,
+             me_percCI_lower95 = me_percCI_lower95,
+             me_percCI_upper95 = me_percCI_upper95),
              granger_p = c(rep(p_gt1,2), rep(p_gt2,2)),
              adf_p = c(rep(adf_v1$p.value,2), rep(adf_v2$p.value,2)),
              kpss_p = c(rep(kpss_v1$p.value,2), rep(kpss_v2$p.value,2)))
 temp_res$statistic <- rownames(temp_res)
 temp_res <- data.frame(temp_res, row.names=NULL)
 
-results[[i]]$granger <- temp_res 
+# create a list of outputs which includes the results and the bootstrap 
+# distributions
+res_list <- list(summary = temp_res, block_bootstraps = boot_out$t, me_bootstraps = me_temp_res)
+
+results[[i]]$granger <- res_list
 
 
-rm(adf_v1, adf_v2, kpss_v1, kpss_v2)
+rm(adf_v1, adf_v2, kpss_v1, kpss_v2, temp_res, gt1, gt2, p_gt1, p_gt2, orig_data,
+   boot_out, meboot_v1out, meboot_v2out, temp_res, me_temp_res, res_list, meboot_long,
+   var1, ar_v1, ar_v2, residuals_orig, CI_lower95, CI_upper95, CIperc_lower95,
+   CIperc_upper95)
              

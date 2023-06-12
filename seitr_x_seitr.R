@@ -174,7 +174,7 @@ results[[i]]$cor <- temp_res
 
 # plot of interaction 
 ggplot(aes(x=v1_obs,y=v2_obs),data=d1) + geom_point() + stat_cor()
-rm(temp_res)
+rm(temp_res, cor_raw)
 
 #----- Transfer entropy analysis ------# 
 
@@ -191,21 +191,22 @@ temp_res <- data.frame(coef(shannon_te))
 
 # creating the 95% CIs about ETE - note that in the code for transfer_entropy to calculate the 
 # se they simply look at the sd of the bootstrap samples NOT SE=sd/sqrt(n)
-temp_res$lower95 <- temp_res$ete - 1.96*temp_res$se/sqrt(N)
-temp_res$upper95 <- temp_res$ete + 1.96*temp_res$se/sqrt(N)
+temp_res$lower95 <- temp_res$ete - 1.96*temp_res$se
+temp_res$upper95 <- temp_res$ete + 1.96*temp_res$se
 
 # add to the results list
 results[[i]]$transfer_entropy <- temp_res
 
-rm(temp_res)
+rm(temp_res, shannon_te)
+
+#---- Granger causality analysis  ----# 
+# separated this method out as a bit more code required
+source("granger_analysis.R")
 
 #------- Convergent Cross mapping analysis -------# 
 # separated this method out as a bit more code required
 source("CCM.R")
 
-#---- Granger causality analysis  ----# 
-# separated this method out as a bit more code required
-source("granger_analysis.R")
 
 
 #---- Wavelets analysis  ----# 
