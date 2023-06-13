@@ -1,5 +1,5 @@
 ##################################################################################################################
-# R code to run pomp model 
+# R code to run pomp model and each of the methods
 # 
 # The C code for the pomp model is here: 
 # /Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/seitr_x_seitr.cpp
@@ -40,7 +40,7 @@ unique_ids <- (1 + (jobid - 1) * sobol_size / no_jobs) : (jobid * sobol_size / n
 mod_code <- readLines('/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/seitr_x_seitr.cpp')
 
 # pull out the various components of the C code ready to feed into pomp
-components_nm <- c('globs', 'dmeas', 'rmeas', 'rinit', 'skel', 'rsim')
+components_nm <- c('globs', 'dmeas', 'rmeas', 'rinit', 'rsim')
 # initialise list
 components_l <- vector(mode = 'list', length = length(components_nm))
 names(components_l) <- components_nm

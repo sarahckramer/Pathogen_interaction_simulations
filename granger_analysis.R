@@ -32,10 +32,8 @@ adf_v2 <- adf.test(d_var$v2_obs,k=lag_v2); adf_v2
 kpss_v1 <- kpss.test(d_var$v1_obs); kpss_v1
 kpss_v2 <- kpss.test(d_var$v2_obs); kpss_v2
 
-# if tests suggest non-stationarity then first difference, rerun the tests and 
-# is still not considered stationary apply approach anyway and just record the results of the stationarity 
-# test with outcome and a column which states if differencing has been applied
-
+# Decided I will just record if stationarity is met or not rather than differencing both series
+# Ask Mathheiu... 
 
 
 # running Granger test and extracting p-values
