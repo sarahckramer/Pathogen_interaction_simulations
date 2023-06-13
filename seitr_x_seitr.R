@@ -58,7 +58,7 @@ true_params <- data.frame(Ri1=2, Ri2=3,
                           gamma1=7/5, gamma2=7/10,
                           delta1=0.7, delta2=0.6,
                           rho1 = 0.5, rho2 = 0.2,
-                          theta_lambda1=1, theta_lambda2=1, 
+                          theta_lambda1=2, theta_lambda2=2, 
                           A=0, phi=0,
                           beta_sd1=0, beta_sd2=0, 
                           N=1000000,
@@ -109,44 +109,9 @@ d1$v2_obs_NORM <- (d1$v2_obs - mean(d1$v2_obs))/sd(d1$v2_obs)
 
 results[[i]]$data <- d1  
 
-#--- plotting the data---#
-# putting data into correct format to plot 
-# original simulated data
-d1_plot <- d1 %>%  dplyr::select(time,v1_obs, v2_obs) %>%
-  pivot_longer(v1_obs:v2_obs, names_to = 'Vir', values_to = 'Inc')
-d1_plot$Inc_percent <- (d1_plot$Inc/1000000) * 100
-head(d1_plot)
-d1_plot$Vir <- as.factor(d1_plot$Vir)
-levels(d1_plot$Vir) <- c("virus 1", "virus 2")
-# plot out the data
-ggplot(aes(x=time,y=Inc_percent,colour=Vir),data=d1_plot) + geom_line() + 
-  theme_classic() + theme(legend.position="bottom", legend.title=element_blank()) + labs(y="Incidence (%)")
-
-# Normalised data
-d1_plot <- d1 %>%  dplyr::select(time,v1_obs_NORM, v2_obs_NORM) %>%
-  pivot_longer(v1_obs_NORM:v2_obs_NORM, names_to = 'Vir', values_to = 'Inc')
-d1_plot$Inc_percent <- (d1_plot$Inc/1000000) * 100
-head(d1_plot)
-d1_plot$Vir <- as.factor(d1_plot$Vir)
-levels(d1_plot$Vir) <- c("virus 1", "virus 2")
-# plot out the data
-ggplot(aes(x=time,y=Inc_percent,colour=Vir),data=d1_plot) + geom_line() + 
-  theme_classic() + theme(legend.position="bottom", legend.title=element_blank()) + labs(y="Incidence (%)")
-
-# plotting H_obs v H (i.e. total positive tests vs total number of infections)
-d1_plot2 <- d1 %>%  dplyr::select(time,v1_obs, v2_obs, v1_T, v2_T) %>% 
-  pivot_longer(v1_obs:v2_T, names_to = 'Vir', values_to = 'Inc')
-head(d1_plot2)
-d1_plot2$Inc_percent <- (d1_plot2$Inc/1000000) * 100
-head(d1_plot2)
-d1_plot2$Vir <- as.factor(d1_plot2$Vir)
-# plot 
-ggplot(aes(x=time, y=Inc_percent), data=d1_plot2) + geom_line() + facet_wrap(.~Vir) +
-  theme_bw()
 
 # remove datasets no longer going to use
-rm(s1,s2,s1_states,s2_states,d1_plot2,d1_plot,components_l,po,
-   components_nm,mod_code,i,nm)
+rm(s1,s1_states,components_l,po,components_nm,mod_code,i,nm, true_params)
 
 ##########################################################
 ## Start testing each method for estimating interaction ##
@@ -172,8 +137,6 @@ temp_res <- data.frame(cbind(as.numeric(cor_raw$estimate), cor_raw$conf.int[1], 
 names(temp_res) <- c("cor", "CI_lower_95", "CI_upper_95", "p_value")
 results[[i]]$cor <- temp_res
 
-# plot of interaction 
-ggplot(aes(x=v1_obs,y=v2_obs),data=d1) + geom_point() + stat_cor()
 rm(temp_res, cor_raw)
 
 #----- Transfer entropy analysis ------# 
