@@ -122,11 +122,6 @@ for (i in 1:num_surr) {
   ccm_out = ccm(v1_data, E = E_v1, lib_column = "v1_obs", target_column = "v2_obs", 
                 lib_sizes = seq(10, dim(d1)[1], 2), num_samples = R, tp=optimal_tp_v1xv2,
                 random_libs = TRUE, replace = TRUE, stats_only=FALSE)
-    
-    
-    # CCM(dataFrame = v1_data, E = E_v1, Tp = optimal_tp_v1xv2,
-    #              columns = 'v1_obs', target = targetCol,
-    #              libSizes = seq(10, dim(d1)[1], 2), sample = 1)
   
   col = paste('v1_obs', ':', targetCol, sep = '')
   
