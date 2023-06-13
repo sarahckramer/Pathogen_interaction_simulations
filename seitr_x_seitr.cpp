@@ -10,8 +10,6 @@ using namespace Rcpp;
 // rmeasure - simulation of f_{Y_n|X_n} for measurement model
 // dmeasure - evaluation of f_{Y_n|X_n} for measurement model 
 // rprocess - simulation of f_{X_n|X_{n-1}} for the process model (specified in rsim)
-// dprocess - evaluation of f_{X_n|X_{n-1}} for the process model (specified in skeleton - skel) 
-
 
 // Created by: Sarah Pirikahu
 // Creation date: 22 December 2022
@@ -22,7 +20,8 @@ using namespace Rcpp;
 //start_globs
 
 // Probability of transition for event of rate r during time step delta_t
-// p = 1 - exp(-r * delta_t)
+// p = 1 - exp(-r * delta_t). This function transforms our transmission, recovery, etc rates 
+// into probabilies for a particular time step delta_t
 static double pTrans(double r, double delta_t) {
   
   // r: event (instantaneous rate)
@@ -42,6 +41,8 @@ static double pTrans(double r, double delta_t) {
 // R02 = initial proportion of the population immune to virus 2
 // R12 = initial proportion of the population immune to both virus 1 and 2 
 // N = overall population size
+
+// Each compartment
 X_SS = nearbyint((1.0 - E01 - E02 - R01 - R02 - R12) * N);
 X_ES = nearbyint(E01 * N);
 X_IS = 0;
@@ -120,7 +121,9 @@ lik = (give_log) ? ll : exp(ll);
 
 //---------- PROCESS MODEL ----------//
 
-// SIMULATION stochastic model (note: you don't need a skeleton when you are doing only a stochastic model)
+// Stochastic model SIMULATION
+// note: you don't need a skeleton when you are doing only a stochastic model
+
 //start_rsim
 // calculate prevalence of each virus 
 double p1 = (X_IS + X_IE +  X_II + X_IT + X_IR); // virus 1
@@ -157,17 +160,16 @@ double lambda2 = beta2 * (p2/N) * s; // virus 2
 Rprintf("p1=%.2f, p2=%.2f, beta1=%.1f, beta2=%.1f lambda1=%.3f, lambda2=%.3f, dt=%.3f\n", 
         p1, p2, beta1, beta2, lambda1, lambda2,dt);
         
-// initalising transitions 
+// specifying the transitions 
 double rates[32];// vector of length 32
 double fromSS[2], fromES[2], fromIS[2], fromTS[2];
 double fromSE[2], fromEE[2], fromIE[2], fromTE[2];
 double fromSI[2], fromEI[2], fromII[2], fromTI[2];
 double fromST[2], fromET[2], fromIT[2], fromTT[2]; // vectors of length 2
-double fromRS, fromRE, fromRI, fromRT, fromSR, fromER, fromIR, fromTR;
+double fromRS, fromRE, fromRI, fromRT, fromSR, fromER, fromIR, fromTR; // constants
 
 // specifying rate for transition - note: vector indexing starts at 0 for C++ rather than 1 like R
 
-//note: indexing in C++ starts at 0 NOT 1
 // row 1 of schematic
 rates[0] = lambda1; // force of infection virus 1 (X_SS -> X_ES)
 rates[1] = lambda2; // force of infection virus 2 (X_SS -> X_SE)
