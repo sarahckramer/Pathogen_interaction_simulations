@@ -120,74 +120,7 @@ lik = (give_log) ? ll : exp(ll);
 
 //---------- PROCESS MODEL ----------//
 
-// DETERMINISTIC SKELETON
-// Don't need this if we decide to only do stochastic models
-// remove before pushing to GIT if we go down this route. 
-//start_skel
-// calculating the prevalence of each infection 
-double p1 = (X_IS + X_IE + X_II + X_IT + X_IR); // virus 1
-double p2 = (X_SI + X_EI + X_II + X_TI + X_RI); // virus 2
-
-// calculate the transmission rate for each virus 
-// where beta_i = Reff*gamma and Reff is the effective reproductive number at time i in a partially susceptible 
-// population.   
-
-double beta1 = Ri1 / (1.0 - (R01 + R12)) * gamma1; // virus 1 
-double beta2 = Ri2 / (1.0 - (R02 + R12)) * gamma2; // virus 2 
-
-// incorporate seasonality parameter for each virus 
-// where A = amplitude, omega = annual angular frequency, t = time and phi = phase
-double omega = (2 * M_PI)/52;
-double s = 1 + A * cos(omega * (t - phi));
-
-// calculate force of infection for each virus - note A = 0 means no seasonality component  
-double lambda1 = beta1 * (p1/N) * s; // virus 1
-double lambda2 = beta2 * (p2/N) * s; // virus 2
-
-
-// ODEs
-// column 1 of schematic
-DX_SS = -(lambda1 + lambda2) * X_SS; 
-DX_SE = lambda2 * X_SS - (lambda1 + sigma2) * X_SE;
-DX_SI = sigma2 * X_SE - (lambda1 * theta_lambda2 + gamma2) * X_SI;
-DX_ST = gamma2 * X_SI - (lambda1 * theta_lambda2 + delta2) * X_ST;
-DX_SR = delta2 * X_ST - lambda1 * X_SR;
-  
-// column 2  of schematic
-DX_ES = lambda1 * X_SS - (sigma1 + lambda2) * X_ES;
-DX_EE = lambda2 * X_ES + lambda1 * X_SE - (sigma1 + sigma2) * X_EE;
-DX_EI = lambda1 * theta_lambda2 * X_SI + sigma2 * X_EE - (sigma1 + gamma2) * X_EI;
-DX_ET = lambda2 * X_EI + lambda1 * theta_lambda2 * X_ST - (sigma1 + delta2) * X_ET;
-DX_ER = lambda1 * X_SR + delta2 * X_ET - sigma1 * X_ER;
-  
-// column 3  of schematic
-DX_IS = sigma1 * X_ES - (gamma1 + lambda2 * theta_lambda1) * X_IS;
-DX_IE = lambda2 * theta_lambda1 * X_IS + sigma1 * X_EE - (gamma1 + sigma2)  * X_IE;
-DX_II = sigma1 * X_EI + sigma2 * X_IE - (gamma1 + gamma2) * X_II;
-DX_IT = sigma1 * X_ET + gamma2 * X_II - (gamma1 + delta2) * X_IT;
-DX_IR = delta2 * X_IT + sigma1 * X_ER - gamma1 * X_IR;
-
-//column 4  of schematic
-DX_TS = gamma1 * X_IS - (delta1 + lambda2 * theta_lambda1) * X_TS;
-DX_TE = lambda2 * theta_lambda1 * X_TS + gamma1 * X_IE - (delta1 + sigma2) * X_TE;  
-DX_TI = sigma2 * X_TE + gamma1 * X_II - (delta1 + gamma2) * X_TI;
-DX_TT = gamma1 * X_IT + gamma2 * X_TI - (delta1 + delta2)* X_TT;
-DX_TR = gamma1 * X_IR + delta2 * X_TT - delta1 * X_TR;
-
-//column 5  of schematic
-DX_RS = delta1 * X_TS - lambda2 * X_RS;
-DX_RE = lambda2 * X_RS + delta1 * X_TE - sigma2 * X_RE;
-DX_RI = sigma2 * X_RE + delta1 * X_TI - gamma2 * X_RI;
-DX_RT = gamma2 * X_RI + delta1 * X_TT - delta2* X_RT;
-DX_RR = delta2 * X_RT + delta1  * X_TR;
-
-// incidence rates of infection overall for each virus 
-Dv1_T = gamma1 * p1; // virus 1 
-Dv2_T = gamma2 * p2; // virus 2 
-//end_skel
-
-
-// SIMULATION - addition of stochasticity 
+// SIMULATION stochastic model (note: you don't need a skeleton when you are doing only a stochastic model)
 //start_rsim
 // calculate prevalence of each virus 
 double p1 = (X_IS + X_IE +  X_II + X_IT + X_IR); // virus 1
