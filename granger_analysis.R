@@ -1,8 +1,6 @@
 ################################################################################
 #                       Granger causality analysis        
 #
-# Useful documentation describing and giving examples:
-# 
 # To run Granger analysis we need the time series to be covariance and mean 
 # stationary
 #
