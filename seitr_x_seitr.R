@@ -90,7 +90,6 @@ po <- pomp(data = data.frame(time = seq(from = 0, to = 52, by = 1), v1_obs = NA,
            globals = components_l[['globs']],
            dmeasure = components_l[['dmeas']],
            rmeasure = components_l[['rmeas']],
-           #skeleton = vectorfield(components_l[['skel']]),
            rprocess = euler(step.fun = components_l[['rsim']], delta.t = 1),
            rinit = components_l[['rinit']]
 )
@@ -118,7 +117,7 @@ rm(s1,s1_states,components_l,po,components_nm,mod_code,i,nm, true_params)
 ##########################################################
 
 # create dataset with just the observed cases
-d_var <- d1[,c("v1_obs", "v1_obs_NORM", "v2_obs", "v2_obs_NORM")]
+d_var <- d1[,c("v1_obs", "v2_obs")]
 # specify total number of weeks of data we have 
 N <- d_var[,1] %>% length()
   
