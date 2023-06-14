@@ -170,8 +170,6 @@ source("granger_analysis.R")
 # separated this method out as a bit more code required
 source("CCM.R")
 
-#----- Bayesian multivariate autoregression -----# 
-source("Bayesian_MAR.R")
 
 #----- Likelihood approach -----# 
 
