@@ -56,7 +56,7 @@ for (nm in components_nm) {
 true_params <- data.frame(Ri1=2, Ri2=3,
                           sigma1=1, sigma2=1 ,
                           gamma1=7/5, gamma2=7/10,
-                          delta1=0.7, delta2=0.6,
+                          delta1=0.6, delta2=0.6,
                           rho1 = 0.5, rho2 = 0.2,
                           theta_lambda1=2, theta_lambda2=2, 
                           A=0, phi=0,
@@ -171,29 +171,6 @@ source("granger_analysis.R")
 source("CCM.R")
 
 
-
-#---- Wavelets analysis  ----# 
-
-my.wc <- analyze.coherency(d_var, my.pair = c("H1_obs","H2_obs"),
-                           loess.span = 0,
-                           dt = 1, dj = 1/100,
-                           make.pval = TRUE, n.sim = 10)
-
-wc.image(my.wc, n.levels = 250,
-         siglvl.contour = 0.1, siglvl.arrow = 0.05, ## default values
-         legend.params = list(lab = "cross-wavelet power levels"),
-         timelab = "")
-
-wc.image(my.wc, which.image = "wc", color.key = "interval", n.levels = 250,
-         siglvl.contour = 0.1, siglvl.arrow = 0.05,
-         legend.params = list(lab = "wavelet coherence levels"),
-         timelab = "")
-
-wc.phasediff.image(my.wc, which.contour = "wc", use.sAngle = TRUE,
-                   n.levels = 250, siglvl = 0.1,
-                   legend.params = list(lab = "phase difference levels",
-                                        lab.line = 3),
-                   timelab = "")
 
 
 
@@ -394,4 +371,26 @@ model {
 }
 
 
+#---- Wavelets analysis  ----# 
+
+my.wc <- analyze.coherency(d_var, my.pair = c("H1_obs","H2_obs"),
+                           loess.span = 0,
+                           dt = 1, dj = 1/100,
+                           make.pval = TRUE, n.sim = 10)
+
+wc.image(my.wc, n.levels = 250,
+         siglvl.contour = 0.1, siglvl.arrow = 0.05, ## default values
+         legend.params = list(lab = "cross-wavelet power levels"),
+         timelab = "")
+
+wc.image(my.wc, which.image = "wc", color.key = "interval", n.levels = 250,
+         siglvl.contour = 0.1, siglvl.arrow = 0.05,
+         legend.params = list(lab = "wavelet coherence levels"),
+         timelab = "")
+
+wc.phasediff.image(my.wc, which.contour = "wc", use.sAngle = TRUE,
+                   n.levels = 250, siglvl = 0.1,
+                   legend.params = list(lab = "phase difference levels",
+                                        lab.line = 3),
+                   timelab = "")
 

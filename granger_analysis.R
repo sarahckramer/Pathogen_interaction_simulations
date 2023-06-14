@@ -106,11 +106,11 @@ expect_true(length(fit_multi_v2)==length(fit_uni_v2))
 # Estimate prevelence fraction and log residual sum of squares (Barraquand et al. 2021)
 # v1
 prev_frac_v1 <- 1-(sum(fit_uni_v1)/sum(fit_multi_v1)); prev_frac_v1 # prevalence fraction 
-ratio_res_v1 <- log(sum(residuals(var1)[,1]^2)/sum(residuals(ar_v1)^2,na.rm=T)); ratio_res_v1 # log RSS
+logRSS_v1 <- log(sum(residuals(ar_v1)^2,na.rm=T)/sum(residuals(var1)[,1]^2)); logRSS_v1 # log RSS
 
 # v2 
 prev_frac_v2 <- 1-(sum(fit_uni_v2)/sum(fit_multi_v2)); prev_frac_v2
-ratio_res_v2 <- log(sum(residuals(var1)[,2]^2)/sum(residuals(ar_v2)^2,na.rm=T)); ratio_res_v2 
+logRSS_v2 <- log(sum(residuals(ar_v2)^2,na.rm=T)/sum(residuals(var1)[,2]^2)); logRSS_v2 
 
 # Estimating the uncertainty around these statistics # 
 # bootstrapping 
@@ -146,16 +146,16 @@ for(j in 1:R){
   
   # calculate statistics (prev frac and log RSS)
   me_prev_frac_v1 <- 1-(sum(mefit_uni_v1, na.rm=T)/sum(mefit_multi_v1)) 
-  me_ratio_res_v1 <- log(sum(residuals(meboot_VAR)[,1]^2)/sum(residuals(meboot_AR_v1)^2,na.rm=T)) 
+  me_logRSS_v1 <- log(sum(residuals(meboot_AR_v1)^2,na.rm=T)/sum(residuals(meboot_VAR)[,1]^2)) 
   
   me_prev_frac_v2 <- 1-(sum(mefit_uni_v2, na.rm=T)/sum(mefit_multi_v2))
-  me_ratio_res_v2 <- log(sum(residuals(meboot_VAR)[,2]^2)/sum(residuals(meboot_AR_v2)^2,na.rm=T)) 
+  me_logRSS_v2 <- log(sum(residuals(meboot_AR_v2)^2,na.rm=T)/sum(residuals(meboot_VAR)[,2]^2)) 
   # collect the results
-  res_out <- c(me_prev_frac_v1,me_ratio_res_v1,me_prev_frac_v2, me_ratio_res_v2)
+  res_out <- c(me_prev_frac_v1,me_logRSS_v1,me_prev_frac_v2, me_logRSS_v2)
   me_temp_res <- rbind(me_temp_res, res_out)
 }
 me_temp_res <- data.frame(me_temp_res, row.names=NULL)
-names(me_temp_res) <- c("prev_frac_v1","ratio_res_v1","prev_frac_v2", "ratio_res_v2")
+names(me_temp_res) <- c("prev_frac_v1","logRSS_v1","prev_frac_v2", "logRSS_v2")
 
 # plot bootstrap replicates 
 # make data long 
@@ -165,7 +165,7 @@ ggplot(aes(x=value),data=meboot_long) + geom_histogram() + facet_grid(.~key, sca
 # estimating ME 95% CIs 
 sd_meboot <- apply(me_temp_res, 2,sd)
 # original estimates
-orig_est <- c(prev_frac_v1, ratio_res_v1, prev_frac_v2, ratio_res_v2)
+orig_est <- c(prev_frac_v1, logRSS_v1, prev_frac_v2, logRSS_v2)
 # standard
 me_CI_lower95 <- orig_est - 1.96*sd_meboot
 me_CI_upper95 <- orig_est + 1.96*sd_meboot
@@ -176,7 +176,7 @@ me_percCI_upper95 <- apply(me_temp_res, 2, quantile, prob=0.975)
 # rm unused variables now
 rm(meboot_VAR, mefit_multi_v1, mefit_multi_v2, meboot_AR_v1, meboot_AR_v2, meboot_data,
    meboot_data_v1, meboot_data_v2,mefit_uni_v1, mefit_uni_v2, prev_frac_v1, prev_frac_v2, 
-   ratio_res_v1, ratio_res_v2, meboot_long)
+   logRSS_v1, logRSS_v2, meboot_long)
 
 ##---- Block bootstrapping -----# 
 
@@ -201,13 +201,13 @@ boot_func <- function(tseries, orig_data, var_model,p) {
   
   # calculate statistics (prev frac and log RSS)
   prev_frac_v1 <- 1-(sum(fit_uni_v1,na.rm=T)/sum(fit_multi_v1)) 
-  ratio_res_v1 <- log(sum(residuals(bootstrap_VAR)[,1]^2)/sum(residuals(bootstrap_AR_v1)^2,na.rm=T)) 
+  logRSS_v1 <- log(sum(residuals(bootstrap_AR_v1)^2,na.rm=T)/sum(residuals(bootstrap_VAR)[,1]^2)) 
   
   prev_frac_v2 <- 1-(sum(fit_uni_v2,na.rm=T)/sum(fit_multi_v2))
-  ratio_res_v2 <- log(sum(residuals(bootstrap_VAR)[,2]^2)/sum(residuals(bootstrap_AR_v2)^2,na.rm=T)) 
+  logRSS_v2 <- log(sum(residuals(bootstrap_AR_v2)^2,na.rm=T)/sum(residuals(bootstrap_VAR)[,2]^2)) 
   
   # combine results into vector for output
-  res <- c(prev_frac_v1, ratio_res_v1, prev_frac_v2, ratio_res_v2)
+  res <- c(prev_frac_v1, logRSS_v1, prev_frac_v2, logRSS_v2)
   return(res)
 }
 
@@ -218,7 +218,7 @@ boot_out <- tsboot(tseries=residuals_orig, statistic=boot_func, R = R, sim="fixe
 
 # check out the bootstrap distributions 
 bootstrap_samples <- data.frame(boot_out$t)
-names(bootstrap_samples) <- c("prev_frac_v1","ratio_res_v1","prev_frac_v2","ratio_res_v2")
+names(bootstrap_samples) <- c("prev_frac_v1","logRSS_v1","prev_frac_v2","logRSS_v2")
 # make data long 
 boot_long <- bootstrap_samples %>% tidyr::gather() 
 ggplot(aes(x=value),data=boot_long) + geom_histogram() + facet_grid(.~key, scales="free_x") 
