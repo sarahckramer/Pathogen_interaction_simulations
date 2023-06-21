@@ -106,7 +106,7 @@ expect_true(length(fit_multi_v2)==length(fit_uni_v2))
 prev_frac_v1 <- 1-(sum(fit_uni_v1)/sum(fit_multi_v1)); prev_frac_v1 # prevalence fraction 
 logRSS_v1 <- log(sum(residuals(ar_v1)^2,na.rm=T)/sum(residuals(var1)[,1]^2)); logRSS_v1 # log RSS
 
-# v2 
+# v2  
 prev_frac_v2 <- 1-(sum(fit_uni_v2)/sum(fit_multi_v2)); prev_frac_v2
 logRSS_v2 <- log(sum(residuals(ar_v2)^2,na.rm=T)/sum(residuals(var1)[,2]^2)); logRSS_v2 
 
@@ -260,7 +260,7 @@ results[[i]]$granger <- res_list
 
 
 rm(adf_v1, adf_v2, kpss_v1, kpss_v2, temp_res, gt1, gt2, p_gt1, p_gt2, orig_data,
-   boot_out, meboot_v1out, meboot_v2out, temp_res, me_temp_res, res_list, meboot_long,
+   boot_out, meboot_v1out, meboot_v2out, me_temp_res, res_list,
    var1, ar_v1, ar_v2, residuals_orig, CI_lower95, CI_upper95, CIperc_lower95,
    CIperc_upper95)
              

@@ -12,7 +12,7 @@
 library(rEDM) 
 
 # create dataset with just the observed cases
-d_ccm <- d1[,c("time","v1_obs", "v2_obs")]
+d_ccm <- d1[,c("v1_obs", "v2_obs")]
 
 # Determining Embedding dimension (i.e. the number of lags used to build up the shadow manifold)
 # Based on the prediction skill of the model. See rEDM vingette https://ha0ye.github.io/rEDM/articles/rEDM.html 
@@ -76,19 +76,20 @@ optimal_tp_v2xv1 <- v1xv2[which.max(v1xv2$`v2_obs:v1_obs`),]$tp
 # plot
 #ggplot(v1xv2, aes(x = tp, y = `v1_obs:v2_obs`)) + geom_line() 
 #ggplot(v2xv1, aes(x=tp, y = `v2_obs:v1_obs`)) + geom_line()
-
+ggplot(aes(x=time,y=v1_obs), data=d1) + geom_line()
 
 #----- run CCM ------#
 
 # number of samples to do with the ccm 
 R <- 100
 # run the ccm 
+lib_max <- dim(d1)[1] - max(abs(optimal_tp_v1xv2),abs(optimal_tp_v2xv1)) -1
 v1_xmap_v2 <- ccm(d_ccm, E = E_v1, lib_column = "v1_obs", target_column = "v2_obs", 
-                  lib_sizes = seq(10, dim(d1)[1], 2), num_samples = R, tp=optimal_tp_v1xv2,
+                  lib_sizes = seq(10, lib_max, 2), num_samples = R, tp=optimal_tp_v1xv2,
                   random_libs = TRUE, replace = TRUE, stats_only=FALSE)
 
 v2_xmap_v1 <- ccm(d_ccm, E = E_v2, lib_column = "v1_obs", target_column = "v2_obs", 
-                  lib_sizes = seq(10, dim(d1)[1], 2), num_samples = R, tp=optimal_tp_v2xv1,
+                  lib_sizes = seq(10, lib_max, 2), num_samples = R, tp=optimal_tp_v2xv1,
                   random_libs = TRUE, replace = TRUE, stats_only=FALSE)
 
 # pull out the mean rho for each library size
@@ -129,14 +130,14 @@ surr_v2 <- make_surrogate_data(d_ccm$v2_obs, method = "random", num_surr = num_s
 # run ccm for surrogate data
 # estimating max lib value 
 abs_max_tp <- max(abs(optimal_tp_v1xv2), abs(optimal_tp_v2xv1))
-lib_max_null <- dim(v1_data)[1] - abs_max_tp
+lib_max_null <- dim(surr_v1)[1] - abs_max_tp
 
 # data.frame to hold CCM rho values
 rho_surr_v1_xmap_v2 <- data.frame(LibSize = seq(10, lib_max_null, 2)) 
 rho_surr_v2_xmap_v1 <- data.frame(LibSize = seq(10, lib_max_null, 2)) 
 
 # creating data frame with observed and surrogate data to be used with ccm 
-v1_data <-  as.data.frame(cbind(seq(1:length(d_ccm$v1_obs)), d_ccm$v1_obs, surr_v1))
+v1_data <-  data.frame(cbind(seq(1:length(d_ccm$v1_obs)), d_ccm$v1_obs, surr_v1))
 names(v1_data) <- c('time', 'v1_obs', paste('T', as.character(seq(1,100)), sep = ''))
 
 v2_data <- as.data.frame(cbind(seq(1:length(d_ccm$v2_obs)), d_ccm$v2_obs, surr_v2))
@@ -220,6 +221,6 @@ overall_res_list <- list(summary=temp_res, v1_xmap_v2_preds=all_predictions_v1,
 results[[i]]$CCM <- overall_res_list
 
 rm(temp_res, res, overall_res_list, mean_preds, mean_rho_v1_xmap_v2, mean_rho_v2_xmap_v1, v1_data,v2_data,
-   interval_perc_v1, interval_perc_v2, intervals_surr_v1_xmap_v2, intervals_surr_v2_xmap_v1, rho_surr_v1_xmap_v2,
+   intervals_surr_v1_xmap_v2, intervals_surr_v2_xmap_v1, rho_surr_v1_xmap_v2,
    rho_surr_v2_xmap_v1, ks_out_v1_x_v2, ks_out_v2_x_v1, v1xv2, v2xv1)
 

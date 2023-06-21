@@ -53,17 +53,31 @@ for (nm in components_nm) {
 
 
 # create dataframe of single set of parameter inputs
+true_params <- data.frame(Ri1=1.3, Ri2=4.5,
+                          sigma1=1, sigma2=1/5,
+                          gamma1=1/4, gamma2=1/10,
+                          delta1=1, delta2=1,
+                          rho1 = 0.2, rho2 = 0.2,
+                          theta_lambda1=0, theta_lambda2=0, 
+                          A=0, phi=0,
+                          beta_sd1=0, beta_sd2=0, 
+                          N=3000000,
+                          E01=0.001, E02=0.001,
+                          R01=0.4, R02=0.3, R12=0.1)
+
+# non realistic parameters that give proper peaks
 true_params <- data.frame(Ri1=2, Ri2=3,
                           sigma1=1, sigma2=1 ,
                           gamma1=7/5, gamma2=7/10,
                           delta1=0.6, delta2=0.6,
                           rho1 = 0.5, rho2 = 0.2,
-                          theta_lambda1=2, theta_lambda2=2, 
+                          theta_lambda1=1, theta_lambda2=1, 
                           A=0, phi=0,
                           beta_sd1=0, beta_sd2=0, 
-                          N=1000000,
+                          N=3000000,
                           E01=0.01, E02=0.01,
                           R01=0.1, R02=0.1, R12=0.001)
+
 
 #---- Create list to save the parameter sets and results of our different methods ---# 
 
@@ -102,11 +116,10 @@ s1 <- simulate(po, times=1:52)
 s1_states <- as(s1, "data.frame") 
 d1 <- s1_states
 
-# normalise case data
-d1$v1_obs_NORM <- (d1$v1_obs - mean(d1$v1_obs))/sd(d1$v1_obs)
-d1$v2_obs_NORM <- (d1$v2_obs - mean(d1$v2_obs))/sd(d1$v2_obs)
-
 results[[i]]$data <- d1  
+
+# some plotting of simulated data
+ggplot(aes(x=time, y=v1_obs),data=d1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue")
 
 
 # remove datasets no longer going to use
@@ -115,6 +128,7 @@ rm(s1,s1_states,components_l,po,components_nm,mod_code,i,nm, true_params)
 ##########################################################
 ## Start testing each method for estimating interaction ##
 ##########################################################
+i=1
 
 # create dataset with just the observed cases
 d_var <- d1[,c("v1_obs", "v2_obs")]
