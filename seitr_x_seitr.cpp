@@ -129,7 +129,7 @@ lik = (give_log) ? ll : exp(ll);
 double p1 = (X_IS + X_IE +  X_II + X_IT + X_IR); // virus 1
 double p2 = (X_SI + X_EI +  X_II + X_TI + X_RI); // virus 2
 
-// calculate basic reproductive number R0 for each virus taking into consideration 
+// calculate basic reproductive number R0 for each virus 
 double R0_1 = Ri1 / (1.0 - (R01 + R12)); // virus 1
 double R0_2 = Ri2 / (1.0 - (R02 + R12)); // virus 2
 
@@ -161,12 +161,12 @@ Rprintf("p1=%.2f, p2=%.2f, beta1=%.1f, beta2=%.1f lambda1=%.3f, lambda2=%.3f, dt
         p1, p2, beta1, beta2, lambda1, lambda2,dt);
         
 // specifying the transitions 
-double rates[32];// vector of length 32
-double fromSS[2], fromES[2], fromIS[2], fromTS[2];
-double fromSE[2], fromEE[2], fromIE[2], fromTE[2];
-double fromSI[2], fromEI[2], fromII[2], fromTI[2];
-double fromST[2], fromET[2], fromIT[2], fromTT[2]; // vectors of length 2
-double fromRS, fromRE, fromRI, fromRT, fromSR, fromER, fromIR, fromTR; // constants
+double rates[49];// vector of length 49
+double fromSS[2], fromES[2], fromIS[2], fromTS[2], fromRS[2];
+double fromSE[2], fromEE[2], fromIE[2], fromTE[2], fromRE[2];
+double fromSI[2], fromEI[2], fromII[2], fromTI[2], fromRI[2];
+double fromST[2], fromET[2], fromIT[2], fromTT[2], fromRT[2]; 
+double fromSR[2], fromER[2], fromIR[2], fromTR[2], fromRR[2]; // vectors of length 2
 
 // specifying rate for transition - note: vector indexing starts at 0 for C++ rather than 1 like R
 
@@ -179,36 +179,57 @@ rates[4] = gamma1; // (X_IS -> X_TS)
 rates[5] = lambda2 * theta_lambda1; // (X_IS -> X_IE)
 rates[6] = delta1; // (X_TS -> X_RS)
 rates[7] = lambda2 * theta_lambda1; // (X_TS -> X_TE)
- 
+rates[8] = lambda2; // (X_RS -> X_RE)
+rates[9] = w1; // (X_RS -> X_SS)
+
 // row 2 of schematic
-rates[8] = lambda1; // (X_SE -> X_EE)
-rates[9] = sigma2;  //  (X_SE -> X_SI)
-rates[10] = sigma1; // (X_EE -> X_IE)
-rates[11] = sigma2; // (X_EE -> X_EI)
-rates[12] = gamma1; // (X_IE -> X_TE)
-rates[13] = sigma2; // (X_IE -> X_II)
-rates[14] = delta1; // (X_TE -> X_RE)
-rates[15] = sigma2; // (X_TE -> X_TI)
+rates[10] = lambda1; // (X_SE -> X_EE)
+rates[11] = sigma2;  //  (X_SE -> X_SI)
+rates[12] = sigma1; // (X_EE -> X_IE)
+rates[13] = sigma2; // (X_EE -> X_EI)
+rates[14] = gamma1; // (X_IE -> X_TE)
+rates[15] = sigma2; // (X_IE -> X_II)
+rates[16] = delta1; // (X_TE -> X_RE)
+rates[17] = sigma2; // (X_TE -> X_TI)
+rates[18] = sigma2; // (X_RE -> X_RI)
+rates[19] = w1; // (X_RE -> X_SE)
 
 // row 3 of schematic
-rates[16] = lambda1 * theta_lambda2; // (X_SI -> X_EI)
-rates[17] = gamma2; // (X_SI -> X_ST)
-rates[18] = sigma1; // (X_EI -> X_II)
-rates[19] = gamma2; // (X_EI -> X_ET)
-rates[20] = gamma1; // (X_II -> X_TI)
-rates[21] = gamma2; // (X_II -> X_IT)
-rates[22] = delta1; // (X_TI -> X_RI)
-rates[23] = gamma2; // (X_TI -> X_TT)
+rates[20] = lambda1 * theta_lambda2; // (X_SI -> X_EI)
+rates[21] = gamma2; // (X_SI -> X_ST)
+rates[22] = sigma1; // (X_EI -> X_II)
+rates[23] = gamma2; // (X_EI -> X_ET)
+rates[24] = gamma1; // (X_II -> X_TI)
+rates[25] = gamma2; // (X_II -> X_IT)
+rates[26] = delta1; // (X_TI -> X_RI)
+rates[27] = gamma2; // (X_TI -> X_TT)
+rates[28] = gamma2; // (X_RI -> X_RT)
+rates[29] = w1; // (X_RI -> X_SI)
 
 // row 4 of schematic
-rates[24] = lambda1 * theta_lambda2; // (X_ST -> X_ET)
-rates[25] = delta2; // (X_ST -> X_SR)
-rates[26] = sigma1; // (X_ET -> X_IT)
-rates[27] = delta2; // (X_ET -> X_ER)
-rates[28] = gamma1; // (X_IT -> X_TT)
-rates[29] = delta2; // (X_IT -> X_IR)
-rates[30] = delta1; // (X_TT -> X_RT)
-rates[31] = delta2; // (X_TT -> X_TR)
+rates[30] = lambda1 * theta_lambda2; // (X_ST -> X_ET)
+rates[31] = delta2; // (X_ST -> X_SR)
+rates[32] = sigma1; // (X_ET -> X_IT)
+rates[33] = delta2; // (X_ET -> X_ER)
+rates[34] = gamma1; // (X_IT -> X_TT)
+rates[35] = delta2; // (X_IT -> X_IR)
+rates[36] = delta1; // (X_TT -> X_RT)
+rates[37] = delta2; // (X_TT -> X_TR)
+rates[38] = delta2; // (X_RT -> X_RR)
+rates[39] = w1; // (X_RT -> X_ST)
+
+// row 5 of schematic
+rates[40] = lambda1; // (X_SR -> X_ER) 
+rates[41] = w2; // (X_SR -> X_SS)
+rates[42] = sigma1; // (X_ER -> X_IR)
+rates[43] = w2; // (X_ER -> X_ES)
+rates[44] = gamma1; // (X_IR -> X_TR)
+rates[45] = w2; // (X_IR -> X_IS)
+rates[46] = delta1; // (X_TR -> X_RR)
+rates[47] = w2; // (X_TR -> X_TS)
+rates[48] = w2; // (X_RR -> X_SR)
+rates[49] = w1;// (X_RR -> X_RS)
+
 
 // drawing sample for each of the compartments from the Euler-multinomial distribution
 // returns a length(rate[i]) by n matrix where in our case we have 2 columns c1 which we let represent
@@ -241,16 +262,17 @@ reulermultinom(2, X_TT, &rates[30], dt, &fromTT[0]);
 
 // drawing samples for each of the recovered compartments from binomial distributions
 // column 5
-fromRS = rbinom(X_RS, pTrans(lambda2, dt));
-fromRE = rbinom(X_RE, pTrans(sigma2, dt));
-fromRI = rbinom(X_RI, pTrans(gamma2, dt));
-fromRT = rbinom(X_RT, pTrans(delta2, dt));
+fromRS = rbinom(X_RS, pTrans(lambda2, dt)); // will become multi
+fromRE = rbinom(X_RE, pTrans(sigma2, dt)); // will become multi
+fromRI = rbinom(X_RI, pTrans(gamma2, dt)); // will become multi
+fromRT = rbinom(X_RT, pTrans(delta2, dt)); // will become multi
 
 // row 5
-fromSR = rbinom(X_SR, pTrans(lambda1, dt));
-fromER = rbinom(X_ER, pTrans(sigma1, dt));
-fromIR = rbinom(X_IR, pTrans(gamma1, dt));
-fromTR = rbinom(X_TR, pTrans(delta1, dt));
+fromSR = rbinom(X_SR, pTrans(lambda1, dt));  // will become multi 
+fromER = rbinom(X_ER, pTrans(sigma1, dt));  // will become multi 
+fromIR = rbinom(X_IR, pTrans(gamma1, dt)); // will become multi 
+fromTR = rbinom(X_TR, pTrans(delta1, dt)); // will become multi 
+//will need fromRR which will be multi too
 
 //Rprintf("fromRS=%.1f, fromRE=%.1f, fromRI=%.1f, fromRT=%.1f\n",
 //        fromRS, fromRE, fromRI, fromRT);
