@@ -179,8 +179,8 @@ rates[4] = gamma1; // (X_IS -> X_TS)
 rates[5] = lambda2 * theta_lambda1; // (X_IS -> X_IE)
 rates[6] = delta1; // (X_TS -> X_RS)
 rates[7] = lambda2 * theta_lambda1; // (X_TS -> X_TE)
-rates[8] = lambda2; // (X_RS -> X_RE)
-rates[9] = w1; // (X_RS -> X_SS)
+rates[8] = w1; // (X_RS -> X_SS)
+rates[9] = lambda2; // (X_RS -> X_RE)
 
 // row 2 of schematic
 rates[10] = lambda1; // (X_SE -> X_EE)
@@ -191,8 +191,8 @@ rates[14] = gamma1; // (X_IE -> X_TE)
 rates[15] = sigma2; // (X_IE -> X_II)
 rates[16] = delta1; // (X_TE -> X_RE)
 rates[17] = sigma2; // (X_TE -> X_TI)
-rates[18] = sigma2; // (X_RE -> X_RI)
-rates[19] = w1; // (X_RE -> X_SE)
+rates[18] = w1; // (X_RE -> X_SE)
+rates[19] = sigma2; // (X_RE -> X_RI)
 
 // row 3 of schematic
 rates[20] = lambda1 * theta_lambda2; // (X_SI -> X_EI)
@@ -203,8 +203,8 @@ rates[24] = gamma1; // (X_II -> X_TI)
 rates[25] = gamma2; // (X_II -> X_IT)
 rates[26] = delta1; // (X_TI -> X_RI)
 rates[27] = gamma2; // (X_TI -> X_TT)
-rates[28] = gamma2; // (X_RI -> X_RT)
-rates[29] = w1; // (X_RI -> X_SI)
+rates[28] = w1; // (X_RI -> X_SI)
+rates[29] = gamma2; // (X_RI -> X_RT)
 
 // row 4 of schematic
 rates[30] = lambda1 * theta_lambda2; // (X_ST -> X_ET)
@@ -215,8 +215,8 @@ rates[34] = gamma1; // (X_IT -> X_TT)
 rates[35] = delta2; // (X_IT -> X_IR)
 rates[36] = delta1; // (X_TT -> X_RT)
 rates[37] = delta2; // (X_TT -> X_TR)
-rates[38] = delta2; // (X_RT -> X_RR)
-rates[39] = w1; // (X_RT -> X_ST)
+rates[38] = w1; // (X_RT -> X_ST)
+rates[39] = delta2; // (X_RT -> X_RR)
 
 // row 5 of schematic
 rates[40] = lambda1; // (X_SR -> X_ER) 

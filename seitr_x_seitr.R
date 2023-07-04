@@ -20,7 +20,6 @@ library(ggfortify)
 library(ggpubr) # stat_cor
 library(vars)
 library(RTransferEntropy) 
-library(vars)
 library(future) # allows for parallel processing
 
 #---- set up cluster ---# 
@@ -53,31 +52,32 @@ for (nm in components_nm) {
 
 
 # create dataframe of single set of parameter inputs
-true_params <- data.frame(Ri1=1.3, Ri2=4.5,
-                          sigma1=1, sigma2=1/5,
-                          gamma1=1/4, gamma2=1/10,
-                          delta1=1, delta2=1,
+# v1 = influenza; v2 = RSV
+# true_params <- data.frame(Ri1=1.3, Ri2=4.5,
+#                           sigma1=1, sigma2=1/5,
+#                           gamma1=1/4, gamma2=1/10,
+#                           delta1=1/7, delta2=1/7,
+#                           w1=1/365, w2=1/190,
+#                           rho1 = 0.2, rho2 = 0.2,
+#                           theta_lambda1=1, theta_lambda2=1,
+#                           A=1/10, phi=100,
+#                           beta_sd1=0.1, beta_sd2=0.1,
+#                           N=3000000,
+#                           E01=0.001, E02=0.001,
+#                           R01=0.4, R02=0.4, R12=0.1)
+
+true_params <- data.frame(Ri1=1.3, Ri2=1.3,
+                          sigma1=1, sigma2=1,
+                          gamma1=1/4, gamma2=1/4,
+                          delta1=1/7, delta2=1/7,
+                          w1=1/365, w2=1/365,
                           rho1 = 0.2, rho2 = 0.2,
-                          theta_lambda1=0, theta_lambda2=0, 
-                          A=0, phi=0,
-                          beta_sd1=0, beta_sd2=0, 
+                          theta_lambda1=1, theta_lambda2=1, 
+                          A=1/10, phi=100,
+                          beta_sd1=0.1, beta_sd2=0.1, 
                           N=3000000,
                           E01=0.001, E02=0.001,
-                          R01=0.4, R02=0.3, R12=0.1)
-
-# non realistic parameters that give proper peaks
-true_params <- data.frame(Ri1=2, Ri2=3,
-                          sigma1=1, sigma2=1 ,
-                          gamma1=7/5, gamma2=7/10,
-                          delta1=0.6, delta2=0.6,
-                          rho1 = 0.5, rho2 = 0.2,
-                          theta_lambda1=1, theta_lambda2=1, 
-                          A=0, phi=0,
-                          beta_sd1=0, beta_sd2=0, 
-                          N=3000000,
-                          E01=0.01, E02=0.01,
-                          R01=0.1, R02=0.1, R12=0.001)
-
+                          R01=0.4, R02=0.4, R12=0.1)
 
 #---- Create list to save the parameter sets and results of our different methods ---# 
 
@@ -89,7 +89,7 @@ for (i in 1:dim(true_params)[1]){
 }
 
 #---- create pomp object ---# 
-po <- pomp(data = data.frame(time = seq(from = 0, to = 52, by = 1), v1_obs = NA, v2_obs = NA),
+po <- pomp(data = data.frame(time = seq(from = 0, to = 1825, by = 1), v1_obs = NA, v2_obs = NA),
            times = "time",
            t0 = 0,
            accumvars = c('v1_T', 'v2_T'),
@@ -110,16 +110,20 @@ po <- pomp(data = data.frame(time = seq(from = 0, to = 52, by = 1), v1_obs = NA,
 
 
 # simulating multiple seasons and pulling them together to make a single timeseries
-s1 <- simulate(po, times=1:52)
+s1 <- simulate(po, times=1:1825)
 
 # NOTE: H1_obs and H2_obs are the number of positive tests to each virus
 s1_states <- as(s1, "data.frame") 
 d1 <- s1_states
 
-results[[i]]$data <- d1  
+#results[[i]]$data <- d1  
 
 # some plotting of simulated data
 ggplot(aes(x=time, y=v1_obs),data=d1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue")
+
+# look at each compartment over time 
+d1_long <- gather(d1, compartment, cases, v1_obs:v2_T, factor_key=T)
+ggplot(aes(x=time,y=cases), data=d1_long) + geom_line() + facet_wrap(.~compartment, scales="free")
 
 
 # remove datasets no longer going to use
