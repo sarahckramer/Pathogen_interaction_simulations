@@ -157,11 +157,11 @@ double s = 1 + A * cos(omega * (t - phi));
 double lambda1 = beta1 * (p1/N) * s; // virus 1
 double lambda2 = beta2 * (p2/N) * s; // virus 2
 
-Rprintf("p1=%.2f, p2=%.2f, beta1=%.1f, beta2=%.1f lambda1=%.3f, lambda2=%.3f, dt=%.3f\n", 
-        p1, p2, beta1, beta2, lambda1, lambda2,dt);
+//Rprintf("p1=%.2f, p2=%.2f, beta1=%.1f, beta2=%.1f lambda1=%.3f, lambda2=%.3f, dt=%.3f\n", 
+//        p1, p2, beta1, beta2, lambda1, lambda2,dt);
         
 // specifying the transitions 
-double rates[49];// vector of length 49
+double rates[50];// vector of length 50
 double fromSS[2], fromES[2], fromIS[2], fromTS[2], fromRS[2];
 double fromSE[2], fromEE[2], fromIE[2], fromTE[2], fromRE[2];
 double fromSI[2], fromEI[2], fromII[2], fromTI[2], fromRI[2];
@@ -231,8 +231,8 @@ rates[48] = w1; // (X_RR -> X_SR)
 rates[49] = w2;// (X_RR -> X_RS)
 
 // drawing sample for each of the compartments from the Euler-multinomial distribution
-// returns a length(rate[i]) by n matrix where in our case we have 2 columns c1 which we let represent
-// transitions due to virus 1 (i.e. vertically down compartments) and c2 the transitions
+// returns a length(rate[i]) by n matrix where in our case we have 2 columns c1 (i.e. vec[0]) which we let represent
+// transitions due to virus 1 (i.e. vertically down compartments) and c2 the transitions (i.e. vec[1])
 // due to virus 2 (i.e. horizontally across compartments)
 
 // row 1
@@ -248,7 +248,7 @@ reulermultinom(2, X_EE, &rates[12], dt, &fromEE[0]);
 reulermultinom(2, X_IE, &rates[14], dt, &fromIE[0]);
 reulermultinom(2, X_TE, &rates[16], dt, &fromTE[0]);
 reulermultinom(2, X_RE, &rates[18], dt, &fromRE[0]);
-
+ 
 // row 3
 reulermultinom(2, X_SI, &rates[20], dt, &fromSI[0]);
 reulermultinom(2, X_EI, &rates[22], dt, &fromEI[0]);
@@ -263,54 +263,54 @@ reulermultinom(2, X_IT, &rates[34], dt, &fromIT[0]);
 reulermultinom(2, X_TT, &rates[36], dt, &fromTT[0]);
 reulermultinom(2, X_RT, &rates[38], dt, &fromRT[0]);
 
-// row 5 
+// row 5
 reulermultinom(2, X_SR, &rates[40], dt, &fromSR[0]);
 reulermultinom(2, X_ER, &rates[42], dt, &fromER[0]);
 reulermultinom(2, X_IR, &rates[44], dt, &fromIR[0]);
 reulermultinom(2, X_TR, &rates[46], dt, &fromTR[0]);
 reulermultinom(2, X_RR, &rates[48], dt, &fromRR[0]);
-
-//Rprintf("fromRS=%.1f, fromRE=%.1f, fromRI=%.1f, fromRT=%.1f\n",
-//        fromRS, fromRE, fromRI, fromRT);
-          
+ 
+ 
 // balance equations
-
+ 
 // row 1 of schmematic
-X_SS += -fromSS[0] - fromSS[1] + fromRS[1] + fromSR[1];
+X_SS += -fromSS[0] - fromSS[1] + fromRS[0] + fromSR[1];
 X_ES += fromSS[0] - fromES[0] - fromES[1] + fromER[1];
 X_IS += fromES[0] - fromIS[0] - fromIS[1] + fromIR[1];
 X_TS += fromIS[0] - fromTS[0] - fromTS[1] + fromTR[1];
 X_RS += fromTS[0] - fromRS[0] - fromRS[1] + fromRR[1];
-
+ 
 // row 2
 X_SE += fromSS[1] - fromSE[0] - fromSE[1] + fromRE[1];
 X_EE += fromES[1] + fromSE[0] - fromEE[0] - fromEE[1];
 X_IE += fromIS[1] + fromEE[0] - fromIE[0] - fromIE[1];
 X_TE += fromTS[1] + fromIE[0] - fromTE[0] - fromTE[1];
-X_RE += fromRS + fromTE[0] - fromRE[0] -fromRE[1];
-
+X_RE += fromRS[0] + fromTE[0] - fromRE[0] - fromRE[1];
+  
 // row 3
 X_SI += fromSE[1] - fromSI[0] - fromSI[1] + fromRI[1];
 X_EI += fromEE[1] + fromSI[0] - fromEI[0] - fromEI[1];
 X_II += fromIE[1] + fromEI[0] - fromII[0] - fromII[1];
 X_TI += fromTE[1] + fromII[0] - fromTI[0] - fromTI[1];
-X_RI += fromRE + fromTI[0] - fromRI[0] - fromRI[1];
-
+X_RI += fromRE[0] + fromTI[0] - fromRI[0] - fromRI[1];
+  
 // row 4
 X_ST += fromSI[1] - fromST[0] - fromST[1] + fromRT[1];
 X_ET += fromEI[1] + fromST[0] - fromET[0] - fromET[1];
 X_IT += fromII[1] + fromET[0] - fromIT[0] - fromIT[1];
 X_TT += fromTI[1] + fromIT[0] - fromTT[0] - fromTT[1];
-X_RT += fromRI + fromTT[0] - fromRT[0] - fromRT[1];
-
+X_RT += fromRI[0] + fromTT[0] - fromRT[0] - fromRT[1];
+  
 // row 5
 X_SR += fromST[1] - fromSR[0] - fromSR[1] + fromRR[0];
 X_ER += fromET[1] + fromSR[0] - fromER[0] - fromER[1];
 X_IR += fromIT[1] + fromER[0] - fromIR[0] - fromER[1];
 X_TR += fromTT[1] + fromIR[0] - fromTR[0] - fromTR[1];
 X_RR += fromRT[1] + fromTR[0] - fromRR[0] - fromRR[1];
-
+ 
 // Total number of cases of each virus in the population
-v1_T += (fromIS[1] + fromIE[1] + fromII[1] + fromIT[1] + fromIR[1]);
-v2_T += (fromSI[0] + fromEI[0] + fromII[0] + fromTI[0] + fromRI[0]);
+v1_T += (fromSI[0] + fromEI[0] + fromII[0] + fromTI[0] + fromRI[0]);
+v2_T += (fromIS[1] + fromIE[1] + fromII[1] + fromIT[1] + fromIR[1]);
+
+//Rprintf("fromIS=%.1f, fromIE=%.1f, fromII=%.1f,fromIR=%.1f\n");
 //end_rsim
