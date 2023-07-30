@@ -8,9 +8,6 @@
 # Creation date: 22 May 2023
 ##################################################################################################################
 
-# set seed:
-set.seed(2908)
-
 # load libraries
 library(tidyverse)
 library(testthat)
@@ -39,7 +36,7 @@ unique_ids <- (1 + (jobid - 1) * sobol_size / no_jobs) : (jobid * sobol_size / n
 mod_code <- readLines('/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/seitr_x_seitr.cpp')
 
 # pull out the various components of the C code ready to feed into pomp
-components_nm <- c('globs', 'dmeas', 'rmeas', 'rinit', 'rsim')
+components_nm <- c('globs', 'dmeas', 'rmeas', 'rinit', 'rsim', 'skel')
 # initialise list
 components_l <- vector(mode = 'list', length = length(components_nm))
 names(components_l) <- components_nm
@@ -64,20 +61,23 @@ for (nm in components_nm) {
 #                           beta_sd1=0.1, beta_sd2=0.1,
 #                           N=3000000,
 #                           E01=0.001, E02=0.001,
-#                           R01=0.4, R02=0.4, R12=0.1)
+#                           R01=0.4, R02=0.1, R12=0.1)
 
-true_params <- data.frame(Ri1=1.3, Ri2=1.3,
-                          sigma1=1, sigma2=1,
-                          gamma1=1/4, gamma2=1/4,
-                          delta1=1/7, delta2=1/7,
-                          w1=1/365, w2=1/365,
-                          rho1 = 0.2, rho2 = 0.2,
-                          theta_lambda1=1, theta_lambda2=1, 
-                          A=1/10, phi=100,
-                          beta_sd1=0.1, beta_sd2=0.1, 
-                          N=3000000,
-                          E01=0.001, E02=0.001,
-                          R01=0.4, R02=0.4, R12=0.1)
+true_params <- data.frame(Ri1=1.3, Ri2=4.5,
+                           sigma1=1, sigma2=1/5,
+                           gamma1=1/4, gamma2=1/10,
+                           delta1=1/7, delta2=1/7,
+                           mu = 0.0001, nu=0.00003, 
+                           w1=1/365, w2=1/190,
+                           rho1 = 0.2, rho2 = 0.2,
+                           theta_lambda1=1, theta_lambda2=1, 
+                           A1=1/10, phi1=100,
+                           A2=1/10, phi2=100,
+                           beta_sd1=0, beta_sd2=0, 
+                           N=3000000,
+                           E01=0.001, E02=0.001,
+                           R01=0.4, R02=0.1, R12=0.1)
+
 
 #---- Create list to save the parameter sets and results of our different methods ---# 
 
@@ -92,39 +92,56 @@ for (i in 1:dim(true_params)[1]){
 po <- pomp(data = data.frame(time = seq(from = 0, to = 1825, by = 1), v1_obs = NA, v2_obs = NA),
            times = "time",
            t0 = 0,
+           obsnames = c('v1_obs', 'v2_obs'),
            accumvars = c('v1_T', 'v2_T'),
            statenames = c('X_SS', 'X_ES' , 'X_IS', 'X_TS', 'X_RS', 
                           'X_SE', 'X_EE', 'X_IE', 'X_TE', 'X_RE',
                           'X_SI', 'X_EI' ,'X_II', 'X_TI', 'X_RI', 
                           'X_ST', 'X_ET' ,'X_IT', 'X_TT', 'X_RT',
                           'X_SR', 'X_ER' ,'X_IR', 'X_TR', 'X_RR', 
-                          'v1_T', 'v2_T'),
+                          'v1_T', 'v2_T', 'death', 'fIS0','fIS1','fIS2', 'fIE', 'fII', 'fIT' , 'fIR','fSI', 'fEI', 'fTI', 'fRI'),
            paramnames = names(true_params),
            params = true_params,
            globals = components_l[['globs']],
            dmeasure = components_l[['dmeas']],
            rmeasure = components_l[['rmeas']],
-           rprocess = euler(step.fun = components_l[['rsim']], delta.t = 1),
+           rprocess = euler(step.fun = components_l[['rsim']], delta.t = 0.3),
+           skeleton = vectorfield(components_l[['skel']]), # putting in deterministic for testing
            rinit = components_l[['rinit']]
 )
 
+# set seed:
+set.seed(2908)
 
 # simulating multiple seasons and pulling them together to make a single timeseries
-s1 <- simulate(po, times=1:1825)
+s1 <- simulate(po, times=1:1825, format="data.frame")
+d1 <- trajectory(po, times=1:1825, format = "data.frame") %>% dplyr::select(-'.id') %>% 
+  mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params$rho1),  
+         v2_obs = rbinom(n=length(v2_T),size=round(v2_T), prob=true_params$rho2))
 
-# NOTE: H1_obs and H2_obs are the number of positive tests to each virus
-s1_states <- as(s1, "data.frame") 
-d1 <- s1_states
+# make time into years
+d1$time <- d1$time/365
+s1$time <- s1$time/365
+# remove first 2 years (treating as burn in)
+d1 <- d1 %>% filter(time > 2)
+s1 <- s1 %>% filter(time > 2)
 
-#results[[i]]$data <- d1  
+#results[[i]]$data <- s1  
 
 # some plotting of simulated data
-ggplot(aes(x=time, y=v1_obs),data=d1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue")
+ggplot(aes(x=time, y=v1_obs),data=d1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue") + 
+  ggtitle("deterministic")
+ggplot(aes(x=time, y=v1_obs),data=s1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue") + 
+  ggtitle("stochastic")
+
 
 # look at each compartment over time 
-d1_long <- gather(d1, compartment, cases, v1_obs:v2_T, factor_key=T)
-ggplot(aes(x=time,y=cases), data=d1_long) + geom_line() + facet_wrap(.~compartment, scales="free")
-
+d1_long <- gather(d1, compartment, cases, X_SS:v2_T, factor_key=T)
+ggplot(aes(x=time,y=cases), data=d1_long) + geom_line() + facet_wrap(.~compartment, scales="free") + 
+  ggtitle("deterministic")
+s1_long <- gather(s1, compartment, cases, X_SS:v2_T, factor_key=T)
+ggplot(aes(x=time,y=cases), data=s1_long) + geom_line() + facet_wrap(.~compartment, scales="free") + 
+  ggtitle("stochastic")
 
 # remove datasets no longer going to use
 rm(s1,s1_states,components_l,po,components_nm,mod_code,i,nm, true_params)
