@@ -69,22 +69,6 @@ X_IR = 0;
 X_TR = 0;
 X_RR = nearbyint(R12 * N);
 
-// Accumulator variables 
-v1_T = 0; // takes into consideration interaction  
-v2_T = 0; 
-death = 0;
-fIS0 = 0;
-fIS1 = 0;
-fIS2 = 0;
-fIE = 0;
-fII = 0;
-fIT = 0;
-fIR = 0;
-fSI = 0;
-fEI = 0;
-fTI = 0;
-fRI = 0;
-
 
 // if the compartments that are assigned some initial value don't sum to
 // N (likely due to rounding in the nearbyint function) print the values
@@ -236,6 +220,46 @@ double s2 = 1 + A2 * cos(omega * (t - phi2));
 double lambda1 = beta1 * (p1/N) * s1; // virus 1
 double lambda2 = beta2 * (p2/N) * s2; // virus 2
         
+// addition of surges for vir1
+// note: we are using these surges for virus 1 only as it represents influenza 
+
+// specify vectors for t_si and delta
+// annoyingly it is hard to make this dynamic so will have to come and change
+// this if I want to add more surges in future
+double t_si[5];
+double delta[5];
+
+// specifying the t_si's
+t_si[0] = t_si_1;
+t_si[1] = t_si_2;
+t_si[2] = t_si_3;
+t_si[3] = t_si_4;
+t_si[4] = t_si_5;
+
+Rprintf("t_si=%.4f\n", t_si);
+
+// specifying the delta's
+delta[0] = delta_i_1;
+delta[1] = delta_i_2;
+delta[2] = delta_i_3;
+delta[3] = delta_i_4;
+delta[4] = delta_i_5;
+
+// the new rate of immunity w1_loss = w1 + delta(t)
+// where delta(t) = delta_i for i in [1,n] when t=t_si days since start of season i;
+//                  0 otherwise
+double w1_s;
+for(int i = 0; i < n_surge + 1; i++){
+  // assign immunity rate either surge or specified rate
+  if(t==t_si[i]){
+  w1_s = w1 + delta[i];
+  } else{
+  w1_s = w1;
+  }
+}
+
+//Rprintf("w1_s=%.4f\n", w1_s);
+
 // specifying the transitions 
 double rates[75];// vector of length 75
 double fromSS[3], fromES[3], fromIS[3], fromTS[3], fromRS[3];
@@ -259,7 +283,7 @@ rates[8] = nu; // natural X_IS death rate
 rates[9] = delta1; // (X_TS -> X_RS)
 rates[10] = lambda2 * theta_lambda1; // (X_TS -> X_TE)
 rates[11] = nu; // natural X_TS death rate
-rates[12] = w1; // (X_RS -> X_SS)
+rates[12] = w1_s; // (X_RS -> X_SS)
 rates[13] = lambda2; // (X_RS -> X_RE)
 rates[14] = nu; // natural X_RS death rate
 
@@ -276,7 +300,7 @@ rates[23] = nu; // natural X_IE death rate
 rates[24] = delta1; // (X_TE -> X_RE)
 rates[25] = sigma2; // (X_TE -> X_TI)
 rates[26] = nu; // natural X_TE death rate
-rates[27] = w1; // (X_RE -> X_SE)
+rates[27] = w1_s; // (X_RE -> X_SE)
 rates[28] = sigma2; // (X_RE -> X_RI)
 rates[29] = nu; // natural X_RE death rate
 
@@ -293,7 +317,7 @@ rates[38] = nu; // natural X_II death rate
 rates[39] = delta1; // (X_TI -> X_RI)
 rates[40] = gamma2; // (X_TI -> X_TT)
 rates[41] = nu; // natural X_TI death rate
-rates[42] = w1; // (X_RI -> X_SI)
+rates[42] = w1_s; // (X_RI -> X_SI)
 rates[43] = gamma2; // (X_RI -> X_RT)
 rates[44] = nu; // natural X_RI death rate
 
@@ -310,7 +334,7 @@ rates[53] = nu; // natural X_IT death rate
 rates[54] = delta1; // (X_TT -> X_RT)
 rates[55] = delta2; // (X_TT -> X_TR)
 rates[56] = nu; // natural X_TT death rate
-rates[57] = w1; // (X_RT -> X_ST)
+rates[57] = w1_s; // (X_RT -> X_ST)
 rates[58] = delta2; // (X_RT -> X_RR)
 rates[59] = nu; // natural X_RT death rate
 
@@ -327,7 +351,7 @@ rates[68] = nu; // natural X_IR death rate
 rates[69] = delta1; // (X_TR -> X_RR)
 rates[70] = w2; // (X_TR -> X_TS)
 rates[71] = nu; // natural X_TR death rate
-rates[72] = w1; // (X_RR -> X_SR)
+rates[72] = w1_s; // (X_RR -> X_SR)
 rates[73] = w2;// (X_RR -> X_RS)
 rates[74] = nu; // natural X_RR death rate
 
@@ -413,33 +437,14 @@ X_IR += fromIT[1] + fromER[0] - fromIR[0] - fromIR[1] - fromIR[2];
 X_TR += fromTT[1] + fromIR[0] - fromTR[0] - fromTR[1] - fromTR[2];
 X_RR += fromRT[1] + fromTR[0] - fromRR[0] - fromRR[1] - fromRR[2];
  
-// Total number of cases of each virus in the population
-v1_T += (fromIS[1] + fromIE[1] + fromII[1] + fromIT[1] + fromIR[1]);
-v2_T += (fromSI[0] + fromEI[0] + fromII[0] + fromTI[0] + fromRI[0]);
+// Total incidence of each virus in the population
+v1_T += fromIS[0] + fromIE[0] + fromII[0] + fromIT[0] + fromIR[0];
+v2_T += fromSI[1] + fromEI[1] + fromII[1] + fromTI[1] + fromRI[1];
 
 //Rprintf("fromIS=%.1f, fromIE=%.1f, fromII=%.1f, fromIT=%.1f, fromIR=%.1f\n", fromIS[1], fromIE[1], fromII[1], fromIT[1], fromIR[1]);
 //Rprintf("fromSI=%.1f, fromEI=%.1f, fromII=%.1f, fromTI=%.1f, fromRI=%.1f\n", fromSI[0], fromEI[0], fromII[0], fromTI[0], fromRI[0]);
 //Rprintf("fromIS0=%.1f,fromIS1=%.1f.fromIS2=%.1f\n", fromIS[0], fromIS[1], fromIS[2]);
+//Rprintf("lambda1=%.3f,lambda2=%.3f\n", lambda1, lambda2);
 
-// can make each of the from variable into accumulators to see how they are changing over time to see where the problem is 
-fIS0 += fromIS[0];
-fIS1 += fromIS[1];
-fIS2 += fromIS[2];
 
-fIE += fromIE[1];
-fII += fromII[1];
-fIT += fromIT[1];
-fIR += fromIR[1];
-fSI += fromSI[0];
-fEI += fromEI[0];
-fTI += fromTI[0];
-fRI += fromRI[0];
-
-death += fromSS[2] + fromES[2] + fromIS[2] + fromTS[2] + fromRS[2] +
-         fromSE[2] + fromEE[2] + fromIE[2] + fromTE[2] + fromRE[2] + 
-         fromSI[2] + fromEI[2] + fromII[2] + fromTI[2] + fromRI[2] +
-         fromST[2] + fromET[2] + fromIT[2] + fromTT[2] + fromRT[2] +
-         fromSR[2] + fromER[2] + fromIR[2] + fromTR[2] + fromRR[2];
-
-//Rprintf("fromIS=%.1f, fromIE=%.1f, fromII=%.1f,fromIR=%.1f\n");
 //end_rsim

@@ -48,6 +48,28 @@ for (nm in components_nm) {
 }
 
 
+# initialize time of surges from start of season (1 July)
+# by drawing from a normal distribution
+n_surge <- 5
+mu_Imloss <- 188
+sd_Imloss <- 35
+t_si <- rnorm(n=n_surge, mean=mu_Imloss,sd=sd_Imloss)
+# correcting t_si to give t based on day of the year rather than 
+# day from start of season (note: July 1 is the 182 day)
+t_si <- round(seq(182, 365*n_surge, by=365) + t_si)
+# remove all t_si which are less than 2years - allowing this amount
+# of time for the system to reach an equilibrium 
+#t_si <- t_si[-which(t_si <= 730)]
+
+# initialize the rate of loss of immunity corresponding to each of the 
+# surge times 
+delta_i <- runif(n=length(t_si), min = 0.1, max=0.12)
+
+
+# up dating the number of surges to input into parameter vector
+#n_surge <- length(t_si)
+
+
 # create dataframe of single set of parameter inputs
 # v1 = influenza; v2 = RSV
 # true_params <- data.frame(Ri1=1.3, Ri2=4.5,
@@ -63,9 +85,9 @@ for (nm in components_nm) {
 #                           E01=0.001, E02=0.001,
 #                           R01=0.4, R02=0.1, R12=0.1)
 
-true_params <- data.frame(Ri1=1.3, Ri2=4.5,
+true_params <- data.frame(Ri1=1.3, Ri2=1,
                            sigma1=1, sigma2=1/5,
-                           gamma1=1/4, gamma2=1/10,
+                           gamma1=1/4, gamma2=1/30,
                            delta1=1/7, delta2=1/7,
                            mu = 0.0001, nu=0.00003, 
                            w1=1/365, w2=1/190,
@@ -76,8 +98,11 @@ true_params <- data.frame(Ri1=1.3, Ri2=4.5,
                            beta_sd1=0, beta_sd2=0, 
                            N=3000000,
                            E01=0.001, E02=0.001,
-                           R01=0.4, R02=0.1, R12=0.1)
+                           R01=0.4, R02=0.2, R12=0.1,
+                           n_surge = n_surge, t_si=t(t_si), delta_i=t(delta_i))
 
+# replacing . in names of true params with _
+names(true_params) <- gsub(x = names(true_params), pattern = "\\.", replacement = "_") 
 
 #---- Create list to save the parameter sets and results of our different methods ---# 
 
@@ -99,13 +124,13 @@ po <- pomp(data = data.frame(time = seq(from = 0, to = 1825, by = 1), v1_obs = N
                           'X_SI', 'X_EI' ,'X_II', 'X_TI', 'X_RI', 
                           'X_ST', 'X_ET' ,'X_IT', 'X_TT', 'X_RT',
                           'X_SR', 'X_ER' ,'X_IR', 'X_TR', 'X_RR', 
-                          'v1_T', 'v2_T', 'death', 'fIS0','fIS1','fIS2', 'fIE', 'fII', 'fIT' , 'fIR','fSI', 'fEI', 'fTI', 'fRI'),
+                          'v1_T', 'v2_T'),
            paramnames = names(true_params),
            params = true_params,
            globals = components_l[['globs']],
            dmeasure = components_l[['dmeas']],
            rmeasure = components_l[['rmeas']],
-           rprocess = euler(step.fun = components_l[['rsim']], delta.t = 0.3),
+           rprocess = euler(step.fun = components_l[['rsim']], delta.t = 0.1),
            skeleton = vectorfield(components_l[['skel']]), # putting in deterministic for testing
            rinit = components_l[['rinit']]
 )
@@ -142,6 +167,17 @@ ggplot(aes(x=time,y=cases), data=d1_long) + geom_line() + facet_wrap(.~compartme
 s1_long <- gather(s1, compartment, cases, X_SS:v2_T, factor_key=T)
 ggplot(aes(x=time,y=cases), data=s1_long) + geom_line() + facet_wrap(.~compartment, scales="free") + 
   ggtitle("stochastic")
+
+# over plotting the stochastic and deterministic compartments to try see where problems 
+# are coming in
+d1_long$type <- 'deterministic'
+s1_long$type <- 'stochastic'
+# combine the two datasets
+s1_long$.id <- NULL
+long_comb <- rbind(d1_long, s1_long)
+# plot 
+ggplot(aes(x=time, y=cases, colour=type),data=long_comb) + geom_line() +
+  facet_wrap(.~compartment, scales="free") 
 
 # remove datasets no longer going to use
 rm(s1,s1_states,components_l,po,components_nm,mod_code,i,nm, true_params)
