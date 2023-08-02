@@ -19,7 +19,7 @@ library(vars)
 library(RTransferEntropy) 
 library(future) # allows for parallel processing
 
-#---- set up cluster ---# 
+#---- set up cluster inputs ---# 
 # Get cluster environmental variables:
 jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size 
 no_jobs <- as.integer(Sys.getenv("NOJOBS")); print(no_jobs)
@@ -31,7 +31,7 @@ jobid <- (jobid - 1) %% no_jobs + 1; print(jobid)
 # Get unique identifiers for each repetition 
 unique_ids <- (1 + (jobid - 1) * sobol_size / no_jobs) : (jobid * sobol_size / no_jobs)
 
-#--- Setup pomp model and simulation ---# 
+#--- reading in CSnippets ---# 
 # read in the C code for the pomp model 
 mod_code <- readLines('/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/seitr_x_seitr.cpp')
 
@@ -47,6 +47,7 @@ for (nm in components_nm) {
   components_l[[nm]] <- Csnippet(text = components_l[[nm]])
 }
 
+#---- setting parameter input values ----# 
 
 # initialize time of surges from start of season (1 July)
 # by drawing from a normal distribution
@@ -57,18 +58,16 @@ t_si <- rnorm(n=n_surge, mean=mu_Imloss,sd=sd_Imloss)
 # correcting t_si to give t based on day of the year rather than 
 # day from start of season (note: July 1 is the 182 day)
 t_si <- round(seq(182, 365*n_surge, by=365) + t_si)
+
 # remove all t_si which are less than 2years - allowing this amount
 # of time for the system to reach an equilibrium 
 #t_si <- t_si[-which(t_si <= 730)]
+# up dating the number of surges to input into parameter vector
+#n_surge <- length(t_si)
 
 # initialize the rate of loss of immunity corresponding to each of the 
 # surge times 
 delta_i <- runif(n=length(t_si), min = 0.1, max=0.12)
-
-
-# up dating the number of surges to input into parameter vector
-#n_surge <- length(t_si)
-
 
 # create dataframe of single set of parameter inputs
 # v1 = influenza; v2 = RSV
@@ -86,23 +85,24 @@ delta_i <- runif(n=length(t_si), min = 0.1, max=0.12)
 #                           R01=0.4, R02=0.1, R12=0.1)
 
 true_params <- data.frame(Ri1=1.3, Ri2=1,
-                           sigma1=1, sigma2=1/5,
-                           gamma1=1/4, gamma2=1/30,
-                           delta1=1/7, delta2=1/7,
-                           mu = 0.0001, nu=0.00003, 
-                           w1=1/365, w2=1/190,
-                           rho1 = 0.2, rho2 = 0.2,
-                           theta_lambda1=1, theta_lambda2=1, 
-                           A1=1/10, phi1=100,
-                           A2=1/10, phi2=100,
-                           beta_sd1=0, beta_sd2=0, 
-                           N=3000000,
-                           E01=0.001, E02=0.001,
-                           R01=0.4, R02=0.2, R12=0.1,
-                           n_surge = n_surge, t_si=t(t_si), delta_i=t(delta_i))
+                          sigma1=1, sigma2=1/5,
+                          gamma1=1/4, gamma2=1/30,
+                          delta1=1/7, delta2=1/7,
+                          mu = 0.0001, nu=0.00003, 
+                          w1=1/365, w2=1/190,
+                          rho1 = 0.2, rho2 = 0.2,
+                          theta_lambda1=1, theta_lambda2=1, 
+                          A1=1/10, phi1=100,
+                          A2=1/10, phi2=100,
+                          beta_sd1=0, beta_sd2=0, 
+                          N=3000000,
+                          E01=0.001, E02=0.001,
+                          R01=0.4, R02=0.2, R12=0.1,
+                          n_surge = n_surge, t_si=t(t_si), delta_i=t(delta_i))
 
 # replacing . in names of true params with _
 names(true_params) <- gsub(x = names(true_params), pattern = "\\.", replacement = "_") 
+
 
 #---- Create list to save the parameter sets and results of our different methods ---# 
 
@@ -124,13 +124,13 @@ po <- pomp(data = data.frame(time = seq(from = 0, to = 1825, by = 1), v1_obs = N
                           'X_SI', 'X_EI' ,'X_II', 'X_TI', 'X_RI', 
                           'X_ST', 'X_ET' ,'X_IT', 'X_TT', 'X_RT',
                           'X_SR', 'X_ER' ,'X_IR', 'X_TR', 'X_RR', 
-                          'v1_T', 'v2_T'),
+                          'v1_T', 'v2_T', 'death', 'fIS0','fIS1','fIS2', 'fIE', 'fII', 'fIT' , 'fIR','fSI', 'fEI', 'fTI', 'fRI'),
            paramnames = names(true_params),
            params = true_params,
            globals = components_l[['globs']],
            dmeasure = components_l[['dmeas']],
            rmeasure = components_l[['rmeas']],
-           rprocess = euler(step.fun = components_l[['rsim']], delta.t = 0.1),
+           rprocess = euler(step.fun = components_l[['rsim']], delta.t = 0.3),
            skeleton = vectorfield(components_l[['skel']]), # putting in deterministic for testing
            rinit = components_l[['rinit']]
 )
@@ -138,7 +138,7 @@ po <- pomp(data = data.frame(time = seq(from = 0, to = 1825, by = 1), v1_obs = N
 # set seed:
 set.seed(2908)
 
-# simulating multiple seasons and pulling them together to make a single timeseries
+# ----simulating data----#
 s1 <- simulate(po, times=1:1825, format="data.frame")
 d1 <- trajectory(po, times=1:1825, format = "data.frame") %>% dplyr::select(-'.id') %>% 
   mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params$rho1),  
@@ -147,29 +147,31 @@ d1 <- trajectory(po, times=1:1825, format = "data.frame") %>% dplyr::select(-'.i
 # make time into years
 d1$time <- d1$time/365
 s1$time <- s1$time/365
-# remove first 2 years (treating as burn in)
+# remove first 2 years where simulation isn't yet at equilibrium 
 d1 <- d1 %>% filter(time > 2)
 s1 <- s1 %>% filter(time > 2)
 
+# save results
 #results[[i]]$data <- s1  
 
-# some plotting of simulated data
+# ---- Plotting simulated data ----#
+
+# observation model output 
 ggplot(aes(x=time, y=v1_obs),data=d1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue") + 
   ggtitle("deterministic")
 ggplot(aes(x=time, y=v1_obs),data=s1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue") + 
   ggtitle("stochastic")
 
 
-# look at each compartment over time 
-d1_long <- gather(d1, compartment, cases, X_SS:v2_T, factor_key=T)
+# process model output - each compartment over time 
+d1_long <- gather(d1, compartment, cases, X_SS:v2_T, factor_key=T) # make data long
 ggplot(aes(x=time,y=cases), data=d1_long) + geom_line() + facet_wrap(.~compartment, scales="free") + 
   ggtitle("deterministic")
 s1_long <- gather(s1, compartment, cases, X_SS:v2_T, factor_key=T)
 ggplot(aes(x=time,y=cases), data=s1_long) + geom_line() + facet_wrap(.~compartment, scales="free") + 
   ggtitle("stochastic")
 
-# over plotting the stochastic and deterministic compartments to try see where problems 
-# are coming in
+# over plots of stochastic and deterministic models - can help identify problems
 d1_long$type <- 'deterministic'
 s1_long$type <- 'stochastic'
 # combine the two datasets
@@ -178,6 +180,7 @@ long_comb <- rbind(d1_long, s1_long)
 # plot 
 ggplot(aes(x=time, y=cases, colour=type),data=long_comb) + geom_line() +
   facet_wrap(.~compartment, scales="free") 
+
 
 # remove datasets no longer going to use
 rm(s1,s1_states,components_l,po,components_nm,mod_code,i,nm, true_params)

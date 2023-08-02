@@ -69,6 +69,8 @@ X_IR = 0;
 X_TR = 0;
 X_RR = nearbyint(R12 * N);
 
+w = 0;
+delta = 0;
 
 // if the compartments that are assigned some initial value don't sum to
 // N (likely due to rounding in the nearbyint function) print the values
@@ -198,6 +200,7 @@ double R0_2 = Ri2 / (1.0 - (R02 + R12)); // virus 2
 // initialisation of the transmission terms 
 double beta1, beta2;
 // incorporate extra demographic stochasticity with the gamma distributed white noise process
+
 // dt is the time step hence it is not defined but is a variable created within pomp
 if (p1 > 0.0 && beta_sd1 > 0.0) { 
   beta1 = rgammawn(sqrt(R0_1 / (p1 * N * beta_sd1 * dt)), R0_1 * gamma1);
@@ -219,46 +222,32 @@ double s2 = 1 + A2 * cos(omega * (t - phi2));
 // calculate force of infection for each virus 
 double lambda1 = beta1 * (p1/N) * s1; // virus 1
 double lambda2 = beta2 * (p2/N) * s2; // virus 2
-        
+
 // addition of surges for vir1
 // note: we are using these surges for virus 1 only as it represents influenza 
-
-// specify vectors for t_si and delta
-// annoyingly it is hard to make this dynamic so will have to come and change
-// this if I want to add more surges in future
-double t_si[5];
-double delta[5];
-
-// specifying the t_si's
-t_si[0] = t_si_1;
-t_si[1] = t_si_2;
-t_si[2] = t_si_3;
-t_si[3] = t_si_4;
-t_si[4] = t_si_5;
-
-Rprintf("t_si=%.4f\n", t_si);
-
-// specifying the delta's
-delta[0] = delta_i_1;
-delta[1] = delta_i_2;
-delta[2] = delta_i_3;
-delta[3] = delta_i_4;
-delta[4] = delta_i_5;
 
 // the new rate of immunity w1_loss = w1 + delta(t)
 // where delta(t) = delta_i for i in [1,n] when t=t_si days since start of season i;
 //                  0 otherwise
 double w1_s;
-for(int i = 0; i < n_surge + 1; i++){
-  // assign immunity rate either surge or specified rate
-  if(t==t_si[i]){
-  w1_s = w1 + delta[i];
-  } else{
-  w1_s = w1;
-  }
-}
 
-//Rprintf("w1_s=%.4f\n", w1_s);
+// it is difficult to make this dynamic therefore will need to change the 
+// code if we want more than 5 surges (note: to see large noticeable 
+// changes in the simulated data the loss in immunity delta_i 
+// needs to be quite large)
+if(t==t_si_1){
+   w1_s = w1 + delta_i_1;
+   } else if (t==t_si_2){
+     w1_s = w1 + delta_i_2;
+   } else if (t==t_si_3){
+     w1_s = w1 + delta_i_3;
+   } else if(t==t_si_4){
+     w1_s = w1 + delta_i_4;
+   } else if(t==t_si_5){
+     w1_s = w1 + delta_i_5;
+   } else{
+   w1_s = w1;
+}
 
 // specifying the transitions 
 double rates[75];// vector of length 75
@@ -373,7 +362,7 @@ reulermultinom(3, X_EE, &rates[18], dt, &fromEE[0]);
 reulermultinom(3, X_IE, &rates[21], dt, &fromIE[0]);
 reulermultinom(3, X_TE, &rates[24], dt, &fromTE[0]);
 reulermultinom(3, X_RE, &rates[27], dt, &fromRE[0]);
- 
+
 // row 3
 reulermultinom(3, X_SI, &rates[30], dt, &fromSI[0]);
 reulermultinom(3, X_EI, &rates[33], dt, &fromEI[0]);
@@ -394,53 +383,57 @@ reulermultinom(3, X_ER, &rates[63], dt, &fromER[0]);
 reulermultinom(3, X_IR, &rates[66], dt, &fromIR[0]);
 reulermultinom(3, X_TR, &rates[69], dt, &fromTR[0]);
 reulermultinom(3, X_RR, &rates[72], dt, &fromRR[0]);
- 
+
 // Drawing number of births from a poisson distribution 
 double births;
 births = rpois(mu*N*dt);
 //Rprintf("births=%.1f, mu=%.1f, dt=%.1f\n", births, mu, dt);
 
 // balance equations
- 
+
 // row 1 of schematic
 X_SS += births - fromSS[0] - fromSS[1] + fromRS[0] + fromSR[1] - fromSS[2];
 X_ES += fromSS[0] - fromES[0] - fromES[1] + fromER[1] - fromES[2];
 X_IS += fromES[0] - fromIS[0] - fromIS[1] + fromIR[1] - fromIS[2];
 X_TS += fromIS[0] - fromTS[0] - fromTS[1] + fromTR[1] - fromTS[2];
 X_RS += fromTS[0] - fromRS[0] - fromRS[1] + fromRR[1] - fromRS[2];
- 
+
 // row 2
 X_SE += fromSS[1] - fromSE[0] - fromSE[1] + fromRE[0] - fromSE[2];
 X_EE += fromES[1] + fromSE[0] - fromEE[0] - fromEE[1] - fromEE[2];
 X_IE += fromIS[1] + fromEE[0] - fromIE[0] - fromIE[1] - fromIE[2];
 X_TE += fromTS[1] + fromIE[0] - fromTE[0] - fromTE[1] - fromTE[2];
 X_RE += fromRS[1] + fromTE[0] - fromRE[0] - fromRE[1] - fromRE[2];
-  
+
 // row 3
 X_SI += fromSE[1] - fromSI[0] - fromSI[1] + fromRI[0] - fromSI[2];
 X_EI += fromEE[1] + fromSI[0] - fromEI[0] - fromEI[1] - fromEI[2];
 X_II += fromIE[1] + fromEI[0] - fromII[0] - fromII[1] - fromII[2];
 X_TI += fromTE[1] + fromII[0] - fromTI[0] - fromTI[1] - fromTI[2];
 X_RI += fromRE[1] + fromTI[0] - fromRI[0] - fromRI[1] - fromRI[2];
-  
+
 // row 4
 X_ST += fromSI[1] - fromST[0] - fromST[1] + fromRT[0] - fromST[2];
 X_ET += fromEI[1] + fromST[0] - fromET[0] - fromET[1] - fromET[2];
 X_IT += fromII[1] + fromET[0] - fromIT[0] - fromIT[1] - fromIT[2];
 X_TT += fromTI[1] + fromIT[0] - fromTT[0] - fromTT[1] - fromTT[2];
 X_RT += fromRI[1] + fromTT[0] - fromRT[0] - fromRT[1] - fromRT[2];
-  
+
 // row 5
 X_SR += fromST[1] - fromSR[0] - fromSR[1] + fromRR[0] - fromSR[2];
 X_ER += fromET[1] + fromSR[0] - fromER[0] - fromER[1] - fromER[2];
 X_IR += fromIT[1] + fromER[0] - fromIR[0] - fromIR[1] - fromIR[2];
 X_TR += fromTT[1] + fromIR[0] - fromTR[0] - fromTR[1] - fromTR[2];
 X_RR += fromRT[1] + fromTR[0] - fromRR[0] - fromRR[1] - fromRR[2];
- 
+
 // Total incidence of each virus in the population
 v1_T += fromIS[0] + fromIE[0] + fromII[0] + fromIT[0] + fromIR[0];
 v2_T += fromSI[1] + fromEI[1] + fromII[1] + fromTI[1] + fromRI[1];
 
+Rprintf("w1_s=%.4f, t=%.1f, t_si_1=%.1f\n", w1_s, t, t_si_1);
+
+w = w1_s;
+delta = delta_i_1;
 //Rprintf("fromIS=%.1f, fromIE=%.1f, fromII=%.1f, fromIT=%.1f, fromIR=%.1f\n", fromIS[1], fromIE[1], fromII[1], fromIT[1], fromIR[1]);
 //Rprintf("fromSI=%.1f, fromEI=%.1f, fromII=%.1f, fromTI=%.1f, fromRI=%.1f\n", fromSI[0], fromEI[0], fromII[0], fromTI[0], fromRI[0]);
 //Rprintf("fromIS0=%.1f,fromIS1=%.1f.fromIS2=%.1f\n", fromIS[0], fromIS[1], fromIS[2]);
