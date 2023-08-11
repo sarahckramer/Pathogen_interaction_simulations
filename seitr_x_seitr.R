@@ -52,28 +52,19 @@ for (nm in components_nm) {
 
 # set seed:
 set.seed(2908)
-# initialize time of surges from start of season (1 July)
-# by drawing from a normal distribution
+# initialize time of surges (based on week) from start of season (1 July)
+# by drawing from a normal distribution 
 n_surge <- 7
-# by day
-mu_Imloss <- 188
-sd_Imloss <- 35
-
-# by week
 mu_Imloss <- 27
 sd_Imloss <- 5
 
 t_si <- rnorm(n=n_surge, mean=mu_Imloss,sd=sd_Imloss)
-# correcting t_si to give t based on day of the year rather than 
-# day from start of season (note: July 1 is the 182 day)
-t_si <- round(seq(182, 365*n_surge, by=365) + t_si)
-# generating based on week 
+# correcting t_si to give t based on week of the year rather than 
+# week from start of season (note: July 1 is week 26)
 t_si <- round(seq(26, 52*n_surge, by=52) + t_si)
 
 # remove all t_si which are less than 2years - allowing this amount
-# of time for the system to reach an equilibrium 
-t_si <- t_si[-which(t_si <= 730)]
-# by week
+# of time for the system to reach an equilibrium (2 yrs ~ 104 weeks)
 t_si <- t_si[-which(t_si <= 104)]
 
 # up dating the number of surges to input into parameter vector
@@ -85,24 +76,8 @@ delta_i <- runif(n=length(t_si), min = 0.01, max=0.12)
 
 # create dataframe of single set of parameter inputs
 # v1 = influenza; v2 = RSV
-# daily parameters that work and are based on reliable references
-true_params <- data.frame(Ri1=1.3, Ri2=3.5,
-                          sigma1=1, sigma2=1/5,
-                          gamma1=1/5, gamma2=1/10,
-                          delta1=1/7, delta2=1/7,
-                          mu = 0.0001, nu=0.00003, 
-                          w1=1/365, w2=1/193,
-                          rho1 = 0.15, rho2 = 0.09,
-                          theta_lambda1=2, theta_lambda2=2, 
-                          A1=0.15, phi1=200,
-                          A2=0.4, phi2=175,
-                          beta_sd1=0, beta_sd2=0, 
-                          N=3000000,
-                          E01=0.001, E02=0.0007,
-                          R01=0.4, R02=0.2, R12=0.001,
-                          n_surge = n_surge, t_si=t(t_si), delta_i=t(delta_i))
-
-# setting parameters to weekly  
+# setting parameters to weekly listed as daily in 
+# spreadsheet list of model parameters.xlsx
 true_params <- data.frame(Ri1=1.3, Ri2=3.5,
                           sigma1=7, sigma2=7/5,
                           gamma1=7/5, gamma2=7/10,
@@ -134,31 +109,6 @@ for (i in 1:dim(true_params)[1]){
 }
 
 #---- create pomp object ---# 
-# pomp object for daily parameters that works
-po <- pomp(data = data.frame(time = seq(from = 0, to = 2555, by = 1), v1_obs = NA, v2_obs = NA),
-           times = "time",
-           t0 = 0,
-           obsnames = c('v1_obs', 'v2_obs'),
-           accumvars = c('v1_T', 'v2_T'),
-           statenames = c('X_SS', 'X_ES' , 'X_IS', 'X_TS', 'X_RS', 
-                          'X_SE', 'X_EE', 'X_IE', 'X_TE', 'X_RE',
-                          'X_SI', 'X_EI' ,'X_II', 'X_TI', 'X_RI', 
-                          'X_ST', 'X_ET' ,'X_IT', 'X_TT', 'X_RT',
-                          'X_SR', 'X_ER' ,'X_IR', 'X_TR', 'X_RR', 
-                          'v1_T', 'v2_T', 
-                          'w', 'delta', 'lambda_1', 'lambda_2', 'gamma_1',
-                          'beta_1', 's_1'),
-           paramnames = names(true_params),
-           params = true_params,
-           globals = components_l[['globs']],
-           dmeasure = components_l[['dmeas']],
-           rmeasure = components_l[['rmeas']],
-           rprocess = euler(step.fun = components_l[['rsim']], delta.t = 0.3),
-           skeleton = vectorfield(components_l[['skel']]), # putting in deterministic for testing
-           rinit = components_l[['rinit']]
-)
-
-# pomp object for weekly parameters
 po <- pomp(data = data.frame(time = seq(from = 0, to = 364, by = 1), v1_obs = NA, v2_obs = NA),
            times = "time",
            t0 = 0,
@@ -183,18 +133,13 @@ po <- pomp(data = data.frame(time = seq(from = 0, to = 364, by = 1), v1_obs = NA
 )
 
 # ----simulating data----#
-s1 <- simulate(po, times=1:2555, format="data.frame")
-d1 <- trajectory(po, times=1:2555, format = "data.frame") %>% dplyr::select(-'.id') %>% 
+s1 <- simulate(po, times=1:364, format="data.frame")
+d1 <- trajectory(po, times=1:364, format = "data.frame") %>% dplyr::select(-'.id') %>% 
   mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params$rho1),  
          v2_obs = rbinom(n=length(v2_T),size=round(v2_T), prob=true_params$rho2))
 
-# by week
-s1 <- simulate(po, times=1:364, format="data.frame")
-
 # make time into years
-d1$time <- d1$time/365
-s1$time <- s1$time/365
-
+d1$time <- d1$time/52
 s1$time <- s1$time/52
 
 # remove first 2 years where simulation isn't yet at equilibrium 
@@ -209,9 +154,6 @@ s1 <- s1 %>% filter(time > 2)
 # observation model output 
 ggplot(aes(x=time, y=v1_obs),data=d1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue") + 
   ggtitle("deterministic")
-ggplot(aes(x=time, y=v1_obs),data=s1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue") + 
-  ggtitle("stochastic") + labs(y="observed cases", x="time (years)") +  geom_vline(xintercept = t_si/365, linetype="dotted")
-
 ggplot(aes(x=time, y=v1_obs),data=s1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue") + 
   ggtitle("stochastic") + labs(y="observed cases", x="time (years)") +  geom_vline(xintercept = t_si/52, linetype="dotted")
 
