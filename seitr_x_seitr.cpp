@@ -41,6 +41,7 @@ static double pTrans(double r, double delta_t) {
 // R02 = initial proportion of the population immune to virus 2
 // R12 = initial proportion of the population immune to both virus 1 and 2 
 // N = overall population size
+// note: E01 +  E02 + R01 + R02 +  R12 must be <=1
 
 // Each compartment
 X_SS = nearbyint((1.0 - E01 - E02 - R01 - R02 - R12) * N);
@@ -69,8 +70,14 @@ X_IR = 0;
 X_TR = 0;
 X_RR = nearbyint(R12 * N);
 
+// addition of other variables to be able to monitor output
 w = 0;
 delta = 0;
+lambda_1 = 0;
+lambda_2 = 0;
+gamma_1 = 0;
+beta_1 = 0;
+s_1 =0;
 
 // if the compartments that are assigned some initial value don't sum to
 // N (likely due to rounding in the nearbyint function) print the values
@@ -139,6 +146,7 @@ double beta2 = Ri2 / (1.0 - (R02 + R12)) * gamma2; // virus 2
 // incorporate seasonality parameter for each virus 
 // where A = amplitude, omega = annual angular frequency, t = time and phi = phase
 double omega = (2 * M_PI)/365;
+//double omega = (2 * M_PI)/52;
 double s1 = 1 + A1 * cos(omega * (t - phi1));
 double s2 = 1 + A2 * cos(omega * (t - phi2));
 
@@ -197,6 +205,8 @@ double p2 = (X_SI + X_EI +  X_II + X_TI + X_RI); // virus 2
 double R0_1 = Ri1 / (1.0 - (R01 + R12)); // virus 1
 double R0_2 = Ri2 / (1.0 - (R02 + R12)); // virus 2
 
+//Rprintf("R0_1=%.4f, Ri1=%.4f, R01=%.4f, R12_1=%.4f\n", R0_1, Ri1, R01, R12);
+
 // initialisation of the transmission terms 
 double beta1, beta2;
 // incorporate extra demographic stochasticity with the gamma distributed white noise process
@@ -216,6 +226,7 @@ if (p2 > 0.0 && beta_sd2 > 0.0) {
 // incorporate seasonality parameter for each virus 
 // where A = amplitude, omega = annual angular frequency, t = time and phi = phase
 double omega = (2 * M_PI)/365;
+//double omega = (2 * M_PI)/52;
 double s1 = 1 + A1 * cos(omega * (t - phi1));
 double s2 = 1 + A2 * cos(omega * (t - phi2));
 
@@ -225,16 +236,18 @@ double lambda2 = beta2 * (p2/N) * s2; // virus 2
 
 // addition of surges for vir1
 // note: we are using these surges for virus 1 only as it represents influenza 
+// which has a number of different strains and new mutations each season      
 
 // the new rate of immunity w1_loss = w1 + delta(t)
 // where delta(t) = delta_i for i in [1,n] when t=t_si days since start of season i;
 //                  0 otherwise
-double w1_s;
 
-// it is difficult to make this dynamic therefore will need to change the 
-// code if we want more than 5 surges (note: to see large noticeable 
-// changes in the simulated data the loss in immunity delta_i 
-// needs to be quite large)
+// it is difficult to make this part of the code dynamic therefore
+// will need to change the code if we want more than 5 surges
+// (note: to see large noticeable changes in the simulated data the
+// loss in immunity delta_i needs to be quite large - otherwise the 
+// changes are relatively subtle)
+double w1_s;
 if(t==t_si_1){
    w1_s = w1 + delta_i_1;
    } else if (t==t_si_2){
@@ -430,14 +443,15 @@ X_RR += fromRT[1] + fromTR[0] - fromRR[0] - fromRR[1] - fromRR[2];
 v1_T += fromIS[0] + fromIE[0] + fromII[0] + fromIT[0] + fromIR[0];
 v2_T += fromSI[1] + fromEI[1] + fromII[1] + fromTI[1] + fromRI[1];
 
-Rprintf("w1_s=%.4f, t=%.1f, t_si_1=%.1f\n", w1_s, t, t_si_1);
+//Rprintf("w1_s=%.4f, t=%.1f, t_si_1=%.1f\n", w1_s, t, t_si_1);
 
+// outputting additional variables to monitor
 w = w1_s;
 delta = delta_i_1;
-//Rprintf("fromIS=%.1f, fromIE=%.1f, fromII=%.1f, fromIT=%.1f, fromIR=%.1f\n", fromIS[1], fromIE[1], fromII[1], fromIT[1], fromIR[1]);
-//Rprintf("fromSI=%.1f, fromEI=%.1f, fromII=%.1f, fromTI=%.1f, fromRI=%.1f\n", fromSI[0], fromEI[0], fromII[0], fromTI[0], fromRI[0]);
-//Rprintf("fromIS0=%.1f,fromIS1=%.1f.fromIS2=%.1f\n", fromIS[0], fromIS[1], fromIS[2]);
-//Rprintf("lambda1=%.3f,lambda2=%.3f\n", lambda1, lambda2);
-
+lambda_1 = lambda1;
+lambda_2 = lambda2;
+gamma_1 = gamma1;
+beta_1 = beta1;
+s_1 = s1;
 
 //end_rsim
