@@ -19,6 +19,8 @@ library(vars)
 library(RTransferEntropy) 
 library(future) # allows for parallel processing
 library(mgcv)
+library(latex2exp)
+library(gridExtra)
 
 #---- set up cluster inputs ---# 
 # Get cluster environmental variables:
@@ -56,7 +58,7 @@ set.seed(2908)
 # by drawing from a normal distribution 
 n_surge <- 6
 mu_Imloss <- 36 # early Oct
-sd_Imloss <- 2
+sd_Imloss <- 4
 
 t_si <- rnorm(n=n_surge, mean=mu_Imloss,sd=sd_Imloss)
 # correcting t_si to give t based on week of the year rather than 
@@ -77,8 +79,8 @@ delta_i <- runif(n=length(t_si), min = 0.01, max=0.12)
 
 # create a function to specify multiple sets of parameter inputs
 
-theta_lambda1 <- c(0,1,2)
-theta_lambda2 <- c(0,1,2)
+theta_lambda1 <- c(0,1,4)
+theta_lambda2 <- c(0,1,4)
 delta_1 <- 1
 delta_2 <- 1
 
@@ -101,8 +103,8 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
                           w1=1/52, w2=1/28,
                           rho1 = 0.004, rho2 = 0.003,
                           theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
-                          A1=0.15, phi1=26,
-                          A2=0.3, phi2=25,
+                          A1=0.2, phi1=26,
+                          A2=0.4, phi2=25,
                           beta_sd1=0, beta_sd2=0, 
                           N=3700000,
                           E01=0.001, E02=0.0007,
@@ -152,7 +154,10 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
     # d1 <- trajectory(po, times=1:364, format = "data.frame") %>% dplyr::select(-'.id') %>% 
     #   mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params$rho1),  
     #          v2_obs = rbinom(n=length(v2_T),size=round(v2_T), prob=true_params$rho2))
-
+    
+    # remove first 2 years where simulation isn't yet at equilibrium 
+    s1 <- s1 %>% filter(time > 104)
+    
     # make time into dates based off week number
     s1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(s1$time)
     #d1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(d1$time)
@@ -170,94 +175,115 @@ results <- mapply(sim_data, theta_lambda1, theta_lambda2)
 # changing the surge times to dates
 t_si_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(t_si)
 
-# remove first 2 years where simulation isn't yet at equilibrium 
-# d1 <- d1 %>% filter(time > 104)
-s1 <- s1 %>% filter(time > 104)
-
-# observation model output 
+# plots of single simulation 
 # ggplot(aes(x=time, y=v1_obs),data=d1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue") + 
 #   ggtitle("deterministic")
-ggplot(aes(x=time_date, y=v1_obs),data=s1) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") + 
-  ggtitle("stochastic") + labs(y="observed cases") + 
-  scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + 
-  theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted")
+# ggplot(aes(x=time_date, y=v1_obs),data=s1) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") + 
+#   ggtitle("stochastic") + labs(y="observed cases") + 
+#   scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + 
+#   theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted")
 
-# process model output - each compartment over time 
-d1_long <- gather(d1, compartment, cases, X_SS:v2_T, factor_key=T) # make data long
-ggplot(aes(x=time,y=cases), data=d1_long) + geom_line() + facet_wrap(.~compartment, scales="free") + 
-  ggtitle("deterministic")
-s1_long <- gather(s1, compartment, cases, X_SS:v2_T, factor_key=T)
-ggplot(aes(x=time,y=cases), data=s1_long) + geom_line() + facet_wrap(.~compartment, scales="free") + 
-  ggtitle("stochastic") 
-
-
+# creating multiple plots at once
+plot_list <- list() 
 for(i in 1:3){
-    data <- results[[i]]$data
-    p1 <- ggplot(aes(x=time_date, y=v1_obs),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") + 
-    ggtitle(results[[i]]$true_param$theta_lambda1) + labs(y="observed cases") + 
-    scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + 
+    data <- results[[i]]$data %>% filter(time > 104)
+    plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") + 
+    ggtitle(paste("theta_lambda1 and theta_lambda2 =", results[[i]]$true_param$theta_lambda1, 
+                  "AND delta_1 = delta_2 =", results[[i]]$true_param$delta1)) + labs(y="observed cases") + 
+    scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + ylim(0,800) +
     theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted")
-    print(p1)
 }
-
+grid.arrange(grobs=plot_list,ncol=1)
 
 ##########################################################
 ## Start testing each method for estimating interaction ##
 ##########################################################
-i=1
 
-# create dataset with just the observed cases
-d_var <- d1[,c("v1_obs", "v2_obs")]
-# specify total number of weeks of data we have 
-N <- d_var[,1] %>% length()
-  
+#------------ setup ---------------#
 # Automatically determine the best lag doing several models with lags
-# 1-5 then choose the best lag number  based on AIC
-lags <- lapply(d_var, VARselect, lag.max=5) 
-# pull out the lag with best BIC. Lower BIC = better (not BIC is labeled SV)
-# regardless of whether raw of normalised data used the lag chosen is the same
-lag_v1 <- as.numeric(lags$v1_obs$selection[3])
-lag_v2 <- as.numeric(lags$v2_obs$selection[3])
+# 1-5 (approximately 1 month) then choose the best lag number based on BIC
+
+# initialising lists to put results in 
+lags <- list()
+lag_v1 <- list()
+lag_v2 <- list()
+
+# loop over each simulated dataset to determine the number of lags for each
+for(i in 1:3){
+  df <- results[[i]]$data %>% dplyr::select(v1_obs, v2_obs)
+  lags[[i]] <- lapply(df, VARselect, lag.max=5) # lag of approx 1 month
+  rm(df)
+  # pull out the lag with best BIC. Lower BIC = better (not BIC is labeled SV)
+  # regardless of whether raw of normalised data used the lag chosen is the same
+  lag_v1[[i]] <- as.numeric(lags[[i]]$v1_obs$selection[3])
+  lag_v2[[i]] <- as.numeric(lags[[i]]$v2_obs$selection[3])
+  rm(lags)
+}
 
 #---- Correlation coefficents --------# 
-cor_raw <- cor.test(d_var$v1_obs, d_var$v2_obs); cor_raw
 
-temp_res <- data.frame(cbind(as.numeric(cor_raw$estimate), cor_raw$conf.int[1], cor_raw$conf.int[2]), cor_raw$p.value)
-names(temp_res) <- c("cor", "CI_lower_95", "CI_upper_95", "p_value")
-results[[i]]$cor <- temp_res
+# function to estimate correlation 
+corr_func <- function(v1_obs, v2_obs){
+  # calculated correlation coefficent 
+  cor_raw <- cor.test(v1_obs, v2_obs)
+  # pull together results in data frame 
+  temp_res <- data.frame(cbind(as.numeric(cor_raw$estimate), cor_raw$conf.int[1], cor_raw$conf.int[2]), cor_raw$p.value)
+  names(temp_res) <- c("cor", "CI_lower_95", "CI_upper_95", "p_value")
+  return(temp_res)
+}
 
-rm(temp_res, cor_raw)
+# apply correlation function to all simulated datasets and save results 
+for(i in 1:3){
+  results[[i]]$cor <- corr_func(v1_obs = results[[i]]$data$v1_obs, v2_obs = results[[i]]$data$v2_obs)
+}
 
 #----- Transfer entropy analysis ------# 
 
-# Interpreting transfer entropy (note: TE \in [0,1]):
-# If test significant suggests T_{X->Y} > 0 and the uncertainty about 
-# Y is reduced by the addition of X, that is X causes Y.
+# create function to give transfer entropy results
+te_func <- function(v1_obs, v2_obs, lag_v1, lag_v2){
+  # Interpreting transfer entropy (note: TE \in [0,1]):
+  # If test significant suggests T_{X->Y} > 0 and the uncertainty about 
+  # Y is reduced by the addition of X, that is X causes Y.
 
-# Output: provides not the transfer entropy and bias corrected effective transfer entropy  
-# Transfer entropy estimates are biased by small sample sizes. For large sample sizes TE and ETE 
-# will be approximately the same. For a single season the sample size is quite small so we want to 
-# go with ETE... see Behrendt et al. 2019 for more details
-shannon_te <- transfer_entropy(d_var$v1_obs, d_var$v2_obs, lx = min(lag_v1, lag_v2), ly=min(lag_v1, lag_v2))
-temp_res <- data.frame(coef(shannon_te))
+  # Output: provides not the transfer entropy and bias corrected effective transfer entropy  
+  # Transfer entropy estimates are biased by small sample sizes. For large sample sizes TE and ETE 
+  # will be approximately the same. For a single season the sample size is quite small so we want to 
+  # go with ETE... see Behrendt et al. 2019 for more details
+  shannon_te <- transfer_entropy(v1_obs, v2_obs, lx = min(lag_v1, lag_v2), ly=min(lag_v1, lag_v2))
+  temp_res <- data.frame(coef(shannon_te))
 
-# creating the 95% CIs about ETE - note that in the code for transfer_entropy to calculate the 
-# se they simply look at the sd of the bootstrap samples NOT SE=sd/sqrt(n)
-temp_res$lower95 <- temp_res$ete - 1.96*temp_res$se
-temp_res$upper95 <- temp_res$ete + 1.96*temp_res$se
+  # creating the 95% CIs about ETE - note that in the code for transfer_entropy to calculate the 
+  # se they simply look at the sd of the bootstrap samples NOT SE=sd/sqrt(n)
+  temp_res$lower95 <- temp_res$ete - 1.96*temp_res$se
+  temp_res$upper95 <- temp_res$ete + 1.96*temp_res$se
+  return(temp_res)
+}
 
-# add to the results list
-results[[i]]$transfer_entropy <- temp_res
-
-rm(temp_res, shannon_te)
+# apply transfer entropy function to all simulated datasets and save results
+for(i in 1:3){
+  results[[i]]$transfer_entropy <- te_func(v1_obs = results[[i]]$data$v1_obs, v2_obs = results[[i]]$data$v2_obs, 
+                                           lag_v1 = lag_v1[[i]], lag_v2 = lag_v2[[i]]) 
+}
 
 #---- Granger causality analysis  ----# 
 # separated this method out as a bit more code required
 source("granger_analysis.R")
 
+# apply the granger analysis to each simulated data set and save the results
+for(i in 1:3){
+  data <- results[[i]]$data %>% dplyr::select(v1_obs, v2_obs)
+  results[[i]]$granger <- granger_func(data = data, lag_v1 = lag_v1[[i]], lag_v2 = lag_v2[[i]])
+}
+
 #------- Convergent Cross mapping analysis -------# 
 # separated this method out as a bit more code required
 source("CCM.R")
+
+# apply the CCM approach to each simulated data set and save the results
+for(i in 1:3){
+  data <- results[[i]]$data %>% dplyr::select(time, v1_obs, v2_obs)
+  results[[i]]$CCM <- ccm_func(data = data)
+}
 
 
 #----- Likelihood approach -----# 
