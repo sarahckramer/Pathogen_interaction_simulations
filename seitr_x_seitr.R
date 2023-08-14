@@ -82,11 +82,17 @@ theta_lambda2 <- c(0,1,2)
 delta_1 <- 1
 delta_2 <- 1
 
+# function to create list of true parameter inputs and simulated data 
+# function takes a vector of the interaction parameters 
 sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
-# create dataframe of single set of parameter inputs
-# v1 = influenza; v2 = RSV
-# setting parameters to weekly listed as daily in 
-# spreadsheet list of model parameters.xlsx
+  set.seed(2908)
+  # can add expand.grid function here to get all combinations of the 
+  # interaction parameters
+  
+
+  # setting parameters to weekly rates - params listed as daily in 
+  # spreadsheet list of model parameters.xlsx
+  # note also v1 = influenza; v2 = RSV
   true_params <- data.frame(Ri1=1.3, Ri2=3.5,
                           sigma1=7, sigma2=7/5,
                           gamma1=7/5, gamma2=7/10,
@@ -95,8 +101,8 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
                           w1=1/52, w2=1/28,
                           rho1 = 0.004, rho2 = 0.003,
                           theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
-                          A1=0.15, phi1=25,
-                          A2=0.3, phi2=24,
+                          A1=0.15, phi1=26,
+                          A2=0.3, phi2=25,
                           beta_sd1=0, beta_sd2=0, 
                           N=3700000,
                           E01=0.001, E02=0.0007,
@@ -184,15 +190,16 @@ s1_long <- gather(s1, compartment, cases, X_SS:v2_T, factor_key=T)
 ggplot(aes(x=time,y=cases), data=s1_long) + geom_line() + facet_wrap(.~compartment, scales="free") + 
   ggtitle("stochastic") 
 
-# over plots of stochastic and deterministic models - can help identify problems
-d1_long$type <- 'deterministic'
-s1_long$type <- 'stochastic'
-# combine the two datasets
-s1_long$.id <- NULL
-long_comb <- rbind(d1_long, s1_long)
-# plot 
-ggplot(aes(x=time, y=cases, colour=type),data=long_comb) + geom_line() +
-  facet_wrap(.~compartment, scales="free") 
+
+for(i in 1:3){
+    data <- results[[i]]$data
+    p1 <- ggplot(aes(x=time_date, y=v1_obs),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") + 
+    ggtitle(results[[i]]$true_param$theta_lambda1) + labs(y="observed cases") + 
+    scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + 
+    theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted")
+    print(p1)
+}
+
 
 ##########################################################
 ## Start testing each method for estimating interaction ##
