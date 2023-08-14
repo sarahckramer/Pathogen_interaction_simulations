@@ -142,32 +142,31 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
 
 # ----simulating data----#
     s1 <- simulate(po, times=1:364, format="data.frame")
-# d1 <- trajectory(po, times=1:364, format = "data.frame") %>% dplyr::select(-'.id') %>% 
-#   mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params$rho1),  
-#          v2_obs = rbinom(n=length(v2_T),size=round(v2_T), prob=true_params$rho2))
+    # deterministic simulation 
+    # d1 <- trajectory(po, times=1:364, format = "data.frame") %>% dplyr::select(-'.id') %>% 
+    #   mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params$rho1),  
+    #          v2_obs = rbinom(n=length(v2_T),size=round(v2_T), prob=true_params$rho2))
 
-  # make time into dates based off week number
+    # make time into dates based off week number
     s1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(s1$time)
-  
-  
+    #d1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(d1$time)
+    
   # save results
     results[[j]]$data <- s1  
       }
   return(results)
 }
 
-# generate all true parameter sets
+# generate all true parameter sets and simulate data 
 results <- mapply(sim_data, theta_lambda1, theta_lambda2)
 
+# ---- Plotting simulated data ----#
+# changing the surge times to dates
 t_si_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(t_si)
 
 # remove first 2 years where simulation isn't yet at equilibrium 
 # d1 <- d1 %>% filter(time > 104)
 s1 <- s1 %>% filter(time > 104)
-
-
-
-# ---- Plotting simulated data ----#
 
 # observation model output 
 # ggplot(aes(x=time, y=v1_obs),data=d1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue") + 
