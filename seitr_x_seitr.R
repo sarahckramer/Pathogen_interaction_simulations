@@ -22,15 +22,15 @@ library(mgcv)
 
 #---- set up cluster inputs ---# 
 # Get cluster environmental variables:
-jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size 
-no_jobs <- as.integer(Sys.getenv("NOJOBS")); print(no_jobs)
-sobol_size <- as.integer(Sys.getenv("SOBOLSIZE")); print(sobol_size) 
-
-# determine which number job each original jobid, from the array, corresponds to
-jobid <- (jobid - 1) %% no_jobs + 1; print(jobid) 
-
-# Get unique identifiers for each repetition 
-unique_ids <- (1 + (jobid - 1) * sobol_size / no_jobs) : (jobid * sobol_size / no_jobs)
+# jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size 
+# no_jobs <- as.integer(Sys.getenv("NOJOBS")); print(no_jobs)
+# sobol_size <- as.integer(Sys.getenv("SOBOLSIZE")); print(sobol_size) 
+# 
+# # determine which number job each original jobid, from the array, corresponds to
+# jobid <- (jobid - 1) %% no_jobs + 1; print(jobid) 
+# 
+# # Get unique identifiers for each repetition 
+# unique_ids <- (1 + (jobid - 1) * sobol_size / no_jobs) : (jobid * sobol_size / no_jobs)
 
 #--- reading in CSnippets ---# 
 # read in the C code for the pomp model 
@@ -54,9 +54,9 @@ for (nm in components_nm) {
 set.seed(2908)
 # initialize time of surges (based on week) from start of season (1 July)
 # by drawing from a normal distribution 
-n_surge <- 7
-mu_Imloss <- 27
-sd_Imloss <- 5
+n_surge <- 6
+mu_Imloss <- 36 # early Oct
+sd_Imloss <- 2
 
 t_si <- rnorm(n=n_surge, mean=mu_Imloss,sd=sd_Imloss)
 # correcting t_si to give t based on week of the year rather than 
@@ -74,42 +74,50 @@ n_surge <- length(t_si)
 # surge times 
 delta_i <- runif(n=length(t_si), min = 0.01, max=0.12)
 
+
+# create a function to specify multiple sets of parameter inputs
+
+theta_lambda1 <- c(0,1,2)
+theta_lambda2 <- c(0,1,2)
+delta_1 <- 1
+delta_2 <- 1
+
+sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
 # create dataframe of single set of parameter inputs
 # v1 = influenza; v2 = RSV
 # setting parameters to weekly listed as daily in 
 # spreadsheet list of model parameters.xlsx
-true_params <- data.frame(Ri1=1.3, Ri2=3.5,
+  true_params <- data.frame(Ri1=1.3, Ri2=3.5,
                           sigma1=7, sigma2=7/5,
                           gamma1=7/5, gamma2=7/10,
                           delta1=1, delta2=1,
-                          mu = 0.0007, nu=0.00021, 
+                          mu = 0.0002, nu=0.0007, 
                           w1=1/52, w2=1/28,
-                          rho1 = 0.15, rho2 = 0.09,
-                          theta_lambda1=2, theta_lambda2=2, 
-                          A1=0.15, phi1=29,
-                          A2=0.4, phi2=25,
+                          rho1 = 0.004, rho2 = 0.003,
+                          theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
+                          A1=0.15, phi1=25,
+                          A2=0.3, phi2=24,
                           beta_sd1=0, beta_sd2=0, 
-                          N=3000000,
+                          N=3700000,
                           E01=0.001, E02=0.0007,
                           R01=0.4, R02=0.2, R12=0.001,
                           n_surge = n_surge, t_si=t(t_si), delta_i=t(delta_i))
 
-
-# replacing . in names of true params with _
-names(true_params) <- gsub(x = names(true_params), pattern = "\\.", replacement = "_") 
-
+  # replacing . in names of true params with _
+  names(true_params) <- gsub(x = names(true_params), pattern = "\\.", replacement = "_") 
 
 #---- Create list to save the parameter sets and results of our different methods ---# 
 
-results <- vector(mode = "list", length = dim(true_params)[1])
-for (i in 1:dim(true_params)[1]){
-  results[[i]] <- vector(mode = "list", length = 6)
-  results[[i]][[1]] <- true_params[1,] 
-  names(results[[i]]) <- c("true_param", "data", "cor", "transfer_entropy", "CCM","granger")
-}
+  results <- vector(mode = "list", length = dim(true_params)[1])
+  for (j in 1:dim(true_params)[1]){
+    results[[j]] <- vector(mode = "list", length = 6)
+    results[[j]][[1]] <- true_params[1,] 
+    names(results[[j]]) <- c("true_param", "data", "cor", "transfer_entropy", "CCM","granger")
+  
+
 
 #---- create pomp object ---# 
-po <- pomp(data = data.frame(time = seq(from = 0, to = 364, by = 1), v1_obs = NA, v2_obs = NA),
+      po <- pomp(data = data.frame(time = seq(from = 0, to = 364, by = 1), v1_obs = NA, v2_obs = NA),
            times = "time",
            t0 = 0,
            obsnames = c('v1_obs', 'v2_obs'),
@@ -123,40 +131,51 @@ po <- pomp(data = data.frame(time = seq(from = 0, to = 364, by = 1), v1_obs = NA
                           'w', 'delta', 'lambda_1', 'lambda_2', 'gamma_1',
                           'beta_1', 's_1'),
            paramnames = names(true_params),
-           params = true_params,
+           params = true_params[j,],
            globals = components_l[['globs']],
            dmeasure = components_l[['dmeas']],
            rmeasure = components_l[['rmeas']],
            rprocess = euler(step.fun = components_l[['rsim']], delta.t = 1),
            skeleton = vectorfield(components_l[['skel']]), # putting in deterministic for testing
            rinit = components_l[['rinit']]
-)
+      )
 
 # ----simulating data----#
-s1 <- simulate(po, times=1:364, format="data.frame")
-d1 <- trajectory(po, times=1:364, format = "data.frame") %>% dplyr::select(-'.id') %>% 
-  mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params$rho1),  
-         v2_obs = rbinom(n=length(v2_T),size=round(v2_T), prob=true_params$rho2))
+    s1 <- simulate(po, times=1:364, format="data.frame")
+# d1 <- trajectory(po, times=1:364, format = "data.frame") %>% dplyr::select(-'.id') %>% 
+#   mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params$rho1),  
+#          v2_obs = rbinom(n=length(v2_T),size=round(v2_T), prob=true_params$rho2))
 
-# make time into years
-d1$time <- d1$time/52
-s1$time <- s1$time/52
+  # make time into dates based off week number
+    s1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(s1$time)
+  
+  
+  # save results
+    results[[j]]$data <- s1  
+      }
+  return(results)
+}
+
+# generate all true parameter sets
+results <- mapply(sim_data, theta_lambda1, theta_lambda2)
+
+t_si_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(t_si)
 
 # remove first 2 years where simulation isn't yet at equilibrium 
-d1 <- d1 %>% filter(time > 2)
-s1 <- s1 %>% filter(time > 2)
+# d1 <- d1 %>% filter(time > 104)
+s1 <- s1 %>% filter(time > 104)
 
-# save results
-#results[[i]]$data <- s1  
+
 
 # ---- Plotting simulated data ----#
 
 # observation model output 
-ggplot(aes(x=time, y=v1_obs),data=d1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue") + 
-  ggtitle("deterministic")
-ggplot(aes(x=time, y=v1_obs),data=s1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue") + 
-  ggtitle("stochastic") + labs(y="observed cases", x="time (years)") +  geom_vline(xintercept = t_si/52, linetype="dotted")
-
+# ggplot(aes(x=time, y=v1_obs),data=d1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue") + 
+#   ggtitle("deterministic")
+ggplot(aes(x=time_date, y=v1_obs),data=s1) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") + 
+  ggtitle("stochastic") + labs(y="observed cases") + 
+  scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + 
+  theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted")
 
 # process model output - each compartment over time 
 d1_long <- gather(d1, compartment, cases, X_SS:v2_T, factor_key=T) # make data long
@@ -175,10 +194,6 @@ long_comb <- rbind(d1_long, s1_long)
 # plot 
 ggplot(aes(x=time, y=cases, colour=type),data=long_comb) + geom_line() +
   facet_wrap(.~compartment, scales="free") 
-
-
-# remove datasets no longer going to use
-rm(s1,s1_states,components_l,po,components_nm,mod_code,i,nm, true_params)
 
 ##########################################################
 ## Start testing each method for estimating interaction ##
