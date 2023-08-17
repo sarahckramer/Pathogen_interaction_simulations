@@ -79,11 +79,11 @@ ccm_func <- function(data){
   # run the ccm 
   lib_max <- dim(data)[1] - max(abs(optimal_tp_v1xv2),abs(optimal_tp_v2xv1)) -1 - max(abs(E_v1), abs(E_v2))
   v1_xmap_v2 <- ccm(data, E = E_v1, lib_column = "v1_obs", target_column = "v2_obs", 
-                    lib_sizes = seq(10, lib_max, 2), num_samples = R, tp=optimal_tp_v1xv2,
+                    lib_sizes = seq(50, lib_max, 2), num_samples = R, tp=optimal_tp_v1xv2,
                     random_libs = TRUE, replace = TRUE, stats_only=FALSE)
   
   v2_xmap_v1 <- ccm(data, E = E_v2, lib_column = "v1_obs", target_column = "v2_obs", 
-                    lib_sizes = seq(10, lib_max, 2), num_samples = R, tp=optimal_tp_v2xv1,
+                    lib_sizes = seq(50, lib_max, 2), num_samples = R, tp=optimal_tp_v2xv1,
                     random_libs = TRUE, replace = TRUE, stats_only=FALSE)
   
   # pull out the mean rho for each library size
@@ -114,12 +114,45 @@ ccm_func <- function(data){
   # join the CI intervals with the mean
   res <- mean_preds %>% left_join(interval_perc)
   
-  # Creating the null hypothesis for comparison with our CCM output
+  # ------Creating the null hypothesis for comparison with our CCM output-----#
+  
   # using a randomised shuffle approach 
   num_surr <- 100 # number of surrogate datasets
   surr_v1 <- make_surrogate_data(data$v1_obs, method = "random", num_surr = num_surr)
   surr_v2 <- make_surrogate_data(data$v2_obs, method = "random", num_surr = num_surr)
   #str(surr_v1) # 100 columns for each of the surrogate datasets all with 52 rows
+  
+  # using seasonal data to create null hypothesis 
+  load(system.file("extdata", "isd_history.rda", package = "GSODR"))
+  # create data.frame for Germany only
+  DE <- subset(isd_history, COUNTRY_NAME == "GERMANY")
+  table(DE$NAME)
+  
+  # Look for a specific city in Germany
+  subset(DE, grepl("BERLIN/ALEXANDERPLZ", NAME))
+  subset(DE, grepl("BERLIN/SCHONEFELD", NAME)) 
+  subset(DE, grepl("BERLIN/DAHLEM", NAME)) # only 1973-2003 but daily data
+  
+  dat_BER <- get_GSOD(years = 1973:2023, station = "103810-99999") 
+  dat_BER$WEEK <- lubridate::isoweek(dat_BER$YEARMODA)
+  str(dat_BER)
+  
+  wk_temp_BER <- dat_BER %>% group_by(YEAR, WEEK) %>% 
+    summarise(mean_wk_temp = mean(TEMP))
+  
+  wk_temp_BER$date <- paste(wk_temp_BER$YEAR, wk_temp_BER$WEEK, sep="-")
+  wk_temp_BER$date <- as_date(wk_temp_BER$date, format="%Y-%b-%d") # still trying to get year and week into date format
+  
+  head(wk_temp_BER)
+  
+  # plotting temperature
+  tbar_temps <- tbar[, c("YEARMODA", "TEMP", "MAX", "MIN")]
+  
+  
+  
+  
+  
+  
   
   # run ccm for surrogate data
   # estimating max lib value 
@@ -137,15 +170,18 @@ ccm_func <- function(data){
   v2_data <- as.data.frame(cbind(seq(1:length(data$v2_obs)), data$v2_obs, surr_v2))
   names(v2_data) <- c('time', 'v2_obs', paste('T', as.character(seq(1,100)), sep = ''))
   
+  temp_data <- as.data.frame(cbind(seq(1:length(data$v2_obs)), data$v2_obs, surr_temp))
+  names(v2_data) <- c('time', 'v2_obs', paste('T', as.character(seq(1,66)), sep = ''))
+  
   # Cross mapping
   for (j in 1:num_surr) {
     targetCol <- paste('T', j, sep = '' ) # as in v1T_data
     ccm_out_v1 <- ccm(v1_data, E = E_v1, lib_column = "v1_obs", target_column = targetCol,  
-                  lib_sizes = seq(10, lib_max_null, 2), num_samples = R, tp=optimal_tp_v1xv2,
+                  lib_sizes = seq(50, lib_max_null, 2), num_samples = R, tp=optimal_tp_v1xv2,
                   random_libs = TRUE, replace = TRUE)
     
     ccm_out_v2 <- ccm(v2_data, E = E_v2, lib_column = "v2_obs", target_column = targetCol,  
-                     lib_sizes = seq(10, lib_max_null, 2), num_samples = R, tp=optimal_tp_v2xv1,
+                     lib_sizes = seq(50, lib_max_null, 2), num_samples = R, tp=optimal_tp_v2xv1,
                      random_libs = TRUE, replace = TRUE)
     
     col_v1 <- paste('v1_obs', ':', targetCol, sep = '')
@@ -212,7 +248,7 @@ ccm_func <- function(data){
                            v1_xmap_v2_null = intervals_surr_v1_xmap_v2,
                            v2_xmap_v1_null = intervals_surr_v2_xmap_v1)
   res_list <- list(summary = overall_res_list, 
-                   fig_v1_xmap_v2 = p_v1_xmap_v2, fig_v2_xmap_v1 = p_v1_xmap_v2)
+                   fig_v1_xmap_v2 = p_v1_xmap_v2, fig_v2_xmap_v1 = p_v2_xmap_v1)
   return(res_list)
 }
 
