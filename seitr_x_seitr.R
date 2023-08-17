@@ -21,15 +21,15 @@ library(gridExtra)
 
 #---- set up cluster inputs ---# 
 # Get cluster environmental variables:
-# jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size 
-# no_jobs <- as.integer(Sys.getenv("NOJOBS")); print(no_jobs)
-# sobol_size <- as.integer(Sys.getenv("SOBOLSIZE")); print(sobol_size) 
-# 
-# # determine which number job each original jobid, from the array, corresponds to
-# jobid <- (jobid - 1) %% no_jobs + 1; print(jobid) 
-# 
-# # Get unique identifiers for each repetition 
-# unique_ids <- (1 + (jobid - 1) * sobol_size / no_jobs) : (jobid * sobol_size / no_jobs)
+jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size 
+no_jobs <- as.integer(Sys.getenv("NOJOBS")); print(no_jobs)
+
+# determine which number job each original jobid, from the array, corresponds to
+jobid <- (jobid - 1) %% no_jobs + 1; print(jobid)
+
+# Set maximal execution time for each estimation:
+time_max <- 4 # max execution time in hours
+nmins_exec <- time_max * 60 /no_jobs
 
 #--- reading in CSnippets ---# 
 # read in the C code for the pomp model 
@@ -73,9 +73,7 @@ n_surge <- length(t_si)
 # surge times 
 delta_i <- runif(n=length(t_si), min = 0.01, max=0.12)
 
-
 # create a function to specify multiple sets of parameter inputs
-
 theta_lambda1 <- c(0,1,4)
 theta_lambda2 <- c(0,1,4)
 delta_1 <- 1/2
