@@ -117,68 +117,21 @@ ccm_func <- function(data){
   
   # ------Creating the null hypothesis for comparison with our CCM output-----#
   
-  # using a randomised shuffle approach 
   num_surr <- 100 # number of surrogate datasets
-  surr_v1 <- make_surrogate_data(data$v1_obs, method = "random", num_surr = num_surr)
-  surr_v2 <- make_surrogate_data(data$v2_obs, method = "random", num_surr = num_surr)
-  #str(surr_v1) # 100 columns for each of the surrogate datasets all with 52 rows
   
   # using seasonal data to create null hypothesis 
   surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = 52)
   surr_v2 <- make_surrogate_data(data$v2_obs, method = "seasonal", num_surr = num_surr, T_period = 52)
 
-  # decided to use Berlin air temperature data to build up my seasonal 
-  # null distribution 
-  
-  #---- extract and clean weather data ----# 
-  # finding weather stations in Berlin  
-  findID("Berlin", exactmatch=FALSE)
-  # check out the meta data for Berlin-Dahlem (FU) it has the most amount of data for Berlin
-  meta_ber <- metaInfo(403) # has subdaily air temp, per=historical 
-  # prepare the link to download the data from 
-  link <- selectDWD("Berlin-Dahlem (FU)", res="subdaily", var="air_temperature", per="historical")
-  # download data
-  clim <- dataDWD(link)
-  # filter out data prior to 1 July 2014 and after July 2019
-  clim_sub <- clim %>% filter(MESS_DATUM > "2014-07-01" & MESS_DATUM < "2019-07-01")
-  # specify date and date
-  clim_sub$MESS_DATUM <- as.Date(clim_sub$MESS_DATUM) 
-  # plot to check 
-  # ggplot(aes(x=MESS_DATUM,y=TT_TER), data=clim_sub) + geom_line() +
-  #   scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") +
-  #   theme(axis.text.x=element_text(angle=60, hjust=1))
-  # 
-  # add a week and year column to the dataframe
-  clim_sub$year <- year(clim_sub$MESS_DATUM)
-  clim_sub$month <- month(clim_sub$MESS_DATUM)
-  clim_sub$week <- week(clim_sub$MESS_DATUM)
-  # estimate weekly temp
-  wk_temp <- clim_sub %>% group_by(year, week) %>% summarise(mean_wk_temp = mean(TT_TER))
-  # create date column based on week and year 
-  wk_temp$date <- as.Date(paste(wk_temp$year, wk_temp$week, 1, sep="-"), "%Y-%U-%u")
-  wk_temp <- wk_temp %>% filter(!is.na(date))
-  # have an extra week at the start of my time series in comparison to the 
-  # virus data so remove this 
-  wk_temp <- wk_temp[-1,]
-  # plot weekly temps - looks good
-   ggplot(aes(x=date, y=mean_wk_temp), data=wk_temp) + geom_line() +  scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") +
-     theme(axis.text.x=element_text(angle=60, hjust=1))
-  
-  #---- create the surrogate data now----# 
-  surr_temp <- make_surrogate_data(wk_temp$mean_wk_temp, method = "seasonal", num_surr = num_surr, T_period = 12)
-   
   # run ccm for surrogate data
   # estimating max lib value 
   abs_max_tp <- max(abs(optimal_tp_v1xv2), abs(optimal_tp_v2xv1))
-  lib_max_null <- dim(surr_temp)[1] - abs_max_tp - max(E_v1,E_v2)
+  lib_max_null <- dim(surr_v1)[1] - abs_max_tp - max(E_v1,E_v2)
   
   # data.frame to hold CCM rho values
   rho_surr_v1_xmap_v2 <- data.frame(LibSize = seq(50, lib_max_null, 2))
   rho_surr_v2_xmap_v1 <- data.frame(LibSize = seq(50, lib_max_null, 2))
   
-  # rho_surr_v1_xmap_temp <- data.frame(LibSize = seq(50, lib_max_null, 2))
-  # rho_surr_v2_xmap_temp <- data.frame(LibSize = seq(50, lib_max_null, 2))
-   
   # creating data frame with observed and surrogate data to be used with ccm 
   v1_data <-  data.frame(cbind(seq(1:length(data$v1_obs)), data$v1_obs, surr_v1))
   names(v1_data) <- c('time', 'v1_obs', paste('T', as.character(seq(1,100)), sep = ''))
@@ -186,15 +139,10 @@ ccm_func <- function(data){
   v2_data <- as.data.frame(cbind(seq(1:length(data$v2_obs)), data$v2_obs, surr_v2))
   names(v2_data) <- c('time', 'v2_obs', paste('T', as.character(seq(1,100)), sep = ''))
 
-  # temp_data_v1 <- as.data.frame(cbind(seq(1:length(data$v1_obs)), data$v1_obs, surr_temp))
-  # names(temp_data_v1) <- c('time', 'v1_obs', paste('T', as.character(seq(1,100)), sep = ''))
-  # 
-  # temp_data_v2 <- as.data.frame(cbind(seq(1:length(data$v2_obs)), data$v2_obs, surr_temp))
-  # names(temp_data_v2) <- c('time', 'v2_obs', paste('T', as.character(seq(1,100)), sep = ''))
-  
   # Cross mapping
-  #for (j in 1:num_surr) {
-  for (j in 1:5) {
+  for (j in 1:num_surr) {
+
+    print(j)
     targetCol <- paste('T', j, sep = '' ) # as in v1T_data
     ccm_out_v1 <- ccm(v1_data, E = E_v1, lib_column = "v1_obs", target_column = targetCol,
                   lib_sizes = seq(50, lib_max_null, 2), num_samples = R, tp=optimal_tp_v1xv2,
@@ -204,63 +152,31 @@ ccm_func <- function(data){
                      lib_sizes = seq(50, lib_max_null, 2), num_samples = R, tp=optimal_tp_v2xv1,
                      random_libs = TRUE, replace = TRUE)
 
-    # ccm_out_v1_x_temp <- ccm(temp_data_v1, E = E_v1, lib_column = "v1_obs", target_column = targetCol,  
-    #                          lib_sizes = seq(50, lib_max_null, 2), num_samples = R, tp=optimal_tp_v1xv2,
-    #                          random_libs = TRUE, replace = TRUE)
-    # 
-    # ccm_out_v2_x_temp <- ccm(temp_data_v2, E = E_v2, lib_column = "v2_obs", target_column = targetCol,  
-    #                          lib_sizes = seq(50, lib_max_null, 2), num_samples = R, tp=optimal_tp_v1xv2,
-    #                          random_libs = TRUE, replace = TRUE)
-    # 
-    
     col_v1 <- paste('v1_obs', ':', targetCol, sep = '')
     col_v2 <- paste('v2_obs', ':', targetCol, sep = '')
     # pulling out the quantiles for the null 
     rho_surr_v1_xmap_v2 = cbind(rho_surr_v1_xmap_v2,ccm_out_v1[,col_v1])
     rho_surr_v2_xmap_v1 = cbind(rho_surr_v2_xmap_v1,ccm_out_v2[,col_v2])
-    
-    #rho_surr_v1_xmap_temp = cbind(rho_surr_v1_xmap_temp,ccm_out_v1_x_temp[,col_v1])
-    #rho_surr_v2_xmap_temp = cbind(rho_surr_v2_xmap_temp,ccm_out_v2_x_temp[,col_v2])
-    
+
   }
   names(rho_surr_v1_xmap_v2) <- c("LibSize", paste0("T", 1:num_surr))
   names(rho_surr_v2_xmap_v1) <- c("LibSize", paste0("T", 1:num_surr))
-  
-  # names(rho_surr_v1_xmap_temp) <- c("LibSize", paste0("T", 1:num_surr))
-  # names(rho_surr_v2_xmap_temp) <- c("LibSize", paste0("T", 1:num_surr))
-  # 
+
   # finding the lower and upper quantiles for a 95% CI
   # v1
   dim(rho_surr_v1_xmap_v2) # 21 x 101
-  intervals_surr_v1_xmap_v2 <- apply(rho_surr_v1_xmap_v2, 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
+  intervals_surr_v1_xmap_v2 <- apply(rho_surr_v1_xmap_v2[,2:6], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
   intervals_surr_v1_xmap_v2 <- t(intervals_surr_v1_xmap_v2) # transpose to get intervals as columns
   intervals_surr_v1_xmap_v2 <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v1_xmap_v2) # add libSizes to df
   intervals_surr_v1_xmap_v2 <- data.frame(intervals_surr_v1_xmap_v2)
   names(intervals_surr_v1_xmap_v2) <- c("LibSizes", "lower95_v1_xmap_v2", "median","upper95_v1_xmap_v2")
 
   # v2
-  intervals_surr_v2_xmap_v1 <- apply(rho_surr_v2_xmap_v1, 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
+  intervals_surr_v2_xmap_v1 <- apply(rho_surr_v2_xmap_v1[,2:6], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
   intervals_surr_v2_xmap_v1 <- t(intervals_surr_v2_xmap_v1) # transpose to get intervals as columns
   intervals_surr_v2_xmap_v1 <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v2_xmap_v1) # add libSizes to df
   intervals_surr_v2_xmap_v1 <- data.frame(intervals_surr_v2_xmap_v1)
   names(intervals_surr_v2_xmap_v1) <- c("LibSizes", "lower95_v2_xmap_v1", "median","upper95_v2_xmap_v1")
-
-  # v1 x temp
-  # dim(rho_surr_v1_xmap_temp) 
-  # intervals_surr_v1_xmap_temp <- apply(rho_surr_v1_xmap_temp, 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
-  # intervals_surr_v1_xmap_temp <- t(intervals_surr_v1_xmap_temp) # transpose to get intervals as columns
-  # intervals_surr_v1_xmap_temp <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v1_xmap_temp) # add libSizes to df
-  # intervals_surr_v1_xmap_temp <- data.frame(intervals_surr_v1_xmap_temp)
-  # names(intervals_surr_v1_xmap_temp) <- c("LibSizes", "lower95_v1_xmap_temp", "median","upper95_v1_xmap_temp")
-  # 
-  # # v2 x temp
-  # intervals_surr_v2_xmap_temp <- apply(rho_surr_v2_xmap_temp, 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
-  # intervals_surr_v2_xmap_temp <- t(intervals_surr_v2_xmap_temp) # transpose to get intervals as columns
-  # intervals_surr_v2_xmap_temp <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v2_xmap_temp) # add libSizes to df
-  # intervals_surr_v2_xmap_temp <- data.frame(intervals_surr_v2_xmap_temp)
-  # names(intervals_surr_v2_xmap_temp) <- c("LibSizes", "lower95_v2_xmap_temp", "median","upper95_v2_xmap_temp")
-  
-  
   
   #--- plotting---#
   # v1 xmap v2
@@ -275,19 +191,6 @@ ccm_func <- function(data){
     geom_line(aes(x=LibSizes,y=median), data=intervals_surr_v2_xmap_v1, colour = "blue") +
     geom_ribbon(aes(x=LibSizes,ymin=lower95_v2_xmap_v1, ymax=upper95_v2_xmap_v1,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
 
-  # # v1 xmap temp
-  # p_v1_xmap_temp <- ggplot(aes(x=LibSize, y=`median_v1_xmap_v2`), data=res) + geom_line() + 
-  #   geom_ribbon(aes(ymin=lower95_v1_xmap_v2, ymax=upper95_v1_xmap_v2,alpha=0.05))  + 
-  #   geom_line(aes(x=LibSizes,y=median), data=intervals_surr_v1_xmap_temp, colour = "blue") +
-  #   geom_ribbon(aes(x=LibSizes,ymin=lower95_v1_xmap_temp, ymax=upper95_v1_xmap_temp,alpha=0.05), data=intervals_surr_v1_xmap_temp, inherit.aes = FALSE, fill = "lightblue")  
-  # 
-  # # v2 xmap v1
-  # p_v2_xmap_v1 <- ggplot(aes(x=LibSize, y=`median_v2_xmap_v1`), data=res) + geom_line() + 
-  #   geom_ribbon(aes(ymin=lower95_v2_xmap_v1, ymax=upper95_v2_xmap_v1,alpha=0.05))  + 
-  #   geom_line(aes(x=LibSizes,y=median), data=intervals_surr_v2_xmap_v1, colour = "blue") +
-  #   geom_ribbon(aes(x=LibSizes,ymin=lower95_v2_xmap_v1, ymax=upper95_v2_xmap_v1,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")  
-  # 
-  
   # implementing two sample Kolmogorov-Smirnov test 
   # this test determines if the two series have come from the same distribution
   # H0: both samples come from the same distribution 
