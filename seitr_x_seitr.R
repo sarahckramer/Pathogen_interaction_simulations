@@ -14,12 +14,9 @@ library(testthat)
 library(pomp)
 library(janitor)
 library(ggfortify)
-library(ggpubr) # stat_cor
 library(vars)
 library(RTransferEntropy) 
 library(future) # allows for parallel processing
-library(mgcv)
-library(latex2exp)
 library(gridExtra)
 
 #---- set up cluster inputs ---# 
@@ -81,8 +78,8 @@ delta_i <- runif(n=length(t_si), min = 0.01, max=0.12)
 
 theta_lambda1 <- c(0,1,4)
 theta_lambda2 <- c(0,1,4)
-delta_1 <- 1
-delta_2 <- 1
+delta_1 <- 1/2
+delta_2 <- 1/2
 
 # function to create list of true parameter inputs and simulated data 
 # function takes a vector of the interaction parameters 
@@ -98,7 +95,7 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
   true_params <- data.frame(Ri1=1.3, Ri2=3.5,
                           sigma1=7, sigma2=7/5,
                           gamma1=7/5, gamma2=7/10,
-                          delta1=1, delta2=1,
+                          delta1=delta_1, delta2=delta_2,
                           mu = 0.0002, nu=0.0007, 
                           w1=1/52, w2=1/28,
                           rho1 = 0.004, rho2 = 0.003,
@@ -169,7 +166,7 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
 }
 
 # generate all true parameter sets and simulate data 
-results <- mapply(sim_data, theta_lambda1, theta_lambda2)
+results <- mapply(sim_data, theta_lambda1, theta_lambda2, delta_1, delta_2)
 
 # ---- Plotting simulated data ----#
 # changing the surge times to dates
@@ -217,8 +214,9 @@ for(i in 1:3){
   # regardless of whether raw of normalised data used the lag chosen is the same
   lag_v1[[i]] <- as.numeric(lags[[i]]$v1_obs$selection[3])
   lag_v2[[i]] <- as.numeric(lags[[i]]$v2_obs$selection[3])
-  rm(lags)
 }
+
+rm(lags)
 
 #---- Correlation coefficents --------# 
 
@@ -267,7 +265,7 @@ for(i in 1:3){
 
 #---- Granger causality analysis  ----# 
 # separated this method out as a bit more code required
-source("granger_analysis.R")
+source("/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/granger_analysis.R")
 
 # apply the granger analysis to each simulated data set and save the results
 for(i in 1:3){
@@ -277,14 +275,16 @@ for(i in 1:3){
 
 #------- Convergent Cross mapping analysis -------# 
 # separated this method out as a bit more code required
-source("CCM.R")
+source("/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/CCM.R")
 
 # apply the CCM approach to each simulated data set and save the results
+start <- Sys.time()
 for(i in 1:3){
   data <- results[[i]]$data %>% dplyr::select(time, v1_obs, v2_obs)
   results[[i]]$CCM <- ccm_func(data = data)
 }
-
+end <- Sys.time()
+end - start
 
 #----- Likelihood approach -----# 
 

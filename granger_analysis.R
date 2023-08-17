@@ -213,7 +213,7 @@ granger_func <- function(data, lag_v1, lag_v2){
   
   # check out the bootstrap distributions 
   bootstrap_samples <- data.frame(boot_out$t)
-  names(bootstrap_samples) <- c("prev_frac_v1","logRSS_v1","prev_frac_v2","logRSS_v2")
+  names(bootstrap_samples) <- c("prev_frac_v1_x_v2","logRSS_v1_x_v2","prev_frac_v2_x_v1","logRSS_v2_x_v1")
   # make data long 
   boot_long <- bootstrap_samples %>% tidyr::gather() 
   ggplot(aes(x=value),data=boot_long) + geom_histogram() + facet_grid(.~key, scales="free_x") 

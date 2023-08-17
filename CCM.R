@@ -11,6 +11,7 @@
 ccm_func <- function(data){
   # load packages
   library(rEDM) 
+  library(rdwd)
   
   # Determining Embedding dimension (i.e. the number of lags used to build up the shadow manifold)
   # Based on the prediction skill of the model. See rEDM vingette https://ha0ye.github.io/rEDM/articles/rEDM.html 
@@ -123,45 +124,55 @@ ccm_func <- function(data){
   #str(surr_v1) # 100 columns for each of the surrogate datasets all with 52 rows
   
   # using seasonal data to create null hypothesis 
-  load(system.file("extdata", "isd_history.rda", package = "GSODR"))
-  # create data.frame for Germany only
-  DE <- subset(isd_history, COUNTRY_NAME == "GERMANY")
-  table(DE$NAME)
+  # decided to use Berlin air temperature data to build up my seasonal 
+  # null distribution 
   
-  # Look for a specific city in Germany
-  subset(DE, grepl("BERLIN/ALEXANDERPLZ", NAME))
-  subset(DE, grepl("BERLIN/SCHONEFELD", NAME)) 
-  subset(DE, grepl("BERLIN/DAHLEM", NAME)) # only 1973-2003 but daily data
+  #---- extract and clean weather data ----# 
+  # finding weather stations in Berlin  
+  findID("Berlin", exactmatch=FALSE)
+  # check out the meta data for Berlin-Dahlem (FU) it has the most amount of data for Berlin
+  meta_ber <- metaInfo(403) # has subdaily air temp, per=historical 
+  # prepare the link to download the data from 
+  link <- selectDWD("Berlin-Dahlem (FU)", res="subdaily", var="air_temperature", per="historical")
+  # download data
+  clim <- dataDWD(link)
+  # filter out data prior to 1 July 2014 and after July 2019
+  clim_sub <- clim %>% filter(MESS_DATUM > "2014-07-01" & MESS_DATUM < "2019-07-01")
+  # specify date and date
+  clim_sub$MESS_DATUM <- as.Date(clim_sub$MESS_DATUM) 
+  # plot to check 
+  # ggplot(aes(x=MESS_DATUM,y=TT_TER), data=clim_sub) + geom_line() +
+  #   scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") +
+  #   theme(axis.text.x=element_text(angle=60, hjust=1))
+  # 
+  # add a week and year column to the dataframe
+  clim_sub$year <- year(clim_sub$MESS_DATUM)
+  clim_sub$month <- month(clim_sub$MESS_DATUM)
+  clim_sub$week <- week(clim_sub$MESS_DATUM)
+  # estimate weekly temp
+  wk_temp <- clim_sub %>% group_by(year, week) %>% summarise(mean_wk_temp = mean(TT_TER))
+  # create date column based on week and year 
+  wk_temp$date <- as.Date(paste(wk_temp$year, wk_temp$week, 1, sep="-"), "%Y-%U-%u")
+  wk_temp <- wk_temp %>% filter(!is.na(date))
+  # have an extra week at the start of my time series in comparison to the 
+  # virus data so remove this 
+  wk_temp <- wk_temp[-1,]
+  # plot weekly temps - looks good
+   ggplot(aes(x=date, y=mean_wk_temp), data=wk_temp) + geom_line() +  scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") +
+     theme(axis.text.x=element_text(angle=60, hjust=1))
   
-  dat_BER <- get_GSOD(years = 1973:2023, station = "103810-99999") 
-  dat_BER$WEEK <- lubridate::isoweek(dat_BER$YEARMODA)
-  str(dat_BER)
-  
-  wk_temp_BER <- dat_BER %>% group_by(YEAR, WEEK) %>% 
-    summarise(mean_wk_temp = mean(TEMP))
-  
-  wk_temp_BER$date <- paste(wk_temp_BER$YEAR, wk_temp_BER$WEEK, sep="-")
-  wk_temp_BER$date <- as_date(wk_temp_BER$date, format="%Y-%b-%d") # still trying to get year and week into date format
-  
-  head(wk_temp_BER)
-  
-  # plotting temperature
-  tbar_temps <- tbar[, c("YEARMODA", "TEMP", "MAX", "MIN")]
-  
-  
-  
-  
-  
-  
-  
+  #---- create the surrogate data now----# 
+   
+   
+   
   # run ccm for surrogate data
   # estimating max lib value 
   abs_max_tp <- max(abs(optimal_tp_v1xv2), abs(optimal_tp_v2xv1))
   lib_max_null <- dim(surr_v1)[1] - abs_max_tp - max(E_v1,E_v2)
   
   # data.frame to hold CCM rho values
-  rho_surr_v1_xmap_v2 <- data.frame(LibSize = seq(10, lib_max_null, 2)) 
-  rho_surr_v2_xmap_v1 <- data.frame(LibSize = seq(10, lib_max_null, 2)) 
+  rho_surr_v1_xmap_v2 <- data.frame(LibSize = seq(50, lib_max_null, 2)) 
+  rho_surr_v2_xmap_v1 <- data.frame(LibSize = seq(50, lib_max_null, 2)) 
   
   # creating data frame with observed and surrogate data to be used with ccm 
   v1_data <-  data.frame(cbind(seq(1:length(data$v1_obs)), data$v1_obs, surr_v1))
@@ -170,8 +181,8 @@ ccm_func <- function(data){
   v2_data <- as.data.frame(cbind(seq(1:length(data$v2_obs)), data$v2_obs, surr_v2))
   names(v2_data) <- c('time', 'v2_obs', paste('T', as.character(seq(1,100)), sep = ''))
   
-  temp_data <- as.data.frame(cbind(seq(1:length(data$v2_obs)), data$v2_obs, surr_temp))
-  names(v2_data) <- c('time', 'v2_obs', paste('T', as.character(seq(1,66)), sep = ''))
+  temp_data <- as.data.frame(cbind(seq(1:length(data$v2_obs)), data$v2_obs, wk_temp))
+  names(v2_data) <- c('time', 'v2_obs', paste('T', as.character(seq(1,100)), sep = ''))
   
   # Cross mapping
   for (j in 1:num_surr) {
