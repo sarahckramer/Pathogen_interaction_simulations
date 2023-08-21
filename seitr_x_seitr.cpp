@@ -71,13 +71,13 @@ X_TR = 0;
 X_RR = nearbyint(R12 * N);
 
 // addition of other variables to be able to monitor output
-w = 0;
-delta = 0;
-lambda_1 = 0;
-lambda_2 = 0;
-gamma_1 = 0;
-beta_1 = 0;
-s_1 =0;
+// w = 0;
+// delta = 0;
+// lambda_1 = 0;
+// lambda_2 = 0;
+// gamma_1 = 0;
+// beta_1 = 0;
+// s_1 =0;
 
 // if the compartments that are assigned some initial value don't sum to
 // N (likely due to rounding in the nearbyint function) print the values
@@ -444,12 +444,12 @@ v2_T += fromSI[1] + fromEI[1] + fromII[1] + fromTI[1] + fromRI[1];
 //Rprintf("w1_s=%.4f, t=%.1f, t_si_1=%.1f\n", w1_s, t, t_si_1);
 
 // outputting additional variables to monitor
-w = w1_s;
-delta = delta_i_1;
-lambda_1 = lambda1;
-lambda_2 = lambda2;
-gamma_1 = gamma1;
-beta_1 = beta1;
-s_1 = s1;
+// w = w1_s;
+// delta = delta_i_1;
+// lambda_1 = lambda1;
+// lambda_2 = lambda2;
+// gamma_1 = gamma1;
+// beta_1 = beta1;
+// s_1 = s1;
 
 //end_rsim

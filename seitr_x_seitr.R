@@ -22,18 +22,10 @@ library(gridExtra)
 #---- set up cluster inputs ---# 
 # Get cluster environmental variables:
 jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size 
-no_jobs <- as.integer(Sys.getenv("NOJOBS")); print(no_jobs)
-
-# determine which number job each original jobid, from the array, corresponds to
-jobid <- (jobid - 1) %% no_jobs + 1; print(jobid)
-
-# Set maximal execution time for each estimation:
-time_max <- 4 # max execution time in hours
-nmins_exec <- time_max * 60 /no_jobs
 
 #--- reading in CSnippets ---# 
 # read in the C code for the pomp model 
-mod_code <- readLines('/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/seitr_x_seitr.cpp')
+mod_code <- readLines('seitr_x_seitr.cpp')
 
 # pull out the various components of the C code ready to feed into pomp
 components_nm <- c('globs', 'dmeas', 'rmeas', 'rinit', 'rsim', 'skel')
@@ -76,17 +68,23 @@ delta_i <- runif(n=length(t_si), min = 0.01, max=0.12)
 # create a function to specify multiple sets of parameter inputs
 theta_lambda1 <- c(0,1,4)
 theta_lambda2 <- c(0,1,4)
-delta_1 <- 1/2
-delta_2 <- 1/2
+delta_1 <- c(1,1/2,1/3)
+delta_2 <- c(1,1/2,1/3)
+
+# Get all combinations of the interaction parameters
+all_param_comb <- expand.grid(theta_lambda1, theta_lambda2, delta_1, delta_2)
+names(all_param_comb) <- c("theta_lambda1", "theta_lambda2", "delta_1", "delta_2")
+
+# for now just keep symmetric interactions 
+all_param_comb <- all_param_comb %>% filter(theta_lambda1 == theta_lambda2 & delta_1 == delta_2)
+# remove parameter vectors 
+rm(theta_lambda1, theta_lambda2, delta_1, delta_2)
 
 # function to create list of true parameter inputs and simulated data 
 # function takes a vector of the interaction parameters 
 sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
   set.seed(2908)
-  # can add expand.grid function here to get all combinations of the 
-  # interaction parameters
   
-
   # setting parameters to weekly rates - params listed as daily in 
   # spreadsheet list of model parameters.xlsx
   # note also v1 = influenza; v2 = RSV
@@ -111,13 +109,9 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
 
 #---- Create list to save the parameter sets and results of our different methods ---# 
 
-  results <- vector(mode = "list", length = dim(true_params)[1])
-  for (j in 1:dim(true_params)[1]){
-    results[[j]] <- vector(mode = "list", length = 6)
-    results[[j]][[1]] <- true_params[1,] 
-    names(results[[j]]) <- c("true_param", "data", "cor", "transfer_entropy", "CCM","granger")
-  
-
+    results <- vector(mode = "list", length = 6)
+    results[[1]] <- true_params[1,] 
+    names(results) <- c("true_param", "data", "cor", "transfer_entropy", "CCM","granger")
 
 #---- create pomp object ---# 
       po <- pomp(data = data.frame(time = seq(from = 0, to = 364, by = 1), v1_obs = NA, v2_obs = NA),
@@ -130,11 +124,9 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
                           'X_SI', 'X_EI' ,'X_II', 'X_TI', 'X_RI', 
                           'X_ST', 'X_ET' ,'X_IT', 'X_TT', 'X_RT',
                           'X_SR', 'X_ER' ,'X_IR', 'X_TR', 'X_RR', 
-                          'v1_T', 'v2_T', 
-                          'w', 'delta', 'lambda_1', 'lambda_2', 'gamma_1',
-                          'beta_1', 's_1'),
+                          'v1_T', 'v2_T'),
            paramnames = names(true_params),
-           params = true_params[j,],
+           params = true_params,
            globals = components_l[['globs']],
            dmeasure = components_l[['dmeas']],
            rmeasure = components_l[['rmeas']],
@@ -158,61 +150,57 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
     #d1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(d1$time)
     
   # save results
-    results[[j]]$data <- s1  
-      }
-  return(results)
+    results$data <- s1  
+    return(results)
 }
+ 
 
 # generate all true parameter sets and simulate data 
-results <- mapply(sim_data, theta_lambda1, theta_lambda2, delta_1, delta_2)
-
+theta_lambda1 <- all_param_comb[jobid,]$theta_lambda1
+theta_lambda2 <- all_param_comb[jobid,]$theta_lambda2
+delta_1 <- all_param_comb[jobid,]$delta_1
+delta_2 <- all_param_comb[jobid,]$delta_2
+results <- sim_data(theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
+                      delta_1=delta_1, delta_2=delta_2)
+  
 # ---- Plotting simulated data ----#
 # changing the surge times to dates
-t_si_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(t_si)
-
-# plots of single simulation 
-# ggplot(aes(x=time, y=v1_obs),data=d1) + geom_line() + geom_line(aes(x=time, y=v2_obs), colour="blue") + 
-#   ggtitle("deterministic")
-# ggplot(aes(x=time_date, y=v1_obs),data=s1) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") + 
-#   ggtitle("stochastic") + labs(y="observed cases") + 
-#   scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + 
-#   theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted")
-
+t_si_date <- lubridate::ymd("2012-July-01") + lubridate::weeks(t_si)
+  
 # creating multiple plots at once
-plot_list <- list() 
-for(i in 1:3){
-    data <- results[[i]]$data %>% filter(time > 104)
-    plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") + 
-    ggtitle(paste("theta_lambda1 and theta_lambda2 =", results[[i]]$true_param$theta_lambda1, 
-                  "AND delta_1 = delta_2 =", results[[i]]$true_param$delta1)) + labs(y="observed cases") + 
-    scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + ylim(0,800) +
-    theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted")
-}
-grid.arrange(grobs=plot_list,ncol=1)
-
+# plot_list <- list() 
+# for(i in 1:3){
+#     data <- results[[i]]$data %>% filter(time > 104)
+#     plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") + 
+#     ggtitle(paste("theta_lambda1 and theta_lambda2 =", results[[i]]$true_param$theta_lambda1, 
+#                   "AND delta_1 = delta_2 =", results[[i]]$true_param$delta1)) + labs(y="observed cases") + 
+#     scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + ylim(0,800) +
+#     theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted")
+# }
+# grid.arrange(grobs=plot_list,ncol=1)
+  
 ##########################################################
 ## Start testing each method for estimating interaction ##
 ##########################################################
-
+  
 #------------ setup ---------------#
 # Automatically determine the best lag doing several models with lags
 # 1-5 (approximately 1 month) then choose the best lag number based on BIC
-
+  
 # initialising lists to put results in 
 lags <- list()
 lag_v1 <- list()
 lag_v2 <- list()
 
-# loop over each simulated dataset to determine the number of lags for each
-for(i in 1:3){
-  df <- results[[i]]$data %>% dplyr::select(v1_obs, v2_obs)
-  lags[[i]] <- lapply(df, VARselect, lag.max=5) # lag of approx 1 month
-  rm(df)
-  # pull out the lag with best BIC. Lower BIC = better (not BIC is labeled SV)
-  # regardless of whether raw of normalised data used the lag chosen is the same
-  lag_v1[[i]] <- as.numeric(lags[[i]]$v1_obs$selection[3])
-  lag_v2[[i]] <- as.numeric(lags[[i]]$v2_obs$selection[3])
-}
+# determine the number of lags for each simulated dataset
+df <- results$data %>% dplyr::select(v1_obs, v2_obs)
+
+lags <- lapply(df, VARselect, lag.max=5) # lag of approx 1 month
+rm(df)
+# pull out the lag with best BIC. Lower BIC = better (not BIC is labeled SV)
+# regardless of whether raw of normalised data used the lag chosen is the same
+lag_v1 <- as.numeric(lags$v1_obs$selection[3])
+lag_v2 <- as.numeric(lags$v2_obs$selection[3])
 
 rm(lags)
 
@@ -229,97 +217,92 @@ corr_func <- function(v1_obs, v2_obs){
 }
 
 # apply correlation function to all simulated datasets and save results 
-for(i in 1:3){
-  results[[i]]$cor <- corr_func(v1_obs = results[[i]]$data$v1_obs, v2_obs = results[[i]]$data$v2_obs)
-}
+results$cor <- corr_func(v1_obs = results$data$v1_obs, v2_obs = results$data$v2_obs)
+
 
 #----- Transfer entropy analysis ------# 
 
 # create function to give transfer entropy results
 te_func <- function(v1_obs, v2_obs, lag_v1, lag_v2){
-  # Interpreting transfer entropy (note: TE \in [0,1]):
-  # If test significant suggests T_{X->Y} > 0 and the uncertainty about 
-  # Y is reduced by the addition of X, that is X causes Y.
-
-  # Output: provides not the transfer entropy and bias corrected effective transfer entropy  
-  # Transfer entropy estimates are biased by small sample sizes. For large sample sizes TE and ETE 
-  # will be approximately the same. For a single season the sample size is quite small so we want to 
-  # go with ETE... see Behrendt et al. 2019 for more details
-  shannon_te <- transfer_entropy(v1_obs, v2_obs, lx = min(lag_v1, lag_v2), ly=min(lag_v1, lag_v2))
-  temp_res <- data.frame(coef(shannon_te))
-
-  # creating the 95% CIs about ETE - note that in the code for transfer_entropy to calculate the 
-  # se they simply look at the sd of the bootstrap samples NOT SE=sd/sqrt(n)
-  temp_res$lower95 <- temp_res$ete - 1.96*temp_res$se
-  temp_res$upper95 <- temp_res$ete + 1.96*temp_res$se
-  return(temp_res)
-}
-
+    # Interpreting transfer entropy (note: TE \in [0,1]):
+    # If test significant suggests T_{X->Y} > 0 and the uncertainty about 
+    # Y is reduced by the addition of X, that is X causes Y.
+  
+    # Output: provides not the transfer entropy and bias corrected effective transfer entropy  
+    # Transfer entropy estimates are biased by small sample sizes. For large sample sizes TE and ETE 
+    # will be approximately the same. For a single season the sample size is quite small so we want to 
+    # go with ETE... see Behrendt et al. 2019 for more details
+    shannon_te <- transfer_entropy(v1_obs, v2_obs, lx = min(lag_v1, lag_v2), ly=min(lag_v1, lag_v2))
+    temp_res <- data.frame(coef(shannon_te))
+  
+    # creating the 95% CIs about ETE - note that in the code for transfer_entropy to calculate the 
+    # se they simply look at the sd of the bootstrap samples NOT SE=sd/sqrt(n)
+    temp_res$lower95 <- temp_res$ete - 1.96*temp_res$se
+    temp_res$upper95 <- temp_res$ete + 1.96*temp_res$se
+    return(temp_res)
+  }
+  
 # apply transfer entropy function to all simulated datasets and save results
-for(i in 1:3){
-  results[[i]]$transfer_entropy <- te_func(v1_obs = results[[i]]$data$v1_obs, v2_obs = results[[i]]$data$v2_obs, 
-                                           lag_v1 = lag_v1[[i]], lag_v2 = lag_v2[[i]]) 
-}
-
+results$transfer_entropy <- te_func(v1_obs = results$data$v1_obs, v2_obs = results$data$v2_obs, 
+                                         lag_v1 = lag_v1, lag_v2 = lag_v2) 
+  
+  
 #---- Granger causality analysis  ----# 
 # separated this method out as a bit more code required
-source("/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/granger_analysis.R")
-
+source("granger_analysis.R")
 # apply the granger analysis to each simulated data set and save the results
-for(i in 1:3){
-  data <- results[[i]]$data %>% dplyr::select(v1_obs, v2_obs)
-  results[[i]]$granger <- granger_func(data = data, lag_v1 = lag_v1[[i]], lag_v2 = lag_v2[[i]])
-}
-
+data <- results$data %>% dplyr::select(v1_obs, v2_obs)
+results$granger <- granger_func(data = data, lag_v1 = lag_v1, lag_v2 = lag_v2)
+  
 #------- Convergent Cross mapping analysis -------# 
 # separated this method out as a bit more code required
-source("/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/CCM.R")
-
+source("CCM.R")
+  
 # apply the CCM approach to each simulated data set and save the results
-start <- Sys.time()
-for(i in 1:3){
-  data <- results[[i]]$data %>% dplyr::select(time, v1_obs, v2_obs)
-  results[[i]]$CCM <- ccm_func(data = data)
-}
-end <- Sys.time()
-end - start
+data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
+results$CCM <- ccm_func(data = data)
+
+# save out the results
+save(results, file=sprintf('results_%s.RData',jobid))
+
 
 #----- Likelihood approach -----# 
 
 
 
 #---- Wavelets analysis  ----# 
+# 
+# my.wc <- analyze.coherency(d_var, my.pair = c("H1_obs","H2_obs"),
+#                            loess.span = 0,
+#                            dt = 1, dj = 1/100,
+#                            make.pval = TRUE, n.sim = 10)
+# 
+# wc.image(my.wc, n.levels = 250,
+#          siglvl.contour = 0.1, siglvl.arrow = 0.05, ## default values
+#          legend.params = list(lab = "cross-wavelet power levels"),
+#          timelab = "")
+# 
+# wc.image(my.wc, which.image = "wc", color.key = "interval", n.levels = 250,
+#          siglvl.contour = 0.1, siglvl.arrow = 0.05,
+#          legend.params = list(lab = "wavelet coherence levels"),
+#          timelab = "")
+# 
+# wc.phasediff.image(my.wc, which.contour = "wc", use.sAngle = TRUE,
+#                    n.levels = 250, siglvl = 0.1,
+#                    legend.params = list(lab = "phase difference levels",
+#                                         lab.line = 3),
+#                    timelab = "")
 
-my.wc <- analyze.coherency(d_var, my.pair = c("H1_obs","H2_obs"),
-                           loess.span = 0,
-                           dt = 1, dj = 1/100,
-                           make.pval = TRUE, n.sim = 10)
 
-wc.image(my.wc, n.levels = 250,
-         siglvl.contour = 0.1, siglvl.arrow = 0.05, ## default values
-         legend.params = list(lab = "cross-wavelet power levels"),
-         timelab = "")
+# #--- GAM approach ---# 
+# 
+# mvn_mod <- gam(formula = list(v1_obs ~ s(time), v2_obs ~ s(time)),
+#                family = mvn(d = 2),
+#                data = s1)
+# summary(mvn_mod)
+# 
+# corr_mat <- mvn_mod$family$data$R %>%
+#   crossprod() %>%
+#   solve() %>%
+#   cov2cor(); corr_mat
 
-wc.image(my.wc, which.image = "wc", color.key = "interval", n.levels = 250,
-         siglvl.contour = 0.1, siglvl.arrow = 0.05,
-         legend.params = list(lab = "wavelet coherence levels"),
-         timelab = "")
-
-wc.phasediff.image(my.wc, which.contour = "wc", use.sAngle = TRUE,
-                   n.levels = 250, siglvl = 0.1,
-                   legend.params = list(lab = "phase difference levels",
-                                        lab.line = 3),
-                   timelab = "")
-
-
-#--- GAM approach ---# 
-
-mvn_mod <- gam(formula = list(v1_obs ~ s(time), v2_obs ~ s(time)),
-               family = mvn(d = 2),
-               data = s1)
-summary(mvn_mod)
-
-corr_mat <- mvn_mod$family$data$R %>%
-  crossprod() %>%
-  solve() %>%
-  cov2cor(); corr_mat

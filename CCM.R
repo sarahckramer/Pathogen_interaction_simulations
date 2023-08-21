@@ -11,7 +11,6 @@
 ccm_func <- function(data){
   # load packages
   library(rEDM) 
-  library(rdwd)
   
   # Determining Embedding dimension (i.e. the number of lags used to build up the shadow manifold)
   # Based on the prediction skill of the model. See rEDM vingette https://ha0ye.github.io/rEDM/articles/rEDM.html 
@@ -134,15 +133,14 @@ ccm_func <- function(data){
   
   # creating data frame with observed and surrogate data to be used with ccm 
   v1_data <-  data.frame(cbind(seq(1:length(data$v1_obs)), data$v1_obs, surr_v1))
-  names(v1_data) <- c('time', 'v1_obs', paste('T', as.character(seq(1,100)), sep = ''))
+  names(v1_data) <- c('time', 'v1_obs', paste('T', as.character(seq(1,num_surr)), sep = ''))
 
   v2_data <- as.data.frame(cbind(seq(1:length(data$v2_obs)), data$v2_obs, surr_v2))
-  names(v2_data) <- c('time', 'v2_obs', paste('T', as.character(seq(1,100)), sep = ''))
+  names(v2_data) <- c('time', 'v2_obs', paste('T', as.character(seq(1,num_surr)), sep = ''))
 
   # Cross mapping
   for (j in 1:num_surr) {
 
-    print(j)
     targetCol <- paste('T', j, sep = '' ) # as in v1T_data
     ccm_out_v1 <- ccm(v1_data, E = E_v1, lib_column = "v1_obs", target_column = targetCol,
                   lib_sizes = seq(50, lib_max_null, 2), num_samples = R, tp=optimal_tp_v1xv2,
@@ -165,14 +163,14 @@ ccm_func <- function(data){
   # finding the lower and upper quantiles for a 95% CI
   # v1
   dim(rho_surr_v1_xmap_v2) # 21 x 101
-  intervals_surr_v1_xmap_v2 <- apply(rho_surr_v1_xmap_v2[,2:6], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
+  intervals_surr_v1_xmap_v2 <- apply(rho_surr_v1_xmap_v2[,2:num_surr+1], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
   intervals_surr_v1_xmap_v2 <- t(intervals_surr_v1_xmap_v2) # transpose to get intervals as columns
   intervals_surr_v1_xmap_v2 <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v1_xmap_v2) # add libSizes to df
   intervals_surr_v1_xmap_v2 <- data.frame(intervals_surr_v1_xmap_v2)
   names(intervals_surr_v1_xmap_v2) <- c("LibSizes", "lower95_v1_xmap_v2", "median","upper95_v1_xmap_v2")
 
   # v2
-  intervals_surr_v2_xmap_v1 <- apply(rho_surr_v2_xmap_v1[,2:6], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
+  intervals_surr_v2_xmap_v1 <- apply(rho_surr_v2_xmap_v1[,2:num_surr+1], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
   intervals_surr_v2_xmap_v1 <- t(intervals_surr_v2_xmap_v1) # transpose to get intervals as columns
   intervals_surr_v2_xmap_v1 <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v2_xmap_v1) # add libSizes to df
   intervals_surr_v2_xmap_v1 <- data.frame(intervals_surr_v2_xmap_v1)
@@ -187,9 +185,9 @@ ccm_func <- function(data){
 
   # v2 xmap v1
   p_v2_xmap_v1 <- ggplot(aes(x=LibSize, y=`median_v2_xmap_v1`), data=res) + geom_line() +
-    geom_ribbon(aes(ymin=lower95_v2_xmap_v1, ymax=upper95_v2_xmap_v1,alpha=0.05))  +
-    geom_line(aes(x=LibSizes,y=median), data=intervals_surr_v2_xmap_v1, colour = "blue") +
-    geom_ribbon(aes(x=LibSizes,ymin=lower95_v2_xmap_v1, ymax=upper95_v2_xmap_v1,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
+  geom_ribbon(aes(ymin=lower95_v2_xmap_v1, ymax=upper95_v2_xmap_v1,alpha=0.05))  +
+  geom_line(aes(x=LibSizes,y=median), data=intervals_surr_v2_xmap_v1, colour = "blue") +
+  geom_ribbon(aes(x=LibSizes,ymin=lower95_v2_xmap_v1, ymax=upper95_v2_xmap_v1,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
 
   # implementing two sample Kolmogorov-Smirnov test 
   # this test determines if the two series have come from the same distribution
