@@ -154,7 +154,6 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
     return(results)
 }
  
-
 # generate all true parameter sets and simulate data 
 theta_lambda1 <- all_param_comb[jobid,]$theta_lambda1
 theta_lambda2 <- all_param_comb[jobid,]$theta_lambda2
@@ -168,17 +167,24 @@ results <- sim_data(theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2,
 t_si_date <- lubridate::ymd("2012-July-01") + lubridate::weeks(t_si)
   
 # creating multiple plots at once
-# plot_list <- list() 
-# for(i in 1:3){
-#     data <- results[[i]]$data %>% filter(time > 104)
-#     plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") + 
-#     ggtitle(paste("theta_lambda1 and theta_lambda2 =", results[[i]]$true_param$theta_lambda1, 
-#                   "AND delta_1 = delta_2 =", results[[i]]$true_param$delta1)) + labs(y="observed cases") + 
-#     scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + ylim(0,800) +
-#     theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted")
-# }
-# grid.arrange(grobs=plot_list,ncol=1)
-  
+temp <- vector(mode = "list", length = 3)
+plot_list <- vector(mode = "list", length = 3)
+for(i in 1:3){
+  theta_lambda1 <- all_param_comb[i,]$theta_lambda1
+  theta_lambda2 <- all_param_comb[i,]$theta_lambda2
+  delta_1 <- all_param_comb[i,]$delta_1
+  delta_2 <- all_param_comb[i,]$delta_2
+  temp[[i]] <- sim_data(theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
+                      delta_1=delta_1, delta_2=delta_2)
+  data <- temp[[i]]$data
+  plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") +
+    ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param$theta_lambda1,
+                  "AND delta_1 = delta_2 =", temp[[i]]$true_param$delta1)) + labs(y="observed cases") +
+    scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + ylim(0,800) +
+    theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted")
+}
+grid.arrange(grobs=plot_list,ncol=1)
+
 ##########################################################
 ## Start testing each method for estimating interaction ##
 ##########################################################
@@ -268,30 +274,6 @@ save(results, file=sprintf('results_%s.RData',jobid))
 
 #----- Likelihood approach -----# 
 
-
-
-#---- Wavelets analysis  ----# 
-# 
-# my.wc <- analyze.coherency(d_var, my.pair = c("H1_obs","H2_obs"),
-#                            loess.span = 0,
-#                            dt = 1, dj = 1/100,
-#                            make.pval = TRUE, n.sim = 10)
-# 
-# wc.image(my.wc, n.levels = 250,
-#          siglvl.contour = 0.1, siglvl.arrow = 0.05, ## default values
-#          legend.params = list(lab = "cross-wavelet power levels"),
-#          timelab = "")
-# 
-# wc.image(my.wc, which.image = "wc", color.key = "interval", n.levels = 250,
-#          siglvl.contour = 0.1, siglvl.arrow = 0.05,
-#          legend.params = list(lab = "wavelet coherence levels"),
-#          timelab = "")
-# 
-# wc.phasediff.image(my.wc, which.contour = "wc", use.sAngle = TRUE,
-#                    n.levels = 250, siglvl = 0.1,
-#                    legend.params = list(lab = "phase difference levels",
-#                                         lab.line = 3),
-#                    timelab = "")
 
 
 # #--- GAM approach ---# 

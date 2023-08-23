@@ -80,11 +80,11 @@ ccm_func <- function(data){
   lib_max <- dim(data)[1] - max(abs(optimal_tp_v1xv2),abs(optimal_tp_v2xv1)) -1 - max(abs(E_v1), abs(E_v2))
   v1_xmap_v2 <- ccm(data, E = E_v1, lib_column = "v1_obs", target_column = "v2_obs", 
                     lib_sizes = seq(50, lib_max, 2), num_samples = R, tp=optimal_tp_v1xv2,
-                    random_libs = TRUE, replace = TRUE, stats_only=FALSE)
+                    replace = TRUE, stats_only=FALSE)
   
   v2_xmap_v1 <- ccm(data, E = E_v2, lib_column = "v1_obs", target_column = "v2_obs", 
                     lib_sizes = seq(50, lib_max, 2), num_samples = R, tp=optimal_tp_v2xv1,
-                    random_libs = TRUE, replace = TRUE, stats_only=FALSE)
+                     replace = TRUE, stats_only=FALSE)
   
   # pull out the mean rho for each library size
   mean_rho_v1_xmap_v2 <- v1_xmap_v2$LibMeans 
@@ -116,7 +116,7 @@ ccm_func <- function(data){
   
   # ------Creating the null hypothesis for comparison with our CCM output-----#
   
-  num_surr <- 100 # number of surrogate datasets
+  num_surr <- 1000 # number of surrogate datasets
   
   # using seasonal data to create null hypothesis 
   surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = 52)
@@ -163,19 +163,26 @@ ccm_func <- function(data){
   # finding the lower and upper quantiles for a 95% CI
   # v1
   dim(rho_surr_v1_xmap_v2) # 21 x 101
-  intervals_surr_v1_xmap_v2 <- apply(rho_surr_v1_xmap_v2[,2:num_surr+1], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
+  intervals_surr_v1_xmap_v2 <- apply(rho_surr_v1_xmap_v2[,2:(num_surr+1)], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
   intervals_surr_v1_xmap_v2 <- t(intervals_surr_v1_xmap_v2) # transpose to get intervals as columns
+  intervals_surr_v1_xmap_v2 <- cbind(intervals_surr_v1_xmap_v2,mean_rho=apply(rho_surr_v1_xmap_v2[,2:(num_surr+1)], 1, mean, na.rm = TRUE))
+  intervals_surr_v1_xmap_v2 <- cbind(intervals_surr_v1_xmap_v2,sd_rho=apply(rho_surr_v1_xmap_v2[,2:(num_surr+1)], 1, sd, na.rm = TRUE))
   intervals_surr_v1_xmap_v2 <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v1_xmap_v2) # add libSizes to df
   intervals_surr_v1_xmap_v2 <- data.frame(intervals_surr_v1_xmap_v2)
-  names(intervals_surr_v1_xmap_v2) <- c("LibSizes", "lower95_v1_xmap_v2", "median","upper95_v1_xmap_v2")
+  names(intervals_surr_v1_xmap_v2) <- c("LibSizes", "lower95_v1_xmap_v2", "median","upper95_v1_xmap_v2", "mean_rho", "sd_rho")
 
   # v2
-  intervals_surr_v2_xmap_v1 <- apply(rho_surr_v2_xmap_v1[,2:num_surr+1], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
+  intervals_surr_v2_xmap_v1 <- apply(rho_surr_v2_xmap_v1[,2:(num_surr+1)], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
   intervals_surr_v2_xmap_v1 <- t(intervals_surr_v2_xmap_v1) # transpose to get intervals as columns
+  intervals_surr_v2_xmap_v1 <- cbind(intervals_surr_v2_xmap_v1,mean_rho=apply(rho_surr_v2_xmap_v1[,2:(num_surr+1)], 1, mean, na.rm = TRUE))
   intervals_surr_v2_xmap_v1 <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v2_xmap_v1) # add libSizes to df
   intervals_surr_v2_xmap_v1 <- data.frame(intervals_surr_v2_xmap_v1)
-  names(intervals_surr_v2_xmap_v1) <- c("LibSizes", "lower95_v2_xmap_v1", "median","upper95_v2_xmap_v1")
+  names(intervals_surr_v2_xmap_v1) <- c("LibSizes", "lower95_v2_xmap_v1", "median","upper95_v2_xmap_v1", "mean_rho")
   
+  # save out final libsize data
+  surr_max_lib_data_v1_x_v2 <-  rho_surr_v1_xmap_v2[nrow(res),] 
+  surr_max_lib_data_v2_x_v1 <-  rho_surr_v1_xmap_v2[nrow(res),] 
+    
   #--- plotting---#
   # v1 xmap v2
   p_v1_xmap_v2 <- ggplot(aes(x=LibSize, y=`median_v1_xmap_v2`), data=res) + geom_line() +
@@ -189,15 +196,9 @@ ccm_func <- function(data){
   geom_line(aes(x=LibSizes,y=median), data=intervals_surr_v2_xmap_v1, colour = "blue") +
   geom_ribbon(aes(x=LibSizes,ymin=lower95_v2_xmap_v1, ymax=upper95_v2_xmap_v1,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
 
-  # implementing two sample Kolmogorov-Smirnov test 
-  # this test determines if the two series have come from the same distribution
-  # H0: both samples come from the same distribution 
-  # H1: the samples come from different distributions
-  
-  # if p-value is significant this suggests a causal effect as the null
-  # and model cross mapping skill are significantly different
-  ks_out_v1_x_v2 <- ks.test(res$median_v1_xmap_v2, intervals_surr_v1_xmap_v2$median, exact=TRUE)
-  ks_out_v2_x_v1 <- ks.test(res$median_v2_xmap_v1, intervals_surr_v2_xmap_v1$median, exact=TRUE)
+  # estimating p-value using empirical cumulative distribution 
+  p_surr_v1_xmap_v2 <- 1 - ecdf(as.numeric(rho_surr_v1_xmap_v2[nrow(res),]))(res[dim(res)[1],"mean_v1_obs:v2_obs"])
+  p_surr_v2_xmap_v1 <- 1 - ecdf(as.numeric(rho_surr_v2_xmap_v1[nrow(res),]))(res[dim(res)[1],"mean_v2_obs:v1_obs"])
   
   #---- write out results ---# 
   
@@ -205,12 +206,14 @@ ccm_func <- function(data){
   # based max library size on our sample size
   temp_res <- res[dim(res)[1],]
   # add ks p_values
-  temp_res <- cbind(temp_res, ks_p_v1_x_v2=ks_out_v1_x_v2$p.value, ks_p_v2_x_v1=ks_out_v2_x_v1$p.value)
+  temp_res <- cbind(temp_res,ecdf_p_v1_x_v2 = p_surr_v1_xmap_v2, ecdf_p_v2_x_v1 = p_surr_v2_xmap_v1)
   # create list 
   overall_res_list <- list(summary=temp_res, v1_xmap_v2_preds=all_predictions_v1,
                            v2_xmap_v1_preds = all_predictions_v2, 
                            v1_xmap_v2_null = intervals_surr_v1_xmap_v2,
-                           v2_xmap_v1_null = intervals_surr_v2_xmap_v1)
+                           v2_xmap_v1_null = intervals_surr_v2_xmap_v1,
+                           surr_rho_v1_x_v2 = surr_max_lib_data_v1_x_v2,
+                           surr_rho_v2_x_v1 = surr_max_lib_data_v2_x_v1)
   res_list <- list(summary = overall_res_list, 
                    fig_v1_xmap_v2 = p_v1_xmap_v2, fig_v2_xmap_v1 = p_v2_xmap_v1)
   return(res_list)
