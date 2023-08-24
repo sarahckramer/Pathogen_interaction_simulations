@@ -17,7 +17,7 @@ granger_func <- function(data, lag_v1, lag_v2){
   library(boot)
   library(meboot)
   
-  # checking stationary of time series
+  #---- checking stationary of time series ---# 
   
   # ADF Test hypotheses
   # H0: there is a unit root - i.e. the time series is not stationary 
@@ -27,15 +27,14 @@ granger_func <- function(data, lag_v1, lag_v2){
   
   # KPSS Test hypotheses
   # H0: time series is stationary 
-  # H1: non staionary
+  # H1: non stationary
   kpss_v1 <- kpss.test(data$v1_obs); kpss_v1
   kpss_v2 <- kpss.test(data$v2_obs); kpss_v2
   
-  # running Granger test and extracting p-values
+  # ------running Granger test and extracting p-values------#
   # Test hypotheses
   # H0: b1 = b2 = ... = bk = 0 the lags of x provide no additional information about y beyond the lags of y 
   # H1: there exists 1 <= i <= k so that bi \neq 0 at least one x lag provides additional information 
-  
   
   # specifying the lag to be the minimum of the two series
   p <- min(lag_v1,lag_v2)
@@ -47,10 +46,11 @@ granger_func <- function(data, lag_v1, lag_v2){
   p_gt2 <- gt2$`Pr(>F)`[2] # p-value
   
   
-  # determining the causal effect size
+  # ----determining the causal effect size ----# 
   # run the VAR (vector autoregressive) model (i.e. which has both X and Y)
   var1 <- VAR(y=data[,c("v1_obs","v2_obs")], p=p)
   summary(var1) 
+  
   # acf plot to check autocorr - suggest stationary if acf drops off very quickly
   #acf(residuals(var1))
   
@@ -113,6 +113,9 @@ granger_func <- function(data, lag_v1, lag_v2){
   # pull out the residuals from my original model 
   residuals_orig <- data.frame(residuals(var1))
   
+  # original estimates
+  orig_est <- c(prev_frac_v1, logRSS_v1, prev_frac_v2, logRSS_v2)
+  
   ##---- Maximum entropy bootstrapping ----# 
   # number of replicates
   R <- 300
@@ -159,20 +162,13 @@ granger_func <- function(data, lag_v1, lag_v2){
   
   # estimating ME 95% CIs 
   sd_meboot <- apply(me_temp_res, 2,sd)
-  # original estimates
-  orig_est <- c(prev_frac_v1, logRSS_v1, prev_frac_v2, logRSS_v2)
   # standard
   me_CI_lower95 <- orig_est - 1.96*sd_meboot
   me_CI_upper95 <- orig_est + 1.96*sd_meboot
   # percentile boot
   me_percCI_lower95 <- apply(me_temp_res, 2, quantile, prob=0.025)
   me_percCI_upper95 <- apply(me_temp_res, 2, quantile, prob=0.975)
-  
-  # rm unused variables now
-  rm(meboot_VAR, mefit_multi_v1, mefit_multi_v2, meboot_AR_v1, meboot_AR_v2, meboot_data,
-     meboot_data_v1, meboot_data_v2,mefit_uni_v1, mefit_uni_v2, prev_frac_v1, prev_frac_v2, 
-     logRSS_v1, logRSS_v2, meboot_long)
-  
+
   ##---- Block bootstrapping -----# 
   
   # creating a function to define the statistics for the tsboot function which will do 
@@ -229,7 +225,7 @@ granger_func <- function(data, lag_v1, lag_v2){
   
   
   # output results 
-  temp_res <- data.frame(cbind(original_estimate = summary(boot_out)$original,  
+  temp_res <- data.frame(cbind(original_estimate = orig_est,  
                blockbootMean = apply(boot_out$t,2,mean),
                blockbootBias = summary(boot_out)$bootBias, # difference between mean estimate and the original
                blockbootSE = summary(boot_out)$bootSE,
