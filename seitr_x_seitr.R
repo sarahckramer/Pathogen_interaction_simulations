@@ -169,15 +169,15 @@ t_si_date <- lubridate::ymd("2012-July-01") + lubridate::weeks(t_si)
 # creating multiple plots at once
 temp <- vector(mode = "list", length = 3)
 plot_list <- vector(mode = "list", length = 3)
-for(i in 1:3){
+for(i in 7:9){
   theta_lambda1 <- all_param_comb[i,]$theta_lambda1
   theta_lambda2 <- all_param_comb[i,]$theta_lambda2
   delta_1 <- all_param_comb[i,]$delta_1
   delta_2 <- all_param_comb[i,]$delta_2
-  temp[[i]] <- sim_data(theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
+  temp[[i]] <- sim_data(theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2,
                       delta_1=delta_1, delta_2=delta_2)
   data <- temp[[i]]$data
-  plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") +
+  plot_list[[i-6]] <- ggplot(aes(x=time_date, y=v1_obs),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") +
     ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param$theta_lambda1,
                   "AND delta_1 = delta_2 =", temp[[i]]$true_param$delta1)) + labs(y="observed cases") +
     scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + ylim(0,800) +

@@ -141,7 +141,7 @@ granger_func <- function(data, lag_v1, lag_v2){
   
   # create a list of outputs which includes the results and the bootstrap 
   # distributions
-  res_list <- list(summary = temp_res, block_bootstraps = boot_out$t, me_bootstraps = me_temp_res)
+  res_list <- list(summary = temp_res, block_bootstraps = boot_out$t)
   return(res_list)
 }
 
