@@ -66,8 +66,8 @@ n_surge <- length(t_si)
 delta_i <- runif(n=length(t_si), min = 0.01, max=0.12)
 
 # create a function to specify multiple sets of parameter inputs
-theta_lambda1 <- c(0,1,4)
-theta_lambda2 <- c(0,1,4)
+theta_lambda1 <- c(0,1,2)
+theta_lambda2 <- c(0,1,2)
 delta_1 <- c(1,1/2,1/3)
 delta_2 <- c(1,1/2,1/3)
 
@@ -88,19 +88,19 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
   # setting parameters to weekly rates - params listed as daily in 
   # spreadsheet list of model parameters.xlsx
   # note also v1 = influenza; v2 = RSV
-  true_params <- data.frame(Ri1=1.3, Ri2=3.5,
+  true_params <- data.frame(Ri1=1.3, Ri2=1.7,
                           sigma1=7, sigma2=7/5,
                           gamma1=7/5, gamma2=7/10,
                           delta1=delta_1, delta2=delta_2,
                           mu = 0.0002, nu=0.0007, 
                           w1=1/52, w2=1/28,
-                          rho1 = 0.004, rho2 = 0.003,
+                          rho1 = 0.002, rho2 = 0.002,
                           theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
                           A1=0.2, phi1=26,
-                          A2=0.4, phi2=25,
+                          A2=0.2, phi2=20,
                           beta_sd1=0, beta_sd2=0, 
                           N=3700000,
-                          E01=0.001, E02=0.0007,
+                          E01=0.0001, E02=0.0001,
                           R01=0.4, R02=0.2, R12=0.001,
                           n_surge = n_surge, t_si=t(t_si), delta_i=t(delta_i))
 
@@ -109,9 +109,9 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
 
 #---- Create list to save the parameter sets and results of our different methods ---# 
 
-    results <- vector(mode = "list", length = 6)
+    results <- vector(mode = "list", length = 8)
     results[[1]] <- true_params[1,] 
-    names(results) <- c("true_param", "data", "cor", "transfer_entropy", "CCM","granger")
+    names(results) <- c("true_param", "data", "pomp_model", "cor", "transfer_entropy", "CCM","granger", "gam_cor")
 
 #---- create pomp object ---# 
       po <- pomp(data = data.frame(time = seq(from = 0, to = 364, by = 1), v1_obs = NA, v2_obs = NA),
@@ -134,7 +134,10 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
            skeleton = vectorfield(components_l[['skel']]), # putting in deterministic for testing
            rinit = components_l[['rinit']]
       )
-
+      
+    # save pomp model
+    results$pomp_model <- po
+      
 # ----simulating data----#
     s1 <- simulate(po, times=1:364, format="data.frame")
     # deterministic simulation 
@@ -169,7 +172,7 @@ t_si_date <- lubridate::ymd("2012-July-01") + lubridate::weeks(t_si)
 # creating multiple plots at once
 temp <- vector(mode = "list", length = 3)
 plot_list <- vector(mode = "list", length = 3)
-for(i in 7:9){
+for(i in 1:3){
   theta_lambda1 <- all_param_comb[i,]$theta_lambda1
   theta_lambda2 <- all_param_comb[i,]$theta_lambda2
   delta_1 <- all_param_comb[i,]$delta_1
@@ -177,11 +180,21 @@ for(i in 7:9){
   temp[[i]] <- sim_data(theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2,
                       delta_1=delta_1, delta_2=delta_2)
   data <- temp[[i]]$data
-  plot_list[[i-6]] <- ggplot(aes(x=time_date, y=v1_obs),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") +
+  plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") +
     ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param$theta_lambda1,
                   "AND delta_1 = delta_2 =", temp[[i]]$true_param$delta1)) + labs(y="observed cases") +
-    scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + ylim(0,800) +
+    scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + ylim(0,400) +
     theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted")
+
+    # # also estimate attack rates by year for each plot...... NOT WORKING
+  # data$season <- rep(1:5, each=52)
+  # seasonal_incidence <- data %>% group_by(season) %>% summarise(tot_v1 = sum(v1_obs), tot_v2 = sum(v2_obs))
+  # start_season <- data %>% group_by(season) %>% summarise(min(time_date))
+  # start_season <- data %>% filter(time_date %in% start_season$`min(time_date)`)
+  # v1_susceptible <- start_season$X_SS + start_season$X_SE + start_season$X_SI + start_season$X_ST + start_season$X_SR
+  # v2_susceptible <- start_season$X_SS + start_season$X_ES + start_season$X_IS + start_season$X_TS + start_season$X_RS
+  # seasonal_incidence$tot_v1/v1_susceptible*100
+  
 }
 grid.arrange(grobs=plot_list,ncol=1)
 
@@ -264,27 +277,20 @@ results$granger <- granger_func(data = data, lag_v1 = lag_v1, lag_v2 = lag_v2)
 # separated this method out as a bit more code required
 source("CCM.R")
   
-# apply the CCM approach to each simulated data set and save the results
+# apply the CCM approach to each simulated data set 
 data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
 results$CCM <- ccm_func(data = data)
-
-# save out the results
-save(results, file=sprintf('results_%s.RData',jobid))
 
 
 #----- Likelihood approach -----# 
 
 
 
-# #--- GAM approach ---# 
-# 
-# mvn_mod <- gam(formula = list(v1_obs ~ s(time), v2_obs ~ s(time)),
-#                family = mvn(d = 2),
-#                data = s1)
-# summary(mvn_mod)
-# 
-# corr_mat <- mvn_mod$family$data$R %>%
-#   crossprod() %>%
-#   solve() %>%
-#   cov2cor(); corr_mat
+#--- GAM approach ---# 
+source("gam_cor.R")
 
+# apply the GAM correlation approach to each simulated data set and save the results
+results$gam_cor <- gam_cor(data=data)
+
+# save out the results
+save(results, file=sprintf('results_%s.RData',jobid))

@@ -103,7 +103,7 @@ granger_func <- function(data, lag_v1, lag_v2){
     return(res)
   }
  
-  # generate bootstrapped replicates
+  # generate bootstrapped replicates in blocks of 4 weeks
   R <- 300 # number of replicates
   boot_out <- tsboot(tseries=residuals_orig, statistic=boot_func, R = R, sim="fixed", l=4,
                  orig_data = orig_data, var_model=var1, p=p); boot_out
@@ -136,7 +136,6 @@ granger_func <- function(data, lag_v1, lag_v2){
                granger_p = c(p_gt1, p_gt2),
                adf_p = c(adf_v1$p.value, adf_v2$p.value),
                kpss_p = c(kpss_v1$p.value, kpss_v2$p.value)))
-  temp_res$statistic <- rownames(temp_res)
   temp_res <- data.frame(temp_res, row.names=NULL)
   
   # create a list of outputs which includes the results and the bootstrap 
