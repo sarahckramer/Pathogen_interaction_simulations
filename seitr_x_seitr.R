@@ -4,6 +4,14 @@
 # The C code for the pomp model is here: 
 # /Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/seitr_x_seitr.cpp
 #
+# This code runs the following methods:
+#  - Pearson's correlation coefficient
+#  - GAM estimated correlation coefficient
+#  - Transfer entropy
+#  - Granger causality analysis 
+#  - convergent cross mapping
+#  - likelihood estimation (this method is going to be done separately due to the increased computational power required)
+#
 # Created by: Sarah Pirikahu 
 # Creation date: 22 May 2023
 ##################################################################################################################
@@ -43,11 +51,15 @@ for (nm in components_nm) {
 
 # set seed:
 set.seed(2908)
+
+# total number of weeks of data we are going to want 
+tot_weeks <- 365 # 7 yrs
+
 # initialize time of surges (based on week) from start of season (1 July)
 # by drawing from a normal distribution 
-n_surge <- 6
-mu_Imloss <- 36 # early Oct
-sd_Imloss <- 4
+n_surge <- round(tot_weeks/52) - 1 # total number of surges
+mu_Imloss <- 36 # average surge occuring in early Oct
+sd_Imloss <- 4 # allow variation of 4 weeks
 
 t_si <- rnorm(n=n_surge, mean=mu_Imloss,sd=sd_Imloss)
 # correcting t_si to give t based on week of the year rather than 
@@ -82,7 +94,7 @@ rm(theta_lambda1, theta_lambda2, delta_1, delta_2)
 
 # function to create list of true parameter inputs and simulated data 
 # function takes a vector of the interaction parameters 
-sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
+sim_data <- function(tot_weeks,theta_lambda1, theta_lambda2, delta_1, delta_2, components_l=components_l){
   set.seed(2908)
   
   # setting parameters to weekly rates - params listed as daily in 
@@ -111,10 +123,10 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
 
     results <- vector(mode = "list", length = 8)
     results[[1]] <- true_params[1,] 
-    names(results) <- c("true_param", "data", "pomp_model", "cor", "transfer_entropy", "CCM","granger", "gam_cor")
+    names(results) <- c("true_param", "data", "cor", "gam_cor", "transfer_entropy", "CCM","granger")
 
 #---- create pomp object ---# 
-      po <- pomp(data = data.frame(time = seq(from = 0, to = 364, by = 1), v1_obs = NA, v2_obs = NA),
+      po <- pomp(data = data.frame(time = seq(from = 0, to = tot_weeks, by = 1), v1_obs = NA, v2_obs = NA),
            times = "time",
            t0 = 0,
            obsnames = c('v1_obs', 'v2_obs'),
@@ -135,11 +147,8 @@ sim_data <- function(theta_lambda1, theta_lambda2, delta_1, delta_2){
            rinit = components_l[['rinit']]
       )
       
-    # save pomp model
-    results$pomp_model <- po
-      
 # ----simulating data----#
-    s1 <- simulate(po, times=1:364, format="data.frame")
+    s1 <- simulate(po, times=1:tot_weeks, format="data.frame")
     # deterministic simulation 
     # d1 <- trajectory(po, times=1:364, format = "data.frame") %>% dplyr::select(-'.id') %>% 
     #   mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params$rho1),  
@@ -162,8 +171,8 @@ theta_lambda1 <- all_param_comb[jobid,]$theta_lambda1
 theta_lambda2 <- all_param_comb[jobid,]$theta_lambda2
 delta_1 <- all_param_comb[jobid,]$delta_1
 delta_2 <- all_param_comb[jobid,]$delta_2
-results <- sim_data(theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
-                      delta_1=delta_1, delta_2=delta_2)
+results <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
+                      delta_1=delta_1, delta_2=delta_2, components_l = components_l)
   
 # ---- Plotting simulated data ----#
 # changing the surge times to dates
@@ -186,7 +195,7 @@ for(i in 1:3){
     scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + ylim(0,400) +
     theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted")
 
-    # # also estimate attack rates by year for each plot...... NOT WORKING
+  # # also estimate attack rates by year for each plot...... NOT WORKING
   # data$season <- rep(1:5, each=52)
   # seasonal_incidence <- data %>% group_by(season) %>% summarise(tot_v1 = sum(v1_obs), tot_v2 = sum(v2_obs))
   # start_season <- data %>% group_by(season) %>% summarise(min(time_date))
@@ -201,7 +210,7 @@ grid.arrange(grobs=plot_list,ncol=1)
 ##########################################################
 ## Start testing each method for estimating interaction ##
 ##########################################################
-  
+
 #------------ setup ---------------#
 # Automatically determine the best lag doing several models with lags
 # 1-5 (approximately 1 month) then choose the best lag number based on BIC
@@ -226,6 +235,8 @@ rm(lags)
 #---- Correlation coefficents --------# 
 
 # function to estimate correlation 
+# inputs: v1_obs = time series for v1_obs
+#         v2_obs = time series for v2_obs
 corr_func <- function(v1_obs, v2_obs){
   # calculated correlation coefficent 
   cor_raw <- cor.test(v1_obs, v2_obs)
@@ -242,6 +253,10 @@ results$cor <- corr_func(v1_obs = results$data$v1_obs, v2_obs = results$data$v2_
 #----- Transfer entropy analysis ------# 
 
 # create function to give transfer entropy results
+# inputs: v1_obs = time series for v1_obs
+#         v2_obs = time series for v2_obs
+#         lag_v1 = total number lag to use with v1_obs time series
+#         lag_v2 = total number lag to use with v2_obs time series
 te_func <- function(v1_obs, v2_obs, lag_v1, lag_v2){
     # Interpreting transfer entropy (note: TE \in [0,1]):
     # If test significant suggests T_{X->Y} > 0 and the uncertainty about 
@@ -282,10 +297,6 @@ data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
 results$CCM <- ccm_func(data = data)
 
 
-#----- Likelihood approach -----# 
-
-
-
 #--- GAM approach ---# 
 source("gam_cor.R")
 
@@ -294,3 +305,25 @@ results$gam_cor <- gam_cor(data=data)
 
 # save out the results
 save(results, file=sprintf('results_%s.RData',jobid))
+
+#----- Likelihood approach -----# 
+
+# Since the likelihood approach requires a significantly larger amount of compute power will only 
+# perform this method if it is specifically asked for at the cmd line
+likelihood <- as.logical(Sys.getenv("LIKELIHOOD")); print(likelihood) # will be TRUE or FALSE
+
+if(likelihood==TRUE){
+  # how many jobs are there in total we want to run? 
+  no_jobs <- dim(all_param_comb)[1]
+  # how many different starting params are we going to run for numerical optimizer run for each job (i.e. interaction parameter combos)
+  sobol_size <- as.integer(Sys.getenv("SOBOLSIZE")); print(sobol_size) # probably ~10 
+  
+  
+  # run this bit separately if we want. Must
+  true_params <- results$true_param
+  
+}
+
+
+
+

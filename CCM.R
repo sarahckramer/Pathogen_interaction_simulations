@@ -3,6 +3,8 @@
 #
 # Useful documentation describing and giving examples:
 # https://ha0ye.github.io/rEDM/articles/rEDM.html
+# 
+# inputs: data = data with time, v1_obs, v2_obs 
 #
 # Created by: Sarah Pirikahu
 # Creation date: 24 March 2023
@@ -69,7 +71,7 @@ ccm_func <- function(data){
   optimal_tp_v1xv2 <- v1xv2[which.max(v1xv2$`v1_obs:v2_obs`),]$tp
    
   v2xv1 <- output %>% filter(E==E_v2) 
-  optimal_tp_v2xv1 <- v1xv2[which.max(v1xv2$`v2_obs:v1_obs`),]$tp
+  optimal_tp_v2xv1 <- v2xv1[which.max(v2xv1$`v2_obs:v1_obs`),]$tp
   
 
   #----- run CCM ------#
@@ -82,7 +84,7 @@ ccm_func <- function(data){
                     lib_sizes = seq(50, lib_max, 2), num_samples = R, tp=optimal_tp_v1xv2,
                     replace = TRUE, stats_only=FALSE)
   
-  v2_xmap_v1 <- ccm(data, E = E_v2, lib_column = "v1_obs", target_column = "v2_obs", 
+  v2_xmap_v1 <- ccm(data, E = E_v2, lib_column = "v2_obs", target_column = "v1_obs", 
                     lib_sizes = seq(50, lib_max, 2), num_samples = R, tp=optimal_tp_v2xv1,
                      replace = TRUE, stats_only=FALSE)
   
@@ -116,7 +118,7 @@ ccm_func <- function(data){
   
   # ------Creating the null hypothesis for comparison with our CCM output-----#
   
-  num_surr <- 1000 # number of surrogate datasets
+  num_surr <- 300 # number of surrogate datasets
   
   # using seasonal data to create null hypothesis 
   surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = 52)
@@ -162,7 +164,6 @@ ccm_func <- function(data){
 
   # finding the lower and upper quantiles for a 95% CI
   # v1
-  dim(rho_surr_v1_xmap_v2) # 21 x 101
   intervals_surr_v1_xmap_v2 <- apply(rho_surr_v1_xmap_v2[,2:(num_surr+1)], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
   intervals_surr_v1_xmap_v2 <- t(intervals_surr_v1_xmap_v2) # transpose to get intervals as columns
   intervals_surr_v1_xmap_v2 <- cbind(intervals_surr_v1_xmap_v2,mean_rho=apply(rho_surr_v1_xmap_v2[,2:(num_surr+1)], 1, mean, na.rm = TRUE))
@@ -184,18 +185,31 @@ ccm_func <- function(data){
   surr_max_lib_data_v2_x_v1 <-  rho_surr_v1_xmap_v2[nrow(res),] 
     
   #--- plotting---#
-  # v1 xmap v2
-  p_v1_xmap_v2 <- ggplot(aes(x=LibSize, y=`median_v1_xmap_v2`), data=res) + geom_line() +
+  # v1 xmap v2 - median 
+  p_v1_xmap_v2_median <- ggplot(aes(x=LibSize, y=`median_v1_xmap_v2`), data=res) + geom_line() +
   geom_ribbon(aes(ymin=lower95_v1_xmap_v2, ymax=upper95_v1_xmap_v2,alpha=0.05))  +
   geom_line(aes(x=LibSizes,y=median), data=intervals_surr_v1_xmap_v2, colour = "blue") +
   geom_ribbon(aes(x=LibSizes,ymin=lower95_v1_xmap_v2, ymax=upper95_v1_xmap_v2,alpha=0.05), data=intervals_surr_v1_xmap_v2, inherit.aes = FALSE, fill = "lightblue")
 
-  # v2 xmap v1
-  p_v2_xmap_v1 <- ggplot(aes(x=LibSize, y=`median_v2_xmap_v1`), data=res) + geom_line() +
+  # v1 xmap v2 - mean
+  p_v1_xmap_v2_mean <- ggplot(aes(x=LibSize, y=`mean_v1_obs:v2_obs`), data=res) + geom_line() +
+  geom_ribbon(aes(ymin=lower95_v1_xmap_v2, ymax=upper95_v1_xmap_v2,alpha=0.05))  +
+  geom_line(aes(x=LibSizes,y=mean_rho), data=intervals_surr_v1_xmap_v2, colour = "blue") +
+  geom_ribbon(aes(x=LibSizes,ymin=lower95_v1_xmap_v2, ymax=upper95_v1_xmap_v2,alpha=0.05), data=intervals_surr_v1_xmap_v2, inherit.aes = FALSE, fill = "lightblue")
+  
+  # v2 xmap v1 - median
+  p_v2_xmap_v1_median <- ggplot(aes(x=LibSize, y=`median_v2_xmap_v1`), data=res) + geom_line() +
   geom_ribbon(aes(ymin=lower95_v2_xmap_v1, ymax=upper95_v2_xmap_v1,alpha=0.05))  +
   geom_line(aes(x=LibSizes,y=median), data=intervals_surr_v2_xmap_v1, colour = "blue") +
   geom_ribbon(aes(x=LibSizes,ymin=lower95_v2_xmap_v1, ymax=upper95_v2_xmap_v1,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
 
+  # v2 xmap v1 - mean
+  p_v2_xmap_v1_mean <- ggplot(aes(x=LibSize, y=`mean_v2_obs:v1_obs`), data=res) + geom_line() +
+  geom_ribbon(aes(ymin=lower95_v2_xmap_v1, ymax=upper95_v2_xmap_v1,alpha=0.05))  +
+  geom_line(aes(x=LibSizes,y=mean_rho), data=intervals_surr_v2_xmap_v1, colour = "blue") +
+  geom_ribbon(aes(x=LibSizes,ymin=lower95_v2_xmap_v1, ymax=upper95_v2_xmap_v1,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
+  
+  
   # estimating p-value using empirical cumulative distribution 
   p_surr_v1_xmap_v2 <- 1 - ecdf(as.numeric(rho_surr_v1_xmap_v2[nrow(res),]))(res[dim(res)[1],"mean_v1_obs:v2_obs"])
   p_surr_v2_xmap_v1 <- 1 - ecdf(as.numeric(rho_surr_v2_xmap_v1[nrow(res),]))(res[dim(res)[1],"mean_v2_obs:v1_obs"])
@@ -215,7 +229,10 @@ ccm_func <- function(data){
                            surr_rho_v1_x_v2 = surr_max_lib_data_v1_x_v2,
                            surr_rho_v2_x_v1 = surr_max_lib_data_v2_x_v1)
   res_list <- list(summary = overall_res_list, 
-                   fig_v1_xmap_v2 = p_v1_xmap_v2, fig_v2_xmap_v1 = p_v2_xmap_v1)
+                   fig_v1_xmap_v2_median = p_v1_xmap_v2_median,
+                   fig_v1_xmap_v2_mean = p_v1_xmap_v2_mean,
+                   fig_v2_xmap_v1_median = p_v2_xmap_v1_median,
+                   fig_v2_xmap_v1_mean = p_v2_xmap_v1_mean)
   return(res_list)
 }
 

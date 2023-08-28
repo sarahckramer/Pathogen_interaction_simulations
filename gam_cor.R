@@ -6,6 +6,8 @@
 # calculate the correlation whilst taking into account the autocorrelation within
 # our data unlike simple Pearson's correlation
 #
+# input: data = dataset with time, v1_obs, v2_obs
+#
 # Created by: Sarah Pirikahu
 # Creation date: 25 Aug 2023
 ################################################################################

@@ -4,6 +4,10 @@
 # To run Granger analysis we need the time series to be covariance and mean 
 # stationary
 #
+# inputs: data = data with time, v1_obs, v2_obs
+#         lag_v1 = number of lags to use for v1_obs time series
+#         lag_v2 = number of lags to use for v2_obs time series 
+#
 # Created by: Sarah Pirikahu
 # Creation date: 23 March 2023
 ################################################################################
@@ -112,27 +116,35 @@ granger_func <- function(data, lag_v1, lag_v2){
   bootstrap_samples <- data.frame(boot_out$t)
   names(bootstrap_samples) <- c("logRSS_v1_x_v2","logRSS_v2_x_v1")
   # make data long 
-  boot_long <- bootstrap_samples %>% tidyr::gather() 
+  #boot_long <- bootstrap_samples %>% tidyr::gather() 
   #ggplot(aes(x=value),data=boot_long) + geom_histogram() + facet_grid(.~key, scales="free_x") 
   
   # calculate the 95% CI for each statistic
   # standard approach assuming normality of the sampling dist
-  CI_lower95 <- summary(boot_out)$original - 1.96*summary(boot_out)$bootSE
-  CI_upper95 <- summary(boot_out)$original + 1.96*summary(boot_out)$bootSE
+  # v1 x v2
+  CI_lower95_v1_x_v2 <- logRSS_v1 - 1.96*sd(bootstrap_samples$logRSS_v1_x_v2)
+  CI_upper95_v1_x_v2 <- logRSS_v1 + 1.96*sd(bootstrap_samples$logRSS_v1_x_v2)
+  # v2 x v1
+  CI_lower95_v2_x_v1 <- logRSS_v2 - 1.96*sd(bootstrap_samples$logRSS_v2_x_v1)
+  CI_upper95_v2_x_v1 <- logRSS_v2 + 1.96*sd(bootstrap_samples$logRSS_v2_x_v1)
+  
+  
   # percentile bootstrap 
-  CIperc_lower95 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.025))
-  CIperc_upper95 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.975))
+  # v1 x v2
+  CIperc_lower95_v1_x_v2 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.025))[1]
+  CIperc_upper95_v1_x_v2 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.975))[1]
+  # v2 x v1
+  CIperc_lower95_v2_x_v1 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.025))[2]
+  CIperc_upper95_v2_x_v1 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.975))[2]
   
 
   # output results 
   temp_res <- data.frame(cbind(original_estimate = orig_est,  
                blockbootMean = apply(boot_out$t,2,mean),
-               blockbootBias = summary(boot_out)$bootBias, # difference between mean estimate and the original
-               blockbootSE = summary(boot_out)$bootSE,
-               blockboot_CI_lower95 = CI_lower95,
-               blockboot_CI_upper95 = CI_upper95,
-               blockboot_CIperc_lower95 = CIperc_lower95,
-               blockboot_CIperc_upper95 = CIperc_upper95,
+               blockboot_CI_lower95_v1_x_v2 = c(CI_lower95_v1_x_v2,CI_lower95_v2_x_v1),
+               blockboot_CI_upper95_v1_x_v2 = c(CI_upper95_v1_x_v2,CI_upper95_v2_x_v1),
+               blockboot_CIperc_lower95_v1_x_v2 = c(CIperc_lower95_v1_x_v2,CIperc_lower95_v2_x_v1),
+               blockboot_CIperc_upper95_v1_x_v2 = c(CIperc_upper95_v1_x_v2,CIperc_upper95_v2_x_v1),
                granger_p = c(p_gt1, p_gt2),
                adf_p = c(adf_v1$p.value, adf_v2$p.value),
                kpss_p = c(kpss_v1$p.value, kpss_v2$p.value)))
