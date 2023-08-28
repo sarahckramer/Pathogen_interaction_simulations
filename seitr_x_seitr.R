@@ -211,116 +211,130 @@ grid.arrange(grobs=plot_list,ncol=1)
 ## Start testing each method for estimating interaction ##
 ##########################################################
 
-#------------ setup ---------------#
-# Automatically determine the best lag doing several models with lags
-# 1-5 (approximately 1 month) then choose the best lag number based on BIC
-  
-# initialising lists to put results in 
-lags <- list()
-lag_v1 <- list()
-lag_v2 <- list()
-
-# determine the number of lags for each simulated dataset
-df <- results$data %>% dplyr::select(v1_obs, v2_obs)
-
-lags <- lapply(df, VARselect, lag.max=5) # lag of approx 1 month
-rm(df)
-# pull out the lag with best BIC. Lower BIC = better (not BIC is labeled SV)
-# regardless of whether raw of normalised data used the lag chosen is the same
-lag_v1 <- as.numeric(lags$v1_obs$selection[3])
-lag_v2 <- as.numeric(lags$v2_obs$selection[3])
-
-rm(lags)
-
-#---- Correlation coefficents --------# 
-
-# function to estimate correlation 
-# inputs: v1_obs = time series for v1_obs
-#         v2_obs = time series for v2_obs
-corr_func <- function(v1_obs, v2_obs){
-  # calculated correlation coefficent 
-  cor_raw <- cor.test(v1_obs, v2_obs)
-  # pull together results in data frame 
-  temp_res <- data.frame(cbind(as.numeric(cor_raw$estimate), cor_raw$conf.int[1], cor_raw$conf.int[2]), cor_raw$p.value)
-  names(temp_res) <- c("cor", "CI_lower_95", "CI_upper_95", "p_value")
-  return(temp_res)
-}
-
-# apply correlation function to all simulated datasets and save results 
-results$cor <- corr_func(v1_obs = results$data$v1_obs, v2_obs = results$data$v2_obs)
-
-
-#----- Transfer entropy analysis ------# 
-
-# create function to give transfer entropy results
-# inputs: v1_obs = time series for v1_obs
-#         v2_obs = time series for v2_obs
-#         lag_v1 = total number lag to use with v1_obs time series
-#         lag_v2 = total number lag to use with v2_obs time series
-te_func <- function(v1_obs, v2_obs, lag_v1, lag_v2){
-    # Interpreting transfer entropy (note: TE \in [0,1]):
-    # If test significant suggests T_{X->Y} > 0 and the uncertainty about 
-    # Y is reduced by the addition of X, that is X causes Y.
-  
-    # Output: provides not the transfer entropy and bias corrected effective transfer entropy  
-    # Transfer entropy estimates are biased by small sample sizes. For large sample sizes TE and ETE 
-    # will be approximately the same. For a single season the sample size is quite small so we want to 
-    # go with ETE... see Behrendt et al. 2019 for more details
-    shannon_te <- transfer_entropy(v1_obs, v2_obs, lx = min(lag_v1, lag_v2), ly=min(lag_v1, lag_v2))
-    temp_res <- data.frame(coef(shannon_te))
-  
-    # creating the 95% CIs about ETE - note that in the code for transfer_entropy to calculate the 
-    # se they simply look at the sd of the bootstrap samples NOT SE=sd/sqrt(n)
-    temp_res$lower95 <- temp_res$ete - 1.96*temp_res$se
-    temp_res$upper95 <- temp_res$ete + 1.96*temp_res$se
-    return(temp_res)
-  }
-  
-# apply transfer entropy function to all simulated datasets and save results
-results$transfer_entropy <- te_func(v1_obs = results$data$v1_obs, v2_obs = results$data$v2_obs, 
-                                         lag_v1 = lag_v1, lag_v2 = lag_v2) 
-  
-  
-#---- Granger causality analysis  ----# 
-# separated this method out as a bit more code required
-source("granger_analysis.R")
-# apply the granger analysis to each simulated data set and save the results
-data <- results$data %>% dplyr::select(v1_obs, v2_obs)
-results$granger <- granger_func(data = data, lag_v1 = lag_v1, lag_v2 = lag_v2)
-  
-#------- Convergent Cross mapping analysis -------# 
-# separated this method out as a bit more code required
-source("CCM.R")
-  
-# apply the CCM approach to each simulated data set 
-data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
-results$CCM <- ccm_func(data = data)
-
-
-#--- GAM approach ---# 
-source("gam_cor.R")
-
-# apply the GAM correlation approach to each simulated data set and save the results
-results$gam_cor <- gam_cor(data=data)
-
-# save out the results
-save(results, file=sprintf('results_%s.RData',jobid))
-
-#----- Likelihood approach -----# 
-
 # Since the likelihood approach requires a significantly larger amount of compute power will only 
 # perform this method if it is specifically asked for at the cmd line
 likelihood <- as.logical(Sys.getenv("LIKELIHOOD")); print(likelihood) # will be TRUE or FALSE
 
-if(likelihood==TRUE){
-  # how many jobs are there in total we want to run? 
-  no_jobs <- dim(all_param_comb)[1]
+# If likelihood is true we don't run the non-likelihood methods at all 
+if(likelihood==FALSE){ 
+  
+  #------------ setup ---------------#
+  # Automatically determine the best lag doing several models with lags
+  # 1-5 (approximately 1 month) then choose the best lag number based on BIC
+    
+  # initialising lists to put results in 
+  lags <- list()
+  lag_v1 <- list()
+  lag_v2 <- list()
+  
+  # determine the number of lags for each simulated dataset
+  df <- results$data %>% dplyr::select(v1_obs, v2_obs)
+  
+  lags <- lapply(df, VARselect, lag.max=5) # lag of approx 1 month
+  rm(df)
+  # pull out the lag with best BIC. Lower BIC = better (not BIC is labeled SV)
+  # regardless of whether raw of normalised data used the lag chosen is the same
+  lag_v1 <- as.numeric(lags$v1_obs$selection[3])
+  lag_v2 <- as.numeric(lags$v2_obs$selection[3])
+  
+  rm(lags)
+  
+  #---- Correlation coefficents --------# 
+  
+  # function to estimate correlation 
+  # inputs: v1_obs = time series for v1_obs
+  #         v2_obs = time series for v2_obs
+  corr_func <- function(v1_obs, v2_obs){
+    # calculated correlation coefficent 
+    cor_raw <- cor.test(v1_obs, v2_obs)
+    # pull together results in data frame 
+    temp_res <- data.frame(cbind(as.numeric(cor_raw$estimate), cor_raw$conf.int[1], cor_raw$conf.int[2]), cor_raw$p.value)
+    names(temp_res) <- c("cor", "CI_lower_95", "CI_upper_95", "p_value")
+    return(temp_res)
+  }
+  
+  # apply correlation function to all simulated datasets and save results 
+  results$cor <- corr_func(v1_obs = results$data$v1_obs, v2_obs = results$data$v2_obs)
+  
+  
+  #----- Transfer entropy analysis ------# 
+  
+  # create function to give transfer entropy results
+  # inputs: v1_obs = time series for v1_obs
+  #         v2_obs = time series for v2_obs
+  #         lag_v1 = total number lag to use with v1_obs time series
+  #         lag_v2 = total number lag to use with v2_obs time series
+  te_func <- function(v1_obs, v2_obs, lag_v1, lag_v2){
+      # Interpreting transfer entropy (note: TE \in [0,1]):
+      # If test significant suggests T_{X->Y} > 0 and the uncertainty about 
+      # Y is reduced by the addition of X, that is X causes Y.
+    
+      # Output: provides not the transfer entropy and bias corrected effective transfer entropy  
+      # Transfer entropy estimates are biased by small sample sizes. For large sample sizes TE and ETE 
+      # will be approximately the same. For a single season the sample size is quite small so we want to 
+      # go with ETE... see Behrendt et al. 2019 for more details
+      shannon_te <- transfer_entropy(v1_obs, v2_obs, lx = min(lag_v1, lag_v2), ly=min(lag_v1, lag_v2))
+      temp_res <- data.frame(coef(shannon_te))
+    
+      # creating the 95% CIs about ETE - note that in the code for transfer_entropy to calculate the 
+      # se they simply look at the sd of the bootstrap samples NOT SE=sd/sqrt(n)
+      temp_res$lower95 <- temp_res$ete - 1.96*temp_res$se
+      temp_res$upper95 <- temp_res$ete + 1.96*temp_res$se
+      return(temp_res)
+    }
+    
+  # apply transfer entropy function to all simulated datasets and save results
+  results$transfer_entropy <- te_func(v1_obs = results$data$v1_obs, v2_obs = results$data$v2_obs, 
+                                           lag_v1 = lag_v1, lag_v2 = lag_v2) 
+    
+    
+  #---- Granger causality analysis  ----# 
+  # separated this method out as a bit more code required
+  source("granger_analysis.R")
+  # apply the granger analysis to each simulated data set and save the results
+  data <- results$data %>% dplyr::select(v1_obs, v2_obs)
+  results$granger <- granger_func(data = data, lag_v1 = lag_v1, lag_v2 = lag_v2)
+    
+  #------- Convergent Cross mapping analysis -------# 
+  # separated this method out as a bit more code required
+  source("CCM.R")
+    
+  # apply the CCM approach to each simulated data set 
+  data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
+  results$CCM <- ccm_func(data = data)
+  
+  
+  #--- GAM approach ---# 
+  source("gam_cor.R")
+  
+  # apply the GAM correlation approach to each simulated data set and save the results
+  results$gam_cor <- gam_cor(data=data)
+  
+  # save out the results
+  save(results, file=sprintf('results_%s.RData',jobid))
+} else {
+
+  #----- Likelihood approach -----# 
+
+  # cluster specifications # 
   # how many different starting params are we going to run for numerical optimizer run for each job (i.e. interaction parameter combos)
   sobol_size <- as.integer(Sys.getenv("SOBOLSIZE")); print(sobol_size) # probably ~10 
+  # max time that we want to allow the optmizer to run for
+  maxtime <- 720 # 12 hrs - want this to run for as long as possible so that I don't have to re-run to get the MLE
   
-  
-  # run this bit separately if we want. Must
+  # dataset to apply method to 
+  data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
+  # true parameters used to create the simulated data set
   true_params <- results$true_param
+  
+  # run likelihood estimation 
+  results$lik <- lik(data=data, true_params, components_l = components_l, sobol_size, jobid, maxtime)
+  
+  # save out the results
+  # if I do it this way then I will have a list which has input params the simulated data and the 
+  # output of the different input parameters for the likelihood estimation in their own results file
+  # total output: number of jobs x sobol size results files  
+  save(results, file=sprintf('results_%s_%s.RData',jobid, sobol_size)) 
   
 }
 

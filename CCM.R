@@ -118,7 +118,7 @@ ccm_func <- function(data){
   
   # ------Creating the null hypothesis for comparison with our CCM output-----#
   
-  num_surr <- 300 # number of surrogate datasets
+  num_surr <- 10 # number of surrogate datasets
   
   # using seasonal data to create null hypothesis 
   surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = 52)

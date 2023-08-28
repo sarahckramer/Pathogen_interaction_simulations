@@ -9,6 +9,8 @@
 #         true_params = the true parameter value inputs (simply to specify param names for pomp model)
 #         components_l = the csnippets that specify the components of the pomp model 
 #         sobol_size = the total number of different initial conditions we want to do for the numerical optimizer
+#         no_jobs = 
+#         jobid  = 
 #         maxtime = the maximum amount of time we want to allow the numerical optimizer to run 
 #
 # Created by: Sarah Pirikahu
@@ -18,7 +20,7 @@
 # load packages 
 library(nloptr)
 
-lik <- function(data, true_params, components_l = components_l, sobol_size, maxtime){
+lik <- function(data, true_params, components_l = components_l, sobol_size, jobid, maxtime){
   
   # creating new pomp model with the simulated data 
   po <- pomp(data = data,
@@ -76,14 +78,21 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, maxt
   start_range <- start_range[, est_pars]
   
   # coming up with a number of starting values based on the starting ranges specified above
-  # the starting values are based on the Latin hypercube sampling
+  # the starting values are based on the Latin hypercube sampling (note: all parameters vary - none are fixed)
   start_values <- sobol_design(lower = setNames(as.numeric(start_range[1, ]), names(start_range[1, ])),
                                upper = setNames(as.numeric(start_range[2, ]), names(start_range[2, ])),
                                nseq = sobol_size)
   
+  # Get unique identifiers:
+  sub_start <- 1:sobol_size
   
+  # Loop through start values and perform trajectory matching:
+  for (i in seq_along(sub_start)) {
   
-  
+   # Get param start values:
+   x0 <- as.numeric(start_values[sub_start[i], ])
+
+    
   # Run trajectory matching using subplex algorithm:
   # http://ab-initio.mit.edu/wiki/index.php/NLopt_Algorithms
   tic <- Sys.time()
@@ -97,7 +106,10 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, maxt
   )
   toc <- Sys.time()
   etime <- toc - tic
+  units(etime) <- 'mins'
+  print(etime)
   
   
   
+  }
 }
