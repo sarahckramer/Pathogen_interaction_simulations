@@ -9,7 +9,6 @@
 #         true_params = the true parameter value inputs (simply to specify param names for pomp model)
 #         components_l = the csnippets that specify the components of the pomp model 
 #         sobol_size = the total number of different initial conditions we want to do for the numerical optimizer
-#         no_jobs = 
 #         jobid  = 
 #         maxtime = the maximum amount of time we want to allow the numerical optimizer to run 
 #

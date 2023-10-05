@@ -181,31 +181,43 @@ t_si_date <- lubridate::ymd("2012-July-01") + lubridate::weeks(t_si)
 # creating multiple plots at once
 temp <- vector(mode = "list", length = 3)
 plot_list <- vector(mode = "list", length = 3)
-for(i in 1:3){
+for(i in 1:9){
   theta_lambda1 <- all_param_comb[i,]$theta_lambda1
   theta_lambda2 <- all_param_comb[i,]$theta_lambda2
   delta_1 <- all_param_comb[i,]$delta_1
   delta_2 <- all_param_comb[i,]$delta_2
-  temp[[i]] <- sim_data(theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2,
-                      delta_1=delta_1, delta_2=delta_2)
+  temp[[i]] <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2,
+                      delta_1=delta_1, delta_2=delta_2, components_l=components_l)
   data <- temp[[i]]$data
-  plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs), colour="blue") +
+  
+  legend_colors <- c("v1_obs" = "black", "v2_obs" = "blue") 
+  plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs, colour="v1_obs"),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs,colour="v2_obs")) +
     ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param$theta_lambda1,
                   "AND delta_1 = delta_2 =", temp[[i]]$true_param$delta1)) + labs(y="observed cases") +
-    scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + ylim(0,400) +
-    theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted")
+    scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + ylim(0,500) +
+    theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted") + 
+    scale_colour_manual(values=legend_colors) + labs(colour="")
+    
 
   # # also estimate attack rates by year for each plot...... NOT WORKING
-  # data$season <- rep(1:5, each=52)
-  # seasonal_incidence <- data %>% group_by(season) %>% summarise(tot_v1 = sum(v1_obs), tot_v2 = sum(v2_obs))
-  # start_season <- data %>% group_by(season) %>% summarise(min(time_date))
-  # start_season <- data %>% filter(time_date %in% start_season$`min(time_date)`)
-  # v1_susceptible <- start_season$X_SS + start_season$X_SE + start_season$X_SI + start_season$X_ST + start_season$X_SR
-  # v2_susceptible <- start_season$X_SS + start_season$X_ES + start_season$X_IS + start_season$X_TS + start_season$X_RS
-  # seasonal_incidence$tot_v1/v1_susceptible*100
+  data$season <- c(rep(1:5, each=52),6)
+  seasonal_incidence <- data %>% group_by(season) %>% summarise(tot_v1 = sum(v1_obs), tot_v2 = sum(v2_obs))
+  seasonal_incidence$tot_v1/3700000 * 100
+  seasonal_incidence$tot_v2/3700000 * 100
+  
+  # looking for start of season so I can determine the number of susceptiable to each virus at the start of that season
+  start_season <- data %>% group_by(season) %>% summarise(min(time_date))
+  start_season <- data %>% filter(time_date %in% start_season$`min(time_date)`)
+  
+  v1_susceptible <- start_season$X_SS + start_season$X_SE + start_season$X_SI + start_season$X_ST + start_season$X_SR
+  v2_susceptible <- start_season$X_SS + start_season$X_ES + start_season$X_IS + start_season$X_TS + start_season$X_RS
+  seasonal_incidence$tot_v1/v1_susceptible*100
+  seasonal_incidence$tot_v2/v2_susceptible*100 # order of magnitude of at least 10 to small 
   
 }
-grid.arrange(grobs=plot_list,ncol=1)
+grid.arrange(plot_list[[1]],plot_list[[2]],plot_list[[3]],ncol=1)
+grid.arrange(plot_list[[4]],plot_list[[5]],plot_list[[6]],ncol=1)
+grid.arrange(plot_list[[7]],plot_list[[8]],plot_list[[9]],ncol=1)
 
 ##########################################################
 ## Start testing each method for estimating interaction ##
@@ -257,6 +269,13 @@ if(likelihood==FALSE){
   results$cor <- corr_func(v1_obs = results$data$v1_obs, v2_obs = results$data$v2_obs)
   
   
+  #--- GAM approach ---# 
+  source("gam_cor.R")
+  
+  # apply the GAM correlation approach to each simulated data set and save the results
+  data <- results$data %>% dplyr::select(time,v1_obs, v2_obs)
+  results$gam_cor <- gam_cor(data=data)
+  
   #----- Transfer entropy analysis ------# 
   
   # create function to give transfer entropy results
@@ -302,13 +321,6 @@ if(likelihood==FALSE){
   # apply the CCM approach to each simulated data set 
   data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
   results$CCM <- ccm_func(data = data)
-  
-  
-  #--- GAM approach ---# 
-  source("gam_cor.R")
-  
-  # apply the GAM correlation approach to each simulated data set and save the results
-  results$gam_cor <- gam_cor(data=data)
   
   # save out the results
   save(results, file=sprintf('results_%s.RData',jobid))

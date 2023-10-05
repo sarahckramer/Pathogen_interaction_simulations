@@ -132,7 +132,7 @@ lik = (give_log) ? ll : exp(ll);
 // but it is useful to use the deterministic model for debugging purposes
 
 //start_skel
-// calculating the prevalence of each infection 
+// calculating the incidence of each infection 
 double p1 = (X_IS + X_IE + X_II + X_IT + X_IR); // virus 1
 double p2 = (X_SI + X_EI + X_II + X_TI + X_RI); // virus 2
 
