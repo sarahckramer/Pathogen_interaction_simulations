@@ -112,8 +112,10 @@ double ll_1, ll_2, ll;
 // similarly for v2
 
 // calculating components for the likelihood 
-ll_1 = dbinom(v1_obs, v1_T, rho1, 1); 
-ll_2 = dbinom(v2_obs, v2_T, rho2, 1); 
+ll_1 = dbinom(v1_obs, nearbyint(v1_T), rho1, 1); 
+ll_2 = dbinom(v2_obs, nearbyint(v2_T), rho2, 1); 
+
+//Rprintf("v1_obs=%.4f, v2_obs=%.4f, v1_T=%.4f, v2_T=%.4f, ll_1=%.4f, ll_2=%.4f\n",v1_obs, v2_obs, v1_T, v2_T, ll_1, ll_2);
 
 // If rho_w == 1, the resulting observation probability might be 0 (-Inf on log-scale)
 // Replace by a big, but finite penalty if that's the case 

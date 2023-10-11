@@ -118,7 +118,7 @@ ccm_func <- function(data){
   
   # ------Creating the null hypothesis for comparison with our CCM output-----#
   
-  num_surr <- 10 # number of surrogate datasets
+  num_surr <- 100 # number of surrogate datasets
   
   # using seasonal data to create null hypothesis 
   surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = 52)
@@ -134,10 +134,12 @@ ccm_func <- function(data){
   rho_surr_v2_xmap_v1 <- data.frame(LibSize = seq(50, lib_max_null, 2))
   
   # creating data frame with observed and surrogate data to be used with ccm 
-  v1_data <-  data.frame(cbind(seq(1:length(data$v1_obs)), data$v1_obs, surr_v1))
+  # note for the ccm of v1 x map v2 we want to have the v2 surrogate data (cause v1 xmap v2 is determining if v2 is causing v1)
+  # and vice-versa
+  v1_data <-  data.frame(cbind(seq(1:length(data$v1_obs)), data$v1_obs, surr_v2))
   names(v1_data) <- c('time', 'v1_obs', paste('T', as.character(seq(1,num_surr)), sep = ''))
 
-  v2_data <- as.data.frame(cbind(seq(1:length(data$v2_obs)), data$v2_obs, surr_v2))
+  v2_data <- as.data.frame(cbind(seq(1:length(data$v2_obs)), data$v2_obs, surr_v1))
   names(v2_data) <- c('time', 'v2_obs', paste('T', as.character(seq(1,num_surr)), sep = ''))
 
   # Cross mapping

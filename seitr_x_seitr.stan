@@ -58,25 +58,23 @@ functions {
     real theta_lambda2 = theta[4];
     real w1 = theta[5];
     real w2 = theta[6];
-    
-    real gamma1 = theta[7]; // will fix these parameters later
-    real gamma2 = theta[8];
-    real sigma1 = theta[9];
-    real sigma2 = theta[10];
-    
-    real Ri1 = theta[11];
-    real Ri2 = theta[12];
-    real R01 = theta[13];
-    real R02 = theta[14];
-    real R12 = theta[15];
-    real A1 = theta[16];
-    real A2 = theta[17];
-    real phi1 = theta[18];
-    real phi2 = theta[19];
+    real Ri1 = theta[7];
+    real Ri2 = theta[8];
+    real R01 = theta[9];
+    real R02 = theta[10];
+    real R12 = theta[11];
+    real A1 = theta[12];
+    real A2 = theta[13];
+    real phi1 = theta[14];
+    real phi2 = theta[15];
     
     // specifying model parameters that are fixed 
     real mu = x_r[1]; // real values used to evaluate f; weekly birth rate
     real nu = x_r[2]; // weekly death rate
+    real gamma1 = x_r[3];
+    real gamma2 = x_r[4];
+    real sigma1 = x_r[5];
+    real sigma2 = x_r[6];
     real N = x_i[1]; // integer values used to evaluate f; population size 
     
     // transmission rates
@@ -144,6 +142,10 @@ data {
   real ts[n_weeks]; // the time sereis at which we require the solution to be evaluated
   real mu;
   real nu;
+  real gamma1; 
+  real gamma2;
+  real sigma1;
+  real sigma2;
   int N;
   int v1_obs[n_weeks];
   int v2_obs[n_weeks];
@@ -151,7 +153,7 @@ data {
 
 // specifying x_r and x_i 
 transformed data {
-  real x_r[2] = {mu, nu};
+  real x_r[6] = {mu, nu, gamma1, gamma2, sigma1, sigma2};
   int  x_i[1] = {N};
 }
 
@@ -164,10 +166,6 @@ parameters {
   real<lower=0, upper=6> theta_lambda2;
   real<lower=0> w1;
   real<lower=0> w2;
-  real<lower=0> gamma1;
-  real<lower=0> gamma2;
-  real<lower=0> sigma1;
-  real<lower=0> sigma2;
   real<lower=0> Ri1;
   real<lower=0> Ri2;
   real<lower=0, upper=1> R01;
@@ -190,26 +188,22 @@ transformed parameters{
   real<lower=0> incidence_v2[n_weeks - 1];
   {
     // specifying theta so that we can solve the SIR function 
-    real theta[19];
+    real theta[15];
     theta[1] = delta1;
     theta[2] = delta2;
     theta[3] = theta_lambda1;
     theta[4] = theta_lambda2;
     theta[5] = w1;
     theta[6] = w2;
-    theta[7] = gamma1;
-    theta[8] = gamma2;
-    theta[9] = sigma1;
-    theta[10] = sigma2;
-    theta[11] = Ri1;
-    theta[12] = Ri2;
-    theta[13] = R01;
-    theta[14] = R02;
-    theta[15] = R12;
-    theta[16] = A1;
-    theta[17] = A2;
-    theta[18] = phi1;
-    theta[19] = phi2;
+    theta[7] = Ri1;
+    theta[8] = Ri2;
+    theta[9] = R01;
+    theta[10] = R02;
+    theta[11] = R12;
+    theta[12] = A1;
+    theta[13] = A2;
+    theta[14] = phi1;
+    theta[15] = phi2;
 
     
     // numerical optimisation to solve for y  
@@ -236,10 +230,6 @@ model {
   theta_lambda2 ~ uniform(0,6);
   w1 ~ normal(52,8);
   w2 ~ normal(27,8);
-  gamma1 ~ gamma(3,7); //puts more weight around 3-8 days  (0.4-1.1 weeks)
-  gamma2 ~ gamma(6,7); // more eight around 4-8 days (0.6-1.1 weeks)
-  sigma1 ~ gamma(3,14); // puts more weight around 1-3 days (0.1-0.4 weeks)
-  sigma2 ~ gamma(3,7); // puts more weight around 3-8 days (0.4-1.1 weeks)
   
   Ri1 ~ gamma(4,3); // puts more weight on Ri1 between 1-2 
   Ri2 ~ gamma(4,1.5); // puts more weight on Ri2 betewen 1-3
