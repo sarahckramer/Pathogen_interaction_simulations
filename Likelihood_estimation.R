@@ -19,7 +19,7 @@
 # load packages 
 library(nloptr)
 
-lik <- function(data, true_params, components_l = components_l, sobol_size, jobid, maxtime){
+lik <- function(data, true_params, components_l = components_l, sobol_size, jobid, no_jobs, maxtime){
   
   # creating new pomp model with the simulated data 
   po <- pomp(data = data,
@@ -89,7 +89,7 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
   sub_start <- 1:sobol_size
   
   # Loop through start values and perform trajectory matching:
-  out <- vector(mode = "list", length = length(sub_start)) # initialise output vector
+  #out <- vector(mode = "list", length = length(sub_start)) # initialise output vector
   for (i in seq_along(sub_start)) {
     # Get param start values:
     x0 <- as.numeric(start_values[sub_start[i], ])
@@ -125,7 +125,8 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
       coef(po, est_pars, transform = TRUE) <- m$solution
       
       # Collect all results:
-      out[[i]] <- list(allpars = coef(po),
+      #out[[i]] <- list(allpars = coef(po),
+      out       <- list(allpars = coef(po),
                        estpars = coef(po, est_pars),
                        ll = -m$objective,
                        conv = m$status,
@@ -133,16 +134,13 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
                        niter = m$iterations,
                        etime = as.numeric(etime))
       # Write to file:
-      # saveRDS(out,
-      #         file = sprintf('results/res_%s_%s_%d.rds',
-      #                        vir1, vir2,
-      #                        sub_start[i])
-      #)
-      
-  
+      saveRDS(out,
+               file = sprintf('results/res_%s_%s.rds',
+                              jobid, sub_start[i]))
     }
     
   }
+  return(out)
 }
 
 # res <- NULL

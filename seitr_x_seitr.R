@@ -30,6 +30,9 @@ library(gridExtra)
 #---- set up cluster inputs ---# 
 # Get cluster environmental variables:
 jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size 
+likelihood <- as.logical(Sys.getenv("LIKELIHOOD")); print(likelihood) # will be TRUE or FALSE
+# how many different starting params are we going to run for numerical optimizer for each job 
+sobol_size <- as.integer(Sys.getenv("SOBOLSIZE")); print(sobol_size)  
 
 #--- reading in CSnippets ---# 
 # read in the C code for the pomp model 
@@ -230,7 +233,6 @@ grid.arrange(plot_list[[7]],plot_list[[8]],plot_list[[9]],ncol=1)
 
 # Since the likelihood approach requires a significantly larger amount of compute power will only 
 # perform this method if it is specifically asked for at the cmd line
-likelihood <- as.logical(Sys.getenv("LIKELIHOOD")); print(likelihood) # will be TRUE or FALSE
 
 # If likelihood is true we don't run the non-likelihood methods at all 
 if(likelihood==FALSE){ 
@@ -333,9 +335,6 @@ if(likelihood==FALSE){
 
   #----- Likelihood approach -----# 
 
-  # cluster specifications # 
-  # how many different starting params are we going to run for numerical optimizer run for each job (i.e. interaction parameter combos)
-  sobol_size <- as.integer(Sys.getenv("SOBOLSIZE")); print(sobol_size) # probably ~10 
   # max time that we want to allow the optmizer to run for
   maxtime <- 720  # 12 hrs - want this to run for as long as possible so that I don't have to re-run to get the MLE
   
@@ -345,14 +344,13 @@ if(likelihood==FALSE){
   true_params <- results$true_param
   
   # run likelihood estimation 
-  results$lik <- lik(data=data, true_params, components_l = components_l, sobol_size, jobid, maxtime)
+  results$lik <- lik(data=data, true_params, components_l = components_l, sobol_size, jobid, no_jobs = no_jobs, maxtime)
   
   # save out the results
   # if I do it this way then I will have a list which has input params the simulated data and the 
   # output of the different input parameters for the likelihood estimation in their own results file
   # total output: number of jobs x sobol size results files  
-  save(results, file=sprintf('results_%s_%s.RData',jobid, sobol_size)) 
-  
+  save(results, file=sprintf('true_data_%s_%s.RData',jobid, sobol_size)) 
 }
 
 
