@@ -36,7 +36,7 @@ jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on 
 mod_code <- readLines('seitr_x_seitr.cpp')
 
 # pull out the various components of the C code ready to feed into pomp
-components_nm <- c('globs', 'dmeas', 'rmeas', 'rinit', 'rsim', 'skel')
+components_nm <- c('globs', 'dmeas', 'rmeas', 'rinit', 'rsim', 'skel', 'toest', 'fromest')
 # initialise list
 components_l <- vector(mode = 'list', length = length(components_nm))
 names(components_l) <- components_nm
@@ -114,17 +114,21 @@ sim_data <- function(tot_weeks,theta_lambda1, theta_lambda2, delta_1, delta_2, c
                           N=3700000,
                           E01=0.0001, E02=0.0001,
                           R01=0.4, R02=0.2, R12=0.001,
-                          n_surge = n_surge, t_si=t(t_si), delta_i=t(delta_i))
+                          t_si=t(t_si), delta_i=t(delta_i))
 
   # replacing . in names of true params with _
   names(true_params) <- gsub(x = names(true_params), pattern = "\\.", replacement = "_") 
-
+  
 #---- Create list to save the parameter sets and results of our different methods ---# 
 
     results <- vector(mode = "list", length = 8)
     results[[1]] <- true_params[1,] 
     names(results) <- c("true_param", "data", "cor", "gam_cor", "transfer_entropy", "CCM","granger")
 
+    # remove surges from true params vector before feeding into pomp as we are not 
+    # going to estimate these
+    #true_params <- true_params[1:28]
+    
 #---- create pomp object ---# 
       po <- pomp(data = data.frame(time = seq(from = 0, to = tot_weeks, by = 1), v1_obs = NA, v2_obs = NA),
            times = "time",
@@ -139,6 +143,7 @@ sim_data <- function(tot_weeks,theta_lambda1, theta_lambda2, delta_1, delta_2, c
                           'v1_T', 'v2_T'),
            paramnames = names(true_params),
            params = true_params,
+           partrans = parameter_trans(toEst = components_l[['toest']], fromEst = components_l[['fromest']]),
            globals = components_l[['globs']],
            dmeasure = components_l[['dmeas']],
            rmeasure = components_l[['rmeas']],
@@ -332,7 +337,7 @@ if(likelihood==FALSE){
   # how many different starting params are we going to run for numerical optimizer run for each job (i.e. interaction parameter combos)
   sobol_size <- as.integer(Sys.getenv("SOBOLSIZE")); print(sobol_size) # probably ~10 
   # max time that we want to allow the optmizer to run for
-  maxtime <- 720 # 12 hrs - want this to run for as long as possible so that I don't have to re-run to get the MLE
+  maxtime <- 720  # 12 hrs - want this to run for as long as possible so that I don't have to re-run to get the MLE
   
   # dataset to apply method to 
   data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)

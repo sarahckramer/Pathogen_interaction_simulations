@@ -35,6 +35,7 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
                             'v1_T', 'v2_T'),
              paramnames = names(true_params),
              params = true_params,
+             partrans = parameter_trans(toEst = components_l[['toest']], fromEst = components_l[['fromest']]),
              globals = components_l[['globs']],
              dmeasure = components_l[['dmeas']],
              rmeasure = components_l[['rmeas']],
@@ -49,7 +50,10 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
   
   # Working out the objective function (i.e. working out the likelihood) and
   # specifying the parameters we want to estimate 
-  fx <- traj_objfun(data=po, est = est_pars, verbose=TRUE)
+  fx <- traj_objfun(data=po,
+                    est = est_pars,
+                    partrans = po@partrans,
+                    verbose=TRUE)
   
   # set up starting values for the numerical optimiser 
   # starting range for each parameter 
@@ -89,17 +93,26 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
   for (i in seq_along(sub_start)) {
     # Get param start values:
     x0 <- as.numeric(start_values[sub_start[i], ])
+    coef(po, est_pars) <- x0
+    x0_trans <- coef(po, est_pars, transform = TRUE)
+    
+    # check if transform has been done correctly 
+    po2 <- po
+    p0_trans <- coef(po, transform = T)
+    coef(po2, transform = T) <- p0_trans
+    stopifnot(all.equal(coef(po), coef(po2)))
     
     # Run trajectory matching using subplex algorithm:
     # http://ab-initio.mit.edu/wiki/index.php/NLopt_Algorithms
     tic <- Sys.time()
     m <- try(
-      nloptr(x0 = x0,
+      nloptr(x0 = unname(x0_trans),
              eval_f = fx, # evaluating the pomp models dmeasure component? 
              opts = list(algorithm = 'NLOPT_LN_SBPLX',
                          maxtime = maxtime,
-                         xtol_rel = 0.00001,
-                         print_level = 0))
+                         maxeval = -1, # disabled
+                         xtol_rel = -1, # disabled
+                         print_level = 1))
     )
     toc <- Sys.time()
     # estimate run time and print 
@@ -126,28 +139,25 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
       #                        sub_start[i])
       #)
       
-      # Print results:
-      print(out$ll)
-      print(out$estpars, digits = 2)
-      print(out$conv)
-      print(out$message)
+  
     }
     
   }
 }
 
-res <- NULL
-for(i in 1:sobol_size){
-  res <- cbind(res, out[[i]]$estpars) 
-}
-res <- data.frame(res, row.names=NULL)
-
-res_long <- gather(res, param, value, Ri1:w2, factor_key=T)
-
-ggplot(aes(x=value), data=res_long) + geom_histogram() + 
-  facet_wrap(.~param, scales="free") +   geom_density(colour="blue") 
-
-res_long %>% group_by(param) %>% 
-  summarise(mean=mean(value), sd=sd(value),
-            Q0_025 = quantile(value, 0.025), Q50=quantile(value, 0.5), Q975=quantile(value, 0.975))
-
+# res <- NULL
+# for(i in 1:sobol_size){
+#   res <- cbind(res, out[[i]]$estpars) 
+# }
+# 
+# res <- data.frame(t(res), row.names=NULL)
+# 
+# res_long <- gather(res, param, value, Ri1:w2, factor_key=T)
+# 
+# ggplot(aes(x=value), data=res_long) + geom_histogram() + 
+#   facet_wrap(.~param, scales="free") 
+# 
+# res_long %>% group_by(param) %>% 
+#   summarise(mean=mean(value),median = median(value), sd=sd(value),
+#             Q0_025 = quantile(value, 0.025), Q50=quantile(value, 0.5), Q975=quantile(value, 0.975))
+# 

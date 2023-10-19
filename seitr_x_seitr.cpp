@@ -30,7 +30,136 @@ static double pTrans(double r, double delta_t) {
   double out = 1.0 - exp(-r * delta_t);
   return out;
 }
+
+// Scaled logit transform for parameters constrained in interval [a,b]
+static double logitCons(double x, double a, double b) {
+  x = (x <= a) ? a : (x >= b ? b : x);
+  double out = log((x - a) / (b - x));
+  return out;
+}
+
+// Expit transform for parameters constrained in interval [a,b]
+// this is the back transform of the logit function 
+static double expitCons(double x, double a, double b) {
+  double out = (a + b * exp(x)) / (1.0 + exp(x));
+  if(ISNAN(out) | isinf(out)) out = (b + a * exp(-x)) / (1.0 + exp(-x)); // If x=+Inf, must return b
+  return out;
+}
 //end_globs
+
+
+//----- TRANSFORMATIONS ---//
+// here we specify the transformations applied to each parameter to
+// constrain the integrator search space. We also specify the corresponding
+// back transformation
+
+//start_toest
+T_Ri1 = logitCons(Ri1, 1.0, 10); 
+T_Ri2 = logitCons(Ri2, 1.0, 10); 
+
+T_sigma1 = sigma1;
+T_sigma2 = sigma2;
+T_gamma1 = gamma1;
+T_gamma2 = gamma2;
+
+T_delta1 = log(delta1);
+T_delta2 = log(delta2);
+
+T_mu = mu;
+T_nu = nu;
+
+T_w1 = log(w1);
+T_w2 = log(w2);
+
+T_rho1 = logit(rho1);
+T_rho2 = logit(rho2);
+T_theta_lambda1 = logitCons(theta_lambda1,0,10);
+T_theta_lambda2 = logitCons(theta_lambda2,0,10);
+
+T_A1 = logit(A1);
+T_phi1 = logitCons(phi1,20,42); // 4 month period ofter Oct
+T_A2 = logit(A2);
+T_phi2 = logitCons(phi2,20,42);
+
+T_beta_sd1 = beta_sd1;
+T_beta_sd2 = beta_sd2;
+T_N = N;
+
+T_t_si_1 = t_si_1;
+T_t_si_2 = t_si_2;
+T_t_si_3 = t_si_3;
+T_t_si_4 = t_si_4;
+T_t_si_5 = t_si_5;
+
+T_delta_i_1 = log(delta_i_1);
+T_delta_i_2 = log(delta_i_2);
+T_delta_i_3 = log(delta_i_3);
+T_delta_i_4 = log(delta_i_4);
+T_delta_i_5 = log(delta_i_5);
+
+// we need to specify a transform on the sum of E and R
+// such that the compartments are not allowed to turn
+// negative
+double sum_init = 0.0; // initialise
+sum_init = E01 + E02 + R01 + R02 + R12;
+T_E01 = log(E01 / (1.0 - sum_init));
+T_E02 = log(E02 / (1.0 - sum_init));
+T_R01 = log(R01 / (1.0 - sum_init));
+T_R02 = log(R02 / (1.0 - sum_init));
+T_R12 = log(R12 / (1.0 - sum_init));
+//end_toest
+
+//start_fromest
+Ri1 = expitCons(T_Ri1, 1.0, 10);
+Ri2 = expitCons(T_Ri2, 1.0, 10);
+sigma1 = T_sigma1;
+sigma2 = T_sigma2;
+gamma1 = T_gamma1;
+gamma2 = T_gamma2;
+
+delta1 = exp(T_delta1);
+delta2 = exp(T_delta2);
+
+mu = T_mu;
+nu = T_nu;
+
+w1 = exp(T_w1);
+w2 = exp(T_w2);
+
+rho1 = expit(T_rho1);
+rho2 = expit(T_rho2);
+theta_lambda1 = expitCons(T_theta_lambda1,0,10);
+theta_lambda2 = expitCons(T_theta_lambda2,0,10);
+
+A1 = expit(T_A1);
+phi1 = expitCons(T_phi1,20,42);
+A2 = expit(T_A2);
+phi2 = expitCons(T_phi2,20,42);
+ 
+beta_sd1 = T_beta_sd1;
+beta_sd2 = T_beta_sd2;
+N = T_N;
+
+t_si_1 = T_t_si_1;
+t_si_2 = T_t_si_2;
+t_si_3 = T_t_si_3;
+t_si_4 = T_t_si_4;
+t_si_5 = T_t_si_5;
+
+delta_i_1 = exp(T_delta_i_1);
+delta_i_2 = exp(T_delta_i_2);
+delta_i_3 = exp(T_delta_i_3);
+delta_i_4 = exp(T_delta_i_4);
+delta_i_5 = exp(T_delta_i_5);
+ 
+double sum_init = 0.0;
+sum_init = exp(E01) + exp(E02) + exp(R01) + exp(R02) + exp(R12);
+E01 = exp(T_E01) / (1.0 + sum_init);
+E02 = exp(T_E02) / (1.0 + sum_init);
+R01 = exp(T_R01) / (1.0 + sum_init);
+R02 = exp(T_R02) / (1.0 + sum_init);
+R12 = exp(T_R12) / (1.0 + sum_init);
+//end_fromest
 
 // -----INITIALISATION-----//
 //start_rinit
@@ -70,21 +199,12 @@ X_IR = 0;
 X_TR = 0;
 X_RR = nearbyint(R12 * N);
 
-// addition of other variables to be able to monitor output
-// w = 0;
-// delta = 0;
-// lambda_1 = 0;
-// lambda_2 = 0;
-// gamma_1 = 0;
-// beta_1 = 0;
-// s_1 =0;
-
 // if the compartments that are assigned some initial value don't sum to
 // N (likely due to rounding in the nearbyint function) print the values
 // then re calculate the initial value of X_SS by doing N - all other
 // inital values for the other compartments
 if ((X_SS + X_ES + X_RS + X_SE + X_SR + X_RR) != N) {
-  Rprintf("SS=%f, ES=%f, RS=%f, SE=%f, SR=%f, RR=%f, sum=%f, N=%f\n", X_SS, X_ES, X_RS, X_SE, X_SR, X_RR, X_SS + X_ES + X_RS + X_SE + X_SR + X_RR, N);
+  Rprintf("SS=%f, ES=%f, RS=%f, SE=%f, SR=%f, RR=%f, sum=%f, N=%f, E01=%f, E02=%f, R01=%f, R02=%f, R12=%f\n", X_SS, X_ES, X_RS, X_SE, X_SR, X_RR, X_SS + X_ES + X_RS + X_SE + X_SR + X_RR, N, E01, E02,R01,R02,R12);
   X_SS = nearbyint(N - X_ES - X_RS - X_SE - X_SR - X_RR);
 }
 
@@ -442,16 +562,5 @@ X_RR += fromRT[1] + fromTR[0] - fromRR[0] - fromRR[1] - fromRR[2];
 // Total incidence of each virus in the population
 v1_T += fromIS[0] + fromIE[0] + fromII[0] + fromIT[0] + fromIR[0];
 v2_T += fromSI[1] + fromEI[1] + fromII[1] + fromTI[1] + fromRI[1];
-
-//Rprintf("w1_s=%.4f, t=%.1f, t_si_1=%.1f\n", w1_s, t, t_si_1);
-
-// outputting additional variables to monitor
-// w = w1_s;
-// delta = delta_i_1;
-// lambda_1 = lambda1;
-// lambda_2 = lambda2;
-// gamma_1 = gamma1;
-// beta_1 = beta1;
-// s_1 = s1;
 
 //end_rsim
