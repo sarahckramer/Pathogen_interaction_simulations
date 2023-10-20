@@ -18,6 +18,8 @@
 
 # load packages 
 library(nloptr)
+library(foreach)
+library(doParallel)
 
 lik <- function(data, true_params, components_l = components_l, sobol_size, jobid, no_jobs, maxtime){
   
@@ -87,10 +89,15 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
   
   # Get unique identifiers:
   sub_start <- 1:sobol_size
-  
+
   # Loop through start values and perform trajectory matching:
-  #out <- vector(mode = "list", length = length(sub_start)) # initialise output vector
-  for (i in seq_along(sub_start)) {
+  
+  registerDoParallel(cl <- makeCluster(5))
+  foreach (i=1:sobol_size, .packages=c("pomp", "nloptr")) %dopar% {
+    
+    # print sobol start index
+    print(paste0('Estimation: ', sub_start[i]))
+    
     # Get param start values:
     x0 <- as.numeric(start_values[sub_start[i], ])
     coef(po, est_pars) <- x0
@@ -125,7 +132,6 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
       coef(po, est_pars, transform = TRUE) <- m$solution
       
       # Collect all results:
-      #out[[i]] <- list(allpars = coef(po),
       out       <- list(allpars = coef(po),
                        estpars = coef(po, est_pars),
                        ll = -m$objective,
@@ -133,14 +139,16 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
                        message = m$message,
                        niter = m$iterations,
                        etime = as.numeric(etime))
+      # print some output to understand how the cluster is spliting up the work
+      print(i)
+      
       # Write to file:
       saveRDS(out,
-               file = sprintf('results/res_%s_%s.rds',
+               file = sprintf('res_%s_%s.rds',
                               jobid, sub_start[i]))
     }
-    
   }
-  return(out)
+  stopCluster(cl)
 }
 
 # res <- NULL

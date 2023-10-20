@@ -344,13 +344,14 @@ if(likelihood==FALSE){
   true_params <- results$true_param
   
   # run likelihood estimation 
-  results$lik <- lik(data=data, true_params, components_l = components_l, sobol_size, jobid, no_jobs = no_jobs, maxtime)
+  source("Likelihood_estimation.R")
+  lik(data=data, true_params, components_l = components_l, sobol_size, jobid, no_jobs = no_jobs, maxtime)
   
   # save out the results
   # if I do it this way then I will have a list which has input params the simulated data and the 
   # output of the different input parameters for the likelihood estimation in their own results file
   # total output: number of jobs x sobol size results files  
-  save(results, file=sprintf('true_data_%s_%s.RData',jobid, sobol_size)) 
+  save(results, file=sprintf('true_data_%s.RData',jobid)) 
 }
 
 
