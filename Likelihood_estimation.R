@@ -124,8 +124,6 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
     toc <- Sys.time()
     # estimate run time and print 
     etime <- toc - tic
-    units(etime) <- 'mins'
-    print(etime)
     
     # If estimation is successful, save results:
     if (!inherits(m, 'try-error')) {
@@ -139,8 +137,7 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
                        message = m$message,
                        niter = m$iterations,
                        etime = as.numeric(etime))
-      # print some output to understand how the cluster is spliting up the work
-      print(i)
+      
       
       # Write to file:
       saveRDS(out,
