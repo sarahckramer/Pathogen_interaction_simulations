@@ -75,7 +75,7 @@ data_sir <- list(n_weeks = n_weeks, mu = mu, nu = nu,y0 = y0, t0 = t0, ts = t, N
                  sigma1 = sigma1, sigma2 = sigma2)
 
 # number of MCMC steps
-niter <- 500
+niter <- 2000
 
 # reading in the stan model 
 model <- stan_model("seitr_x_seitr.stan")

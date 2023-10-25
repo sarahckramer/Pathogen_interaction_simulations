@@ -22,40 +22,9 @@ library(foreach)
 library(doParallel)
 
 lik <- function(data, true_params, components_l = components_l, sobol_size, jobid, no_jobs, maxtime){
-  
-  # creating new pomp model with the simulated data 
-  po <- pomp(data = data,
-             times = "time",
-             t0 = data$time[1],
-             obsnames = c('v1_obs', 'v2_obs'),
-             accumvars = c('v1_T', 'v2_T'),
-             statenames = c('X_SS', 'X_ES' , 'X_IS', 'X_TS', 'X_RS', 
-                            'X_SE', 'X_EE', 'X_IE', 'X_TE', 'X_RE',
-                            'X_SI', 'X_EI' ,'X_II', 'X_TI', 'X_RI', 
-                            'X_ST', 'X_ET' ,'X_IT', 'X_TT', 'X_RT',
-                            'X_SR', 'X_ER' ,'X_IR', 'X_TR', 'X_RR', 
-                            'v1_T', 'v2_T'),
-             paramnames = names(true_params),
-             params = true_params,
-             partrans = parameter_trans(toEst = components_l[['toest']], fromEst = components_l[['fromest']]),
-             globals = components_l[['globs']],
-             dmeasure = components_l[['dmeas']],
-             rmeasure = components_l[['rmeas']],
-             rprocess = euler(step.fun = components_l[['rsim']], delta.t = 1),
-             skeleton = vectorfield(components_l[['skel']]), # putting in deterministic for testing
-             rinit = components_l[['rinit']]
-  )
-  
   # parameters to estimate
   est_pars <- c("Ri1","Ri2","E01","E02","R01","R02","R12","rho1","rho2","A1","phi1","A2","phi2","delta1","delta2","theta_lambda1","theta_lambda2",
                 "w1","w2")
-  
-  # Working out the objective function (i.e. working out the likelihood) and
-  # specifying the parameters we want to estimate 
-  fx <- traj_objfun(data=po,
-                    est = est_pars,
-                    partrans = po@partrans,
-                    verbose=TRUE)
   
   # set up starting values for the numerical optimiser 
   # starting range for each parameter 
@@ -72,8 +41,8 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
                             phi1 = c(24, 28),
                             A2 = c(0.2, 0.4),
                             phi2 = c(20, 25),
-                            delta1 = c(1, 1/3),
-                            delta2 = c(1, 1/3),
+                            delta1 = c(0.5, 1),
+                            delta2 = c(0.5, 1),
                             theta_lambda1 = c(0, 2),
                             theta_lambda2 = c(0, 2),
                             w1 = c(1/26,1/78),
@@ -92,22 +61,52 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
 
   # Loop through start values and perform trajectory matching:
   
-  registerDoParallel(cl <- makeCluster(5))
-  foreach (i=1:sobol_size, .packages=c("pomp", "nloptr")) %dopar% {
+  # setting up parallelism for the foreach loop
+  registerDoParallel(cl <- makeCluster(50))
+    results_foreach <- 
+        foreach (i=1:sobol_size, .packages=c("pomp", "nloptr")) %dopar% {
+          
+        # creating new pomp model with the simulated data 
+        # only data, parameters to estimate and pomp code are accessed from the global environemnt
+          po <- pomp(data = data, 
+                 times = "time",
+                 t0 = data$time[1],
+                 obsnames = c('v1_obs', 'v2_obs'),
+                 accumvars = c('v1_T', 'v2_T'),
+                 statenames = c('X_SS', 'X_ES' , 'X_IS', 'X_TS', 'X_RS', 
+                                'X_SE', 'X_EE', 'X_IE', 'X_TE', 'X_RE',
+                                'X_SI', 'X_EI' ,'X_II', 'X_TI', 'X_RI', 
+                                'X_ST', 'X_ET' ,'X_IT', 'X_TT', 'X_RT',
+                                'X_SR', 'X_ER' ,'X_IR', 'X_TR', 'X_RR', 
+                                'v1_T', 'v2_T'),
+                 paramnames = names(true_params),
+                 params = true_params,
+                 partrans = parameter_trans(toEst = components_l[['toest']], fromEst = components_l[['fromest']]),
+                 globals = components_l[['globs']],
+                 dmeasure = components_l[['dmeas']],
+                 rmeasure = components_l[['rmeas']],
+                 rprocess = euler(step.fun = components_l[['rsim']], delta.t = 1),
+                 skeleton = vectorfield(components_l[['skel']]), # putting in deterministic for testing
+                 rinit = components_l[['rinit']])
+
+      
+        # Working out the objective function (i.e. working out the likelihood) and
+        # specifying the parameters we want to estimate 
+        fx <- traj_objfun(data=po,
+                        est = est_pars,
+                        partrans = po@partrans,
+                        verbose=TRUE)
     
-    # print sobol start index
-    print(paste0('Estimation: ', sub_start[i]))
+        # Get param start values:
+        x0 <- as.numeric(start_values[sub_start[i], ])
+        coef(po, est_pars) <- x0
+        x0_trans <- coef(po, est_pars, transform = TRUE)
     
-    # Get param start values:
-    x0 <- as.numeric(start_values[sub_start[i], ])
-    coef(po, est_pars) <- x0
-    x0_trans <- coef(po, est_pars, transform = TRUE)
-    
-    # check if transform has been done correctly 
-    po2 <- po
-    p0_trans <- coef(po, transform = T)
-    coef(po2, transform = T) <- p0_trans
-    stopifnot(all.equal(coef(po), coef(po2)))
+        # check if transform has been done correctly  - transform and back transform results match
+        po2 <- po
+        p0_trans <- coef(po, transform = T)
+        coef(po2, transform = T) <- p0_trans
+        stopifnot(all.equal(coef(po), coef(po2))) # if don't match throw error
     
     # Run trajectory matching using subplex algorithm:
     # http://ab-initio.mit.edu/wiki/index.php/NLopt_Algorithms
@@ -122,30 +121,33 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
                          print_level = 1))
     )
     toc <- Sys.time()
-    # estimate run time and print 
+    # estimate run time in minutes
     etime <- toc - tic
+    units(etime) <- 'mins'
     
     # If estimation is successful, save results:
     if (!inherits(m, 'try-error')) {
       coef(po, est_pars, transform = TRUE) <- m$solution
       
       # Collect all results:
-      out       <- list(allpars = coef(po),
-                       estpars = coef(po, est_pars),
-                       ll = -m$objective,
-                       conv = m$status,
-                       message = m$message,
-                       niter = m$iterations,
-                       etime = as.numeric(etime))
+      out <- list(allpars = coef(po),
+                   estpars = coef(po, est_pars),
+                   ll = -m$objective,
+                   conv = m$status,
+                   message = m$message,
+                   niter = m$iterations,
+                   etime = as.numeric(etime))
       
       
       # Write to file:
-      saveRDS(out,
-               file = sprintf('res_%s_%s.rds',
-                              jobid, sub_start[i]))
+      #saveRDS(out, file = sprintf('res_%s_%s.rds',jobid, sub_start[i]))
+      
+      out
+       }
     }
-  }
   stopCluster(cl)
+  
+  return(results_foreach)
 }
 
 # res <- NULL
