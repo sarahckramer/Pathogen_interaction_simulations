@@ -57,10 +57,10 @@ set.seed(2908)
 
 # total number of weeks of data we are going to want 
 #tot_weeks <- 365 # 7 years
-tot_weeks <- 625 # 12 years 
+#tot_weeks <- 625 # 12 years 
 #tot_weeks <- 1145 # 22 years 
 #tot_weeks <- 2704 # 52 years 
-#tot_weeks <- 5304 # 102 years 
+tot_weeks <- 5304 # 102 years 
 
 # initialize time of surges (based on week) from start of season (1 July)
 # by drawing from a normal distribution 
@@ -192,7 +192,7 @@ for(i in 1:9){
   delta_1 <- all_param_comb[i,]$delta_1
   delta_2 <- all_param_comb[i,]$delta_2
   temp[[i]] <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2,
-                      delta_1=delta_1, delta_2=delta_2, components_l=components_l)
+                      delta_1=delta_1, delta_2=delta_2, n_surge=n_surge, components_l=components_l)
   data <- temp[[i]]$data
 
   legend_colors <- c("v1_obs" = "black", "v2_obs" = "blue")
