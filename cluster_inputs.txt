@@ -7,4 +7,4 @@ squeue -u sarpi
 
 # run after adding likelihood function to the code
 
-sbatch --array=1, --export=LIKELIHOOD="TRUE",SOBOLSIZE="500" seitr_x_seitr_sim.sh
+sbatch --array=2, --export=LIKELIHOOD="TRUE",SOBOLSIZE="500" seitr_x_seitr_sim.sh

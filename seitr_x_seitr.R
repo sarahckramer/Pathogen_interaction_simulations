@@ -56,9 +56,11 @@ for (nm in components_nm) {
 set.seed(2908)
 
 # total number of weeks of data we are going to want 
-tot_weeks <- 365 # 7 years
-#tot_weeks <- 625 # 12 years 
+#tot_weeks <- 365 # 7 years
+tot_weeks <- 625 # 12 years 
 #tot_weeks <- 1145 # 22 years 
+#tot_weeks <- 2704 # 52 years 
+#tot_weeks <- 5304 # 102 years 
 
 # initialize time of surges (based on week) from start of season (1 July)
 # by drawing from a normal distribution 
@@ -99,40 +101,33 @@ rm(theta_lambda1, theta_lambda2, delta_1, delta_2)
 
 # function to create list of true parameter inputs and simulated data 
 # function takes a vector of the interaction parameters 
-sim_data <- function(tot_weeks,theta_lambda1, theta_lambda2, delta_1, delta_2, components_l=components_l){
+sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,n_surge,components_l=components_l){
   set.seed(2908)
   
   # setting parameters to weekly rates - params listed as daily in 
   # spreadsheet list of model parameters.xlsx
   # note also v1 = influenza; v2 = RSV
-  true_params <- data.frame(Ri1=1.3, Ri2=1.7,
-                          sigma1=7, sigma2=7/5,
-                          gamma1=7/5, gamma2=7/10,
-                          delta1=delta_1, delta2=delta_2,
-                          mu = 0.0002, nu=0.0007, 
-                          w1=1/52, w2=1/28,
-                          rho1 = 0.002, rho2 = 0.002,
-                          theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
-                          A1=0.2, phi1=26,
-                          A2=0.2, phi2=20,
-                          beta_sd1=0, beta_sd2=0, 
-                          N=3700000,
-                          E01=0.0001, E02=0.0001,
-                          R01=0.4, R02=0.2, R12=0.001,
-                          t_si=t(t_si), delta_i=t(delta_i))
-
-  # replacing . in names of true params with _
-  names(true_params) <- gsub(x = names(true_params), pattern = "\\.", replacement = "_") 
+  true_params <- c(Ri1=1.3, Ri2=1.7,
+                   sigma1=7, sigma2=7/5,
+                   gamma1=7/5, gamma2=7/10,
+                   delta1=delta_1, delta2=delta_2,
+                   mu = 0.0002, nu=0.0007, 
+                   w1=1/52, w2=1/28,
+                   rho1 = 0.002, rho2 = 0.002,
+                   theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
+                   A1=0.2, phi1=26,
+                   A2=0.2, phi2=20,
+                   beta_sd1=0, beta_sd2=0, 
+                   N=3700000,
+                   E01=0.0001, E02=0.0001,
+                   R01=0.4, R02=0.2, R12=0.001, nsurges=n_surge,
+                   t_si_=t(t_si), delta_i_=t(delta_i))
   
 #---- Create list to save the parameter sets and results of our different methods ---# 
 
     results <- vector(mode = "list", length = 8)
-    results[[1]] <- true_params[1,] 
+    results[[1]] <- true_params 
     names(results) <- c("true_param", "data", "cor", "gam_cor", "transfer_entropy", "CCM","granger","likelihood")
-
-    # remove surges from true params vector before feeding into pomp as we are not 
-    # going to estimate these
-    #true_params <- true_params[1:28]
     
 #---- create pomp object ---# 
       po <- pomp(data = data.frame(time = seq(from = 0, to = tot_weeks, by = 1), v1_obs = NA, v2_obs = NA),
@@ -176,7 +171,7 @@ sim_data <- function(tot_weeks,theta_lambda1, theta_lambda2, delta_1, delta_2, c
     return(results)
 }
  
-# generate all true parameter sets and simulate data 
+# generate single true parameter sets and simulate data 
 theta_lambda1 <- all_param_comb[jobid,]$theta_lambda1
 theta_lambda2 <- all_param_comb[jobid,]$theta_lambda2
 delta_1 <- all_param_comb[jobid,]$delta_1
@@ -189,45 +184,45 @@ results <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_la
 t_si_date <- lubridate::ymd("2012-July-01") + lubridate::weeks(t_si)
   
 # creating multiple plots at once
-# temp <- vector(mode = "list", length = 3)
-# plot_list <- vector(mode = "list", length = 3)
-# for(i in 1:9){
-#   theta_lambda1 <- all_param_comb[i,]$theta_lambda1
-#   theta_lambda2 <- all_param_comb[i,]$theta_lambda2
-#   delta_1 <- all_param_comb[i,]$delta_1
-#   delta_2 <- all_param_comb[i,]$delta_2
-#   temp[[i]] <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2,
-#                       delta_1=delta_1, delta_2=delta_2, components_l=components_l)
-#   data <- temp[[i]]$data
-#   
-#   legend_colors <- c("v1_obs" = "black", "v2_obs" = "blue") 
-#   plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs, colour="v1_obs"),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs,colour="v2_obs")) +
-#     ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param$theta_lambda1,
-#                   "AND delta_1 = delta_2 =", temp[[i]]$true_param$delta1)) + labs(y="observed cases") +
-#     scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + ylim(0,500) +
-#     theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted") + 
-#     scale_colour_manual(values=legend_colors) + labs(colour="")
-#     
-# 
-#   # # also estimate attack rates by year for each plot...... NOT WORKING
-#   data$season <- c(rep(1:5, each=52),6)
-#   seasonal_incidence <- data %>% group_by(season) %>% summarise(tot_v1 = sum(v1_obs), tot_v2 = sum(v2_obs))
-#   seasonal_incidence$tot_v1/3700000 * 100
-#   seasonal_incidence$tot_v2/3700000 * 100
-#   
-#   # looking for start of season so I can determine the number of susceptiable to each virus at the start of that season
-#   start_season <- data %>% group_by(season) %>% summarise(min(time_date))
-#   start_season <- data %>% filter(time_date %in% start_season$`min(time_date)`)
-#   
-#   v1_susceptible <- start_season$X_SS + start_season$X_SE + start_season$X_SI + start_season$X_ST + start_season$X_SR
-#   v2_susceptible <- start_season$X_SS + start_season$X_ES + start_season$X_IS + start_season$X_TS + start_season$X_RS
-#   seasonal_incidence$tot_v1/v1_susceptible*100
-#   seasonal_incidence$tot_v2/v2_susceptible*100 # order of magnitude of at least 10 to small 
-#   
-# }
-# grid.arrange(plot_list[[1]],plot_list[[2]],plot_list[[3]],ncol=1)
-# grid.arrange(plot_list[[4]],plot_list[[5]],plot_list[[6]],ncol=1)
-# grid.arrange(plot_list[[7]],plot_list[[8]],plot_list[[9]],ncol=1)
+temp <- vector(mode = "list", length = 3)
+plot_list <- vector(mode = "list", length = 3)
+for(i in 1:9){
+  theta_lambda1 <- all_param_comb[i,]$theta_lambda1
+  theta_lambda2 <- all_param_comb[i,]$theta_lambda2
+  delta_1 <- all_param_comb[i,]$delta_1
+  delta_2 <- all_param_comb[i,]$delta_2
+  temp[[i]] <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2,
+                      delta_1=delta_1, delta_2=delta_2, components_l=components_l)
+  data <- temp[[i]]$data
+
+  legend_colors <- c("v1_obs" = "black", "v2_obs" = "blue")
+  plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs, colour="v1_obs"),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs,colour="v2_obs")) +
+    ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param["theta_lambda1"],
+                  "AND delta_1 = delta_2 =", temp[[i]]$true_param["delta1"])) + labs(y="observed cases") +
+    scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + ylim(0,500) +
+    theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted") +
+    scale_colour_manual(values=legend_colors) + labs(colour="")
+
+
+  # # also estimate attack rates by year for each plot...... NOT WORKING
+  # data$season <- c(rep(1:5, each=52),6)
+  # seasonal_incidence <- data %>% group_by(season) %>% summarise(tot_v1 = sum(v1_obs), tot_v2 = sum(v2_obs))
+  # seasonal_incidence$tot_v1/3700000 * 100
+  # seasonal_incidence$tot_v2/3700000 * 100
+  # 
+  # # looking for start of season so I can determine the number of susceptiable to each virus at the start of that season
+  # start_season <- data %>% group_by(season) %>% summarise(min(time_date))
+  # start_season <- data %>% filter(time_date %in% start_season$`min(time_date)`)
+  # 
+  # v1_susceptible <- start_season$X_SS + start_season$X_SE + start_season$X_SI + start_season$X_ST + start_season$X_SR
+  # v2_susceptible <- start_season$X_SS + start_season$X_ES + start_season$X_IS + start_season$X_TS + start_season$X_RS
+  # seasonal_incidence$tot_v1/v1_susceptible*100
+  # seasonal_incidence$tot_v2/v2_susceptible*100 # order of magnitude of at least 10 to small
+
+}
+grid.arrange(plot_list[[1]],plot_list[[2]],plot_list[[3]],ncol=1)
+grid.arrange(plot_list[[4]],plot_list[[5]],plot_list[[6]],ncol=1)
+grid.arrange(plot_list[[7]],plot_list[[8]],plot_list[[9]],ncol=1)
 
 ##########################################################
 ## Start testing each method for estimating interaction ##

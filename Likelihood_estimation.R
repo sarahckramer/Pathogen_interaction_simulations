@@ -30,19 +30,19 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
   # starting range for each parameter 
   start_range <- data.frame(Ri1 = c(1.0, 2.1),
                             Ri2 = c(1.0, 3),
-                            E01 = c(0, 0.0001),
-                            E02 = c(0, 0.0001),
+                            E01 = c(0.0001, 0.01),
+                            E02 = c(0.0001, 0.01),
                             R01 = c(0.1, 0.5),
                             R02 = c(0.15, 0.3),
-                            R12 = c(0, 0.0001),
-                            rho1 = c(0.002, 0.004),
-                            rho2 =c(0.001, 0.004),
+                            R12 = c(0.0001,0.01),
+                            rho1 = c(0.001, 0.003),
+                            rho2 =c(0.001, 0.003),
                             A1 = c(0.1, 0.4),
                             phi1 = c(24, 28),
-                            A2 = c(0.2, 0.4),
-                            phi2 = c(20, 25),
-                            delta1 = c(0.5, 1),
-                            delta2 = c(0.5, 1),
+                            A2 = c(0.1, 0.4),
+                            phi2 = c(18, 24),
+                            delta1 = c(0.8, 1.1),
+                            delta2 = c(0.8, 1.1),
                             theta_lambda1 = c(0, 2),
                             theta_lambda2 = c(0, 2),
                             w1 = c(1/26,1/78),
@@ -149,20 +149,3 @@ lik <- function(data, true_params, components_l = components_l, sobol_size, jobi
   
   return(results_foreach)
 }
-
-# res <- NULL
-# for(i in 1:sobol_size){
-#   res <- cbind(res, out[[i]]$estpars) 
-# }
-# 
-# res <- data.frame(t(res), row.names=NULL)
-# 
-# res_long <- gather(res, param, value, Ri1:w2, factor_key=T)
-# 
-# ggplot(aes(x=value), data=res_long) + geom_histogram() + 
-#   facet_wrap(.~param, scales="free") 
-# 
-# res_long %>% group_by(param) %>% 
-#   summarise(mean=mean(value),median = median(value), sd=sd(value),
-#             Q0_025 = quantile(value, 0.025), Q50=quantile(value, 0.5), Q975=quantile(value, 0.975))
-# 

@@ -84,6 +84,7 @@ T_phi2 = logitCons(phi2,20,42);
 T_beta_sd1 = beta_sd1;
 T_beta_sd2 = beta_sd2;
 T_N = N;
+T_nsurges = nsurges;
 
 T_t_si_1 = t_si_1;
 T_t_si_2 = t_si_2;
@@ -139,6 +140,7 @@ phi2 = expitCons(T_phi2,20,42);
 beta_sd1 = T_beta_sd1;
 beta_sd2 = T_beta_sd2;
 N = T_N;
+nsurges = T_nsurges;
 
 t_si_1 = T_t_si_1;
 t_si_2 = T_t_si_2;
@@ -368,107 +370,19 @@ double lambda2 = beta2 * (p2/N) * s2; // virus 2
 // loss in immunity delta_i needs to be quite large - otherwise the 
 // changes are relatively subtle)
 
-//5 surges
+double *t_vec = (double *) &t_si_1;
+double *delta_vec = (double *) &delta_i_1;
 double w1_s;
-if(t==t_si_1){
-   w1_s = w1 + delta_i_1;
-   } else if (t==t_si_2){
-     w1_s = w1 + delta_i_2;
-   } else if (t==t_si_3){
-     w1_s = w1 + delta_i_3;
-   } else if(t==t_si_4){
-     w1_s = w1 + delta_i_4;
-   } else if(t==t_si_5){
-     w1_s = w1 + delta_i_5;
+
+// assigning the loss in immunity depending on the number of surges we have
+for(int i = 0; i < nsurges + 1; i++){
+    if(t == t_vec[i]) { // if t is a surge time point the add the surge in loss of immunity
+      w1_s = w1 + delta_vec[i];
+      break; // exit if we find a surge point
    } else{
-   w1_s = w1;
+      w1_s = w1; // if we don't find a surge point then just set the constant immunity loss
+   }
 }
- 
-
-// if I could create vectors in pomp csnippet this could work but I don't think I can
-// checking if t_si contains element t
-// if(std::find(t_si.begin(), t_si.end(), t) != t_si.end()) {
-//       // t_si contains t
-//      
-//      // finding the position of t in t_si
-//      ptrdiff_t pos = distance(t_si.begin(), find(t_si.begin(), t_si.end(), t));
-//     
-//      // add on the appropriate loss in immunity 
-//      w1_s = w1 + delta_i[pos]
-//  } else {
-//    w1_s = w1;
-//  }
-
-   
-// 10 surges
-// if(t==t_si_1){
-//      w1_s = w1 + delta_i_1;
-//    } else if (t==t_si_2){
-//      w1_s = w1 + delta_i_2;
-//    } else if (t==t_si_3){
-//      w1_s = w1 + delta_i_3;
-//    } else if(t==t_si_4){
-//      w1_s = w1 + delta_i_4;
-//    } else if(t==t_si_5){
-//      w1_s = w1 + delta_i_5;
-//    } else if(t==t_si_6){
-//      w1_s = w1 + delta_i_6;
-//    } else if(t==t_si_7){
-//      w1_s = w1 + delta_i_7;
-//    } else if(t==t_si_8){
-//      w1_s = w1 + delta_i_8;
-//    } else if(t==t_si_9){
-//      w1_s = w1 + delta_i_9;
-//    } else if(t==t_si_10){
-//      w1_s = w1 + delta_i_10;
-//    } else{
-//      w1_s = w1;
-//    }
-  
-// 20 surges   
-// if(t==t_si_1){
-//   w1_s = w1 + delta_i_1;
-// } else if (t==t_si_2){
-//   w1_s = w1 + delta_i_2;
-// } else if (t==t_si_3){
-//   w1_s = w1 + delta_i_3;
-// } else if(t==t_si_4){
-//   w1_s = w1 + delta_i_4;
-// } else if(t==t_si_5){
-//   w1_s = w1 + delta_i_5;
-// } else if(t==t_si_6){
-//   w1_s = w1 + delta_i_6;
-// } else if(t==t_si_7){
-//   w1_s = w1 + delta_i_7;
-// } else if(t==t_si_8){
-//   w1_s = w1 + delta_i_8;
-// } else if(t==t_si_9){
-//   w1_s = w1 + delta_i_9;
-// } else if(t==t_si_10){
-//   w1_s = w1 + delta_i_10;
-// } else if (t==t_si_11){
-//   w1_s = w1 + delta_i_11;
-// } else if (t==t_si_12){
-//   w1_s = w1 + delta_i_12;
-// } else if(t==t_si_13){
-//   w1_s = w1 + delta_i_13;
-// } else if(t==t_si_14){
-//   w1_s = w1 + delta_i_14;
-// } else if(t==t_si_15){
-//   w1_s = w1 + delta_i_15;
-// } else if(t==t_si_16){
-//   w1_s = w1 + delta_i_16;
-// } else if(t==t_si_17){
-//   w1_s = w1 + delta_i_17;
-// } else if(t==t_si_18){
-//   w1_s = w1 + delta_i_18;
-// } else if(t==t_si_19){
-//   w1_s = w1 + delta_i_19;
-// } else if(t==t_si_20){
-//   w1_s = w1 + delta_i_20;
-// }else{
-//   w1_s = w1;
-// }
 
 // specifying the transitions 
 double rates[75];// vector of length 75
