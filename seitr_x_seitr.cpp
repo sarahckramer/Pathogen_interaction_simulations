@@ -65,8 +65,8 @@ T_gamma2 = gamma2;
 T_delta1 = log(delta1);
 T_delta2 = log(delta2);
 
-T_mu = mu;
-T_nu = nu;
+// T_mu = mu;
+// T_nu = nu;
 
 T_w1 = log(w1);
 T_w2 = log(w2);
@@ -86,17 +86,113 @@ T_beta_sd2 = beta_sd2;
 T_N = N;
 T_nsurges = nsurges;
 
+// int *t_vec = (int *) &t_si_1;
+// int *T_t_vec = (int *) &t_si_1;
+// for (int i = 0; i < (int) n_surge; i++) {
+//  T_t_vec[i] = t_vec[i];
+// }
+
+// double T_delta_i_1[n_surge]; 
+// double delta_i_1[n_surge];   
+// for (int i = 0; i < n_surge; i++) {
+//   T_delta_i_1[i] = log(delta_i_1[i]);
+// }
+
 T_t_si_1 = t_si_1;
 T_t_si_2 = t_si_2;
 T_t_si_3 = t_si_3;
 T_t_si_4 = t_si_4;
 T_t_si_5 = t_si_5;
 
+T_t_si_6 = t_si_6;
+T_t_si_7 = t_si_7;
+T_t_si_8 = t_si_8;
+T_t_si_9 = t_si_9;
+T_t_si_10 = t_si_10;
+
+T_t_si_11 = t_si_11;
+T_t_si_12 = t_si_12;
+T_t_si_13 = t_si_13;
+T_t_si_14 = t_si_14;
+T_t_si_15 = t_si_15;
+
+T_t_si_16 = t_si_16;
+T_t_si_17 = t_si_17;
+T_t_si_18 = t_si_18;
+T_t_si_19 = t_si_19;
+T_t_si_20 = t_si_20;
+// 
+// T_t_si_21 = t_si_21;
+// T_t_si_22 = t_si_22;
+// T_t_si_23 = t_si_23;
+// T_t_si_24 = t_si_24;
+// T_t_si_25 = t_si_25;
+// 
+// T_t_si_26 = t_si_26;
+// T_t_si_27 = t_si_27;
+// T_t_si_28 = t_si_28;
+// T_t_si_29 = t_si_29;
+// T_t_si_30 = t_si_30;
+// 
+// T_t_si_31 = t_si_31;
+// T_t_si_32 = t_si_32;
+// T_t_si_33 = t_si_33;
+// T_t_si_34 = t_si_34;
+// T_t_si_35 = t_si_35;
+// 
+// T_t_si_36 = t_si_36;
+// T_t_si_37 = t_si_37;
+// T_t_si_38 = t_si_38;
+// T_t_si_39 = t_si_39;
+// T_t_si_40 = t_si_40;
+
 T_delta_i_1 = log(delta_i_1);
 T_delta_i_2 = log(delta_i_2);
 T_delta_i_3 = log(delta_i_3);
 T_delta_i_4 = log(delta_i_4);
 T_delta_i_5 = log(delta_i_5);
+
+T_delta_i_6 = log(delta_i_6);
+T_delta_i_7 = log(delta_i_7);
+T_delta_i_8 = log(delta_i_8);
+T_delta_i_9 = log(delta_i_9);
+T_delta_i_10 = log(delta_i_10);
+
+T_delta_i_11 = log(delta_i_11);
+T_delta_i_12 = log(delta_i_12);
+T_delta_i_13 = log(delta_i_13);
+T_delta_i_14 = log(delta_i_14);
+T_delta_i_15 = log(delta_i_15);
+
+T_delta_i_16 = log(delta_i_16);
+T_delta_i_17 = log(delta_i_17);
+T_delta_i_18 = log(delta_i_18);
+T_delta_i_19 = log(delta_i_19);
+T_delta_i_20 = log(delta_i_20);
+// 
+// T_delta_i_21 = log(delta_i_21);
+// T_delta_i_22 = log(delta_i_22);
+// T_delta_i_23 = log(delta_i_23);
+// T_delta_i_24 = log(delta_i_24);
+// T_delta_i_25 = log(delta_i_25);
+// 
+// T_delta_i_6 = log(delta_i_26);
+// T_delta_i_7 = log(delta_i_27);
+// T_delta_i_8 = log(delta_i_28);
+// T_delta_i_9 = log(delta_i_29);
+// T_delta_i_10 = log(delta_i_30);
+// 
+// T_delta_i_31 = log(delta_i_31);
+// T_delta_i_32 = log(delta_i_32);
+// T_delta_i_33 = log(delta_i_33);
+// T_delta_i_34 = log(delta_i_34);
+// T_delta_i_35 = log(delta_i_35);
+// 
+// T_delta_i_36 = log(delta_i_36);
+// T_delta_i_37 = log(delta_i_37);
+// T_delta_i_38 = log(delta_i_38);
+// T_delta_i_39 = log(delta_i_39);
+// T_delta_i_40 = log(delta_i_40);
 
 // we need to specify a transform on the sum of E and R
 // such that the compartments are not allowed to turn
@@ -121,8 +217,8 @@ gamma2 = T_gamma2;
 delta1 = exp(T_delta1);
 delta2 = exp(T_delta2);
 
-mu = T_mu;
-nu = T_nu;
+// mu = T_mu;
+// nu = T_nu;
 
 w1 = exp(T_w1);
 w2 = exp(T_w2);
@@ -142,17 +238,114 @@ beta_sd2 = T_beta_sd2;
 N = T_N;
 nsurges = T_nsurges;
 
+//int *t_vec = (int *) &t_si_1;
+//int *T_t_vec = (int *) &t_si_1;
+// for (int i = 0; i < (int) n_surge; i++) {
+//   t_vec[i] = T_t_vec[i];
+// }
+
+// double T_delta_i_1[n_surge]; 
+// double delta_i_1[n_surge];   
+// for (int i = 0; i < n_surge; i++) {
+//   delta_i_1[i] = exp(T_delta_i_1[i]);
+// }
+
 t_si_1 = T_t_si_1;
 t_si_2 = T_t_si_2;
 t_si_3 = T_t_si_3;
 t_si_4 = T_t_si_4;
 t_si_5 = T_t_si_5;
 
+t_si_6 = T_t_si_6;
+t_si_7 = T_t_si_7;
+t_si_8 = T_t_si_8;
+t_si_9 = T_t_si_9;
+t_si_10 = T_t_si_10;
+
+t_si_11 = T_t_si_11;
+t_si_12 = T_t_si_12;
+t_si_13 = T_t_si_13;
+t_si_14 = T_t_si_14;
+t_si_15 = T_t_si_15;
+
+t_si_16 = T_t_si_16;
+t_si_17 = T_t_si_17;
+t_si_18 = T_t_si_18;
+t_si_19 = T_t_si_19;
+t_si_20 = T_t_si_20;
+// 
+// t_si_21 = T_t_si_21;
+// t_si_22 = T_t_si_22;
+// t_si_23 = T_t_si_23;
+// t_si_24 = T_t_si_24;
+// t_si_25 = T_t_si_25;
+// 
+// t_si_26 = T_t_si_26;
+// t_si_27 = T_t_si_27;
+// t_si_28 = T_t_si_28;
+// t_si_29 = T_t_si_29;
+// t_si_30 = T_t_si_30;
+// 
+// t_si_31 = T_t_si_31;
+// t_si_32 = T_t_si_32;
+// t_si_33 = T_t_si_33;
+// t_si_34 = T_t_si_34;
+// t_si_35 = T_t_si_35;
+// 
+// t_si_36 = T_t_si_36;
+// t_si_37 = T_t_si_37;
+// t_si_38 = T_t_si_38;
+// t_si_39 = T_t_si_39;
+// t_si_40 = T_t_si_40;
+
 delta_i_1 = exp(T_delta_i_1);
 delta_i_2 = exp(T_delta_i_2);
 delta_i_3 = exp(T_delta_i_3);
 delta_i_4 = exp(T_delta_i_4);
 delta_i_5 = exp(T_delta_i_5);
+
+delta_i_6 = exp(T_delta_i_6);
+delta_i_7 = exp(T_delta_i_7);
+delta_i_8 = exp(T_delta_i_8);
+delta_i_9 = exp(T_delta_i_9);
+delta_i_10 = exp(T_delta_i_10);
+
+delta_i_11 = exp(T_delta_i_11);
+delta_i_12 = exp(T_delta_i_12);
+delta_i_13 = exp(T_delta_i_13);
+delta_i_14 = exp(T_delta_i_14);
+delta_i_15 = exp(T_delta_i_15);
+
+delta_i_16 = exp(T_delta_i_16);
+delta_i_17 = exp(T_delta_i_17);
+delta_i_18 = exp(T_delta_i_18);
+delta_i_19 = exp(T_delta_i_19);
+delta_i_20 = exp(T_delta_i_20);
+// 
+// delta_i_21 = exp(T_delta_i_21);
+// delta_i_22 = exp(T_delta_i_22);
+// delta_i_23 = exp(T_delta_i_23);
+// delta_i_24 = exp(T_delta_i_24);
+// delta_i_25 = exp(T_delta_i_25);
+// 
+// delta_i_26 = exp(T_delta_i_26);
+// delta_i_27 = exp(T_delta_i_27);
+// delta_i_28 = exp(T_delta_i_28);
+// delta_i_29 = exp(T_delta_i_29);
+// delta_i_30 = exp(T_delta_i_30);
+// 
+// delta_i_31 = exp(T_delta_i_31);
+// delta_i_32 = exp(T_delta_i_32);
+// delta_i_33 = exp(T_delta_i_33);
+// delta_i_34 = exp(T_delta_i_34);
+// delta_i_35 = exp(T_delta_i_35);
+// 
+// delta_i_36 = exp(T_delta_i_36);
+// delta_i_37 = exp(T_delta_i_37);
+// delta_i_38 = exp(T_delta_i_38);
+// delta_i_39 = exp(T_delta_i_39);
+// delta_i_40 = exp(T_delta_i_40);
+
  
 double sum_init = 0.0;
 sum_init = exp(E01) + exp(E02) + exp(R01) + exp(R02) + exp(R12);
@@ -277,41 +470,68 @@ double s2 = 1 + A2 * cos(omega * (t - phi2));
 double lambda1 = beta1 * (p1/N) * s1; // virus 1
 double lambda2 = beta2 * (p2/N) * s2; // virus 2
 
+// addition of surges for v1
+// note: we are using these surges for virus 1 only as it represents influenza 
+// which has a number of different strains and new mutations each season      
+
+// the new rate of immunity w1_loss = w1 + delta(t)
+// where delta(t) = delta_i for i in [1,n] when t=t_si days since start of season i;
+//                  0 otherwise
+
+// note: to see large noticeable changes in the simulated data the
+// loss in immunity delta_i needs to be quite large - otherwise the 
+// changes are relatively subtle
+
+// initialising vectors for t_si and delta_i
+double *t_vec = (double *) &t_si_1;
+double *delta_vec = (double *) &delta_i_1;
+double w1_s;
+
+// assigning the loss in immunity depending on the number of surges we have
+for(int i = 0; i < nsurges + 1; i++){
+  if(floor(t) == t_vec[i]) { // if t is a surge time point the add the surge in loss of immunity
+    w1_s = w1 + delta_vec[i];
+    break; // exit if we find a surge point
+  } else{
+    w1_s = w1; // if we don't find a surge point then just set the constant immunity loss
+  }
+}
+
 // ODEs
 //column 1 of schematic
-DX_SS = -(lambda1 + lambda2) * X_SS + w2 * X_SR + w1 * X_RS + mu * N - nu * X_SS;
-DX_SE = lambda2 * X_SS - (lambda1 + sigma2) * X_SE + w1 * X_RE - nu * X_SE;
-DX_SI = sigma2 * X_SE - (lambda1 * theta_lambda2 + gamma2) * X_SI + w1 * X_RI - nu * X_SI;
-DX_ST = gamma2 * X_SI - (lambda1 * theta_lambda2 + delta2) * X_ST + w1 * X_RT - nu * X_ST;
-DX_SR = delta2 * X_ST - lambda1 * X_SR + w1 * X_RR - w2 * X_SR - nu * X_SR;
+DX_SS = -(lambda1 + lambda2) * X_SS + w2 * X_SR + w1_s * X_RS;//+ mu * N - nu * X_SS;
+DX_SE = lambda2 * X_SS - (lambda1 + sigma2) * X_SE + w1_s * X_RE;//- nu * X_SE;
+DX_SI = sigma2 * X_SE - (lambda1 * theta_lambda2 + gamma2) * X_SI + w1_s * X_RI;// - nu * X_SI;
+DX_ST = gamma2 * X_SI - (lambda1 * theta_lambda2 + delta2) * X_ST + w1_s * X_RT;// - nu * X_ST;
+DX_SR = delta2 * X_ST - lambda1 * X_SR + w1_s * X_RR - w2 * X_SR;// - nu * X_SR;
 
 // column 2  of schematic
-DX_ES = lambda1 * X_SS - (sigma1 + lambda2) * X_ES + w2 * X_ER - nu * X_ES;
-DX_EE = lambda2 * X_ES + lambda1 * X_SE - (sigma1 + sigma2) * X_EE - nu * X_EE;
-DX_EI = lambda1 * theta_lambda2 * X_SI + sigma2 * X_EE - (sigma1 + gamma2) * X_EI - nu * X_EI;
-DX_ET = gamma2 * X_EI + lambda1 * theta_lambda2 * X_ST - (sigma1 + delta2) * X_ET - nu * X_ET;
-DX_ER = lambda1 * X_SR + delta2 * X_ET - sigma1 * X_ER - w2 * X_ER - nu * X_ER;
+DX_ES = lambda1 * X_SS - (sigma1 + lambda2) * X_ES + w2 * X_ER ;//- nu * X_ES;
+DX_EE = lambda2 * X_ES + lambda1 * X_SE - (sigma1 + sigma2) * X_EE;// - nu * X_EE;
+DX_EI = lambda1 * theta_lambda2 * X_SI + sigma2 * X_EE - (sigma1 + gamma2) * X_EI;//- nu * X_EI;
+DX_ET = gamma2 * X_EI + lambda1 * theta_lambda2 * X_ST - (sigma1 + delta2) * X_ET;// - nu * X_ET;
+DX_ER = lambda1 * X_SR + delta2 * X_ET - sigma1 * X_ER - w2 * X_ER ;//- nu * X_ER;
 
 // column 3  of schematic
-DX_IS = sigma1 * X_ES - (gamma1 + lambda2 * theta_lambda1) * X_IS + w2 * X_IR - nu * X_IS;
-DX_IE = lambda2 * theta_lambda1 * X_IS + sigma1 * X_EE - (gamma1 + sigma2) * X_IE - nu * X_IE;
-DX_II = sigma1 * X_EI + sigma2 * X_IE - (gamma1 + gamma2) * X_II - nu * X_II;
-DX_IT = sigma1 * X_ET + gamma2 * X_II - (gamma1 + delta2) * X_IT - nu * X_IT;
-DX_IR = delta2 * X_IT + sigma1 * X_ER - gamma1 * X_IR -w2 * X_IR - nu * X_IR;
+DX_IS = sigma1 * X_ES - (gamma1 + lambda2 * theta_lambda1) * X_IS + w2 * X_IR;// - nu * X_IS;
+DX_IE = lambda2 * theta_lambda1 * X_IS + sigma1 * X_EE - (gamma1 + sigma2) * X_IE;// - nu * X_IE;
+DX_II = sigma1 * X_EI + sigma2 * X_IE - (gamma1 + gamma2) * X_II;// - nu * X_II;
+DX_IT = sigma1 * X_ET + gamma2 * X_II - (gamma1 + delta2) * X_IT;// - nu * X_IT;
+DX_IR = delta2 * X_IT + sigma1 * X_ER - gamma1 * X_IR -w2 * X_IR;// - nu * X_IR;
 
 //column 4  of schematic
-DX_TS = gamma1 * X_IS - (delta1 + lambda2 * theta_lambda1) * X_TS + w2 * X_TR - nu * X_TS;
-DX_TE = lambda2 * theta_lambda1 * X_TS + gamma1 * X_IE - (delta1 + sigma2) * X_TE - nu * X_TE;
-DX_TI = sigma2 * X_TE + gamma1 * X_II - (delta1 + gamma2) * X_TI - nu * X_TI;
-DX_TT = gamma1 * X_IT + gamma2 * X_TI - (delta1 + delta2)* X_TT - nu * X_TT;
-DX_TR = gamma1 * X_IR + delta2 * X_TT - delta1 * X_TR - w2 * X_TR - nu * X_TR;
+DX_TS = gamma1 * X_IS - (delta1 + lambda2 * theta_lambda1) * X_TS + w2 * X_TR;//- nu * X_TS;
+DX_TE = lambda2 * theta_lambda1 * X_TS + gamma1 * X_IE - (delta1 + sigma2) * X_TE;// - nu * X_TE;
+DX_TI = sigma2 * X_TE + gamma1 * X_II - (delta1 + gamma2) * X_TI;// - nu * X_TI;
+DX_TT = gamma1 * X_IT + gamma2 * X_TI - (delta1 + delta2)* X_TT;// - nu * X_TT;
+DX_TR = gamma1 * X_IR + delta2 * X_TT - delta1 * X_TR - w2 * X_TR;// - nu * X_TR;
 
 //column 5  of schematic
-DX_RS = delta1 * X_TS - lambda2 * X_RS + w2 * X_RR - w1 * X_RS - nu * X_RS;
-DX_RE = lambda2 * X_RS + delta1 * X_TE - sigma2 * X_RE - w1 * X_RE - nu * X_RE;
-DX_RI = sigma2 * X_RE + delta1 * X_TI - gamma2 * X_RI - w1 * X_RI - nu * X_RI;
-DX_RT = gamma2 * X_RI + delta1 * X_TT - delta2* X_RT - w1 * X_RT - nu * X_RT;
-DX_RR = delta2 * X_RT + delta1  * X_TR - w1 * X_RR - w2 * X_RR - nu * X_RR;
+DX_RS = delta1 * X_TS - lambda2 * X_RS + w2 * X_RR - w1_s * X_RS;// - nu * X_RS;
+DX_RE = lambda2 * X_RS + delta1 * X_TE - sigma2 * X_RE - w1_s * X_RE;//- nu * X_RE;
+DX_RI = sigma2 * X_RE + delta1 * X_TI - gamma2 * X_RI - w1_s * X_RI;//- nu * X_RI;
+DX_RT = gamma2 * X_RI + delta1 * X_TT - delta2* X_RT - w1_s * X_RT;//- nu * X_RT;
+DX_RR = delta2 * X_RT + delta1  * X_TR - w1_s * X_RR - w2 * X_RR;//- nu * X_RR;
 
 Dv1_T = p1 * gamma1;
 Dv2_T = p2 * gamma2;
@@ -357,19 +577,7 @@ double lambda1 = beta1 * (p1/N) * s1; // virus 1
 double lambda2 = beta2 * (p2/N) * s2; // virus 2
 
 // addition of surges for vir1
-// note: we are using these surges for virus 1 only as it represents influenza 
-// which has a number of different strains and new mutations each season      
-
-// the new rate of immunity w1_loss = w1 + delta(t)
-// where delta(t) = delta_i for i in [1,n] when t=t_si days since start of season i;
-//                  0 otherwise
-
-// it is difficult to make this part of the code dynamic therefore
-// will need to change the code if we want more than 5 surges
-// (note: to see large noticeable changes in the simulated data the
-// loss in immunity delta_i needs to be quite large - otherwise the 
-// changes are relatively subtle)
-
+// initialising vectors for t_si and delta_i
 double *t_vec = (double *) &t_si_1;
 double *delta_vec = (double *) &delta_i_1;
 double w1_s;
@@ -383,6 +591,9 @@ for(int i = 0; i < nsurges + 1; i++){
       w1_s = w1; // if we don't find a surge point then just set the constant immunity loss
    }
 }
+
+Rprintf("w1_s=%.5f, t=%.4f\n", w1_s,t);
+
 
 // specifying the transitions 
 double rates[75];// vector of length 75

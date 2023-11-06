@@ -58,9 +58,10 @@ set.seed(2908)
 # total number of weeks of data we are going to want 
 #tot_weeks <- 365 # 7 years
 #tot_weeks <- 625 # 12 years 
-#tot_weeks <- 1145 # 22 years 
+tot_weeks <- 1145 # 22 years 
+#tot_weeks <- 2184 # 42 years
 #tot_weeks <- 2704 # 52 years 
-tot_weeks <- 5304 # 102 years 
+#tot_weeks <- 5304 # 102 years 
 
 # initialize time of surges (based on week) from start of season (1 July)
 # by drawing from a normal distribution 
@@ -82,7 +83,7 @@ n_surge <- length(t_si)
 
 # initialize the rate of loss of immunity corresponding to each of the 
 # surge times 
-delta_i <- runif(n=length(t_si), min = 0.01, max=0.12)
+delta_i <- runif(n=length(t_si), min = 0.01*7, max=0.12*7)
 
 # create a function to specify multiple sets of parameter inputs
 theta_lambda1 <- c(0,1,2)
@@ -111,11 +112,11 @@ sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,n_sur
                    sigma1=7, sigma2=7/5,
                    gamma1=7/5, gamma2=7/10,
                    delta1=delta_1, delta2=delta_2,
-                   mu = 0.0002, nu=0.0007, 
+                   #mu = 0.0002, nu=0.0007, 
                    w1=1/52, w2=1/28,
                    rho1 = 0.002, rho2 = 0.002,
                    theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
-                   A1=0.2, phi1=26,
+                   A1=0.05, phi1=26,
                    A2=0.2, phi2=20,
                    beta_sd1=0, beta_sd2=0, 
                    N=3700000,
@@ -123,66 +124,69 @@ sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,n_sur
                    R01=0.4, R02=0.2, R12=0.001, nsurges=n_surge,
                    t_si_=t(t_si), delta_i_=t(delta_i))
   
-#---- Create list to save the parameter sets and results of our different methods ---# 
-
-    results <- vector(mode = "list", length = 8)
-    results[[1]] <- true_params 
-    names(results) <- c("true_param", "data", "cor", "gam_cor", "transfer_entropy", "CCM","granger","likelihood")
-    
-#---- create pomp object ---# 
-      po <- pomp(data = data.frame(time = seq(from = 0, to = tot_weeks, by = 1), v1_obs = NA, v2_obs = NA),
-           times = "time",
-           t0 = 0,
-           obsnames = c('v1_obs', 'v2_obs'),
-           accumvars = c('v1_T', 'v2_T'),
-           statenames = c('X_SS', 'X_ES' , 'X_IS', 'X_TS', 'X_RS', 
-                          'X_SE', 'X_EE', 'X_IE', 'X_TE', 'X_RE',
-                          'X_SI', 'X_EI' ,'X_II', 'X_TI', 'X_RI', 
-                          'X_ST', 'X_ET' ,'X_IT', 'X_TT', 'X_RT',
-                          'X_SR', 'X_ER' ,'X_IR', 'X_TR', 'X_RR', 
-                          'v1_T', 'v2_T'),
-           paramnames = names(true_params),
-           params = true_params,
-           partrans = parameter_trans(toEst = components_l[['toest']], fromEst = components_l[['fromest']]),
-           globals = components_l[['globs']],
-           dmeasure = components_l[['dmeas']],
-           rmeasure = components_l[['rmeas']],
-           rprocess = euler(step.fun = components_l[['rsim']], delta.t = 1),
-           skeleton = vectorfield(components_l[['skel']]), # putting in deterministic for testing
-           rinit = components_l[['rinit']]
-      )
-      
-# ----simulating data----#
-    s1 <- simulate(po, times=1:tot_weeks, format="data.frame")
-    # deterministic simulation 
-    # d1 <- trajectory(po, times=1:364, format = "data.frame") %>% dplyr::select(-'.id') %>% 
-    #   mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params$rho1),  
-    #          v2_obs = rbinom(n=length(v2_T),size=round(v2_T), prob=true_params$rho2))
-    
-    # remove first 2 years where simulation isn't yet at equilibrium 
-    s1 <- s1 %>% filter(time > 104)
-    
-    # make time into dates based off week number
-    s1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(s1$time)
-    #d1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(d1$time)
-    
+  #---- Create list to save the parameter sets and results of our different methods ---# 
+  
+  results <- vector(mode = "list", length = 8)
+  results[[1]] <- true_params 
+  names(results) <- c("true_param", "data", "cor", "gam_cor", "transfer_entropy", "CCM","granger","likelihood")
+  
+  #---- create pomp object ---# 
+  po <- pomp(data = data.frame(time = seq(from = 0, to = tot_weeks, by = 1), v1_obs = NA, v2_obs = NA),
+             times = "time",
+             t0 = 0,
+             obsnames = c('v1_obs', 'v2_obs'),
+             accumvars = c('v1_T', 'v2_T'),
+             statenames = c('X_SS', 'X_ES' , 'X_IS', 'X_TS', 'X_RS', 
+                            'X_SE', 'X_EE', 'X_IE', 'X_TE', 'X_RE',
+                            'X_SI', 'X_EI' ,'X_II', 'X_TI', 'X_RI', 
+                            'X_ST', 'X_ET' ,'X_IT', 'X_TT', 'X_RT',
+                            'X_SR', 'X_ER' ,'X_IR', 'X_TR', 'X_RR', 
+                            'v1_T', 'v2_T'),
+             paramnames = names(true_params),
+             params = true_params,
+             partrans = parameter_trans(toEst = components_l[['toest']], fromEst = components_l[['fromest']]),
+             globals = components_l[['globs']],
+             dmeasure = components_l[['dmeas']],
+             rmeasure = components_l[['rmeas']],
+             #rprocess = euler(step.fun = components_l[['rsim']], delta.t = 1),
+             skeleton = vectorfield(components_l[['skel']]), # putting in deterministic for testing
+             rinit = components_l[['rinit']]
+  )
+  
+  # ----simulating data----#
+  #s1 <- simulate(po, times=1:tot_weeks, format="data.frame")
+  # deterministic simulation 
+  d1 <- trajectory(po, times=1:tot_weeks, format = "data.frame") %>% dplyr::select(-'.id') %>%
+    mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params["rho1"]),
+           v2_obs = rbinom(n=length(v2_T),size=round(v2_T), prob=true_params["rho2"]))
+  
+  # remove first 2 years where simulation isn't yet at equilibrium 
+  #s1 <- s1 %>% filter(time > 104) 
+  d1 <- d1 %>% filter(time > 104)
+  
+  # make time into dates based off week number
+  #s1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(s1$time)
+  d1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(d1$time)
+  
   # save results
-    results$data <- s1  
-    return(results)
+  #results$data <- s1  
+  results$data <- d1  
+  return(results)
 }
- 
+
 # generate single true parameter sets and simulate data 
 theta_lambda1 <- all_param_comb[jobid,]$theta_lambda1
 theta_lambda2 <- all_param_comb[jobid,]$theta_lambda2
 delta_1 <- all_param_comb[jobid,]$delta_1
 delta_2 <- all_param_comb[jobid,]$delta_2
 results <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
-                      delta_1=delta_1, delta_2=delta_2, components_l = components_l)
-  
+                    delta_1=delta_1, delta_2=delta_2, n_surge = n_surge, components_l = components_l)
+
+
 # ---- Plotting simulated data ----#
 # changing the surge times to dates
 t_si_date <- lubridate::ymd("2012-July-01") + lubridate::weeks(t_si)
-  
+
 # creating multiple plots at once
 temp <- vector(mode = "list", length = 3)
 plot_list <- vector(mode = "list", length = 3)
@@ -192,18 +196,18 @@ for(i in 1:9){
   delta_1 <- all_param_comb[i,]$delta_1
   delta_2 <- all_param_comb[i,]$delta_2
   temp[[i]] <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2,
-                      delta_1=delta_1, delta_2=delta_2, n_surge=n_surge, components_l=components_l)
+                        delta_1=delta_1, delta_2=delta_2, n_surge=n_surge, components_l=components_l)
   data <- temp[[i]]$data
-
+  
   legend_colors <- c("v1_obs" = "black", "v2_obs" = "blue")
   plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs, colour="v1_obs"),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs,colour="v2_obs")) +
     ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param["theta_lambda1"],
                   "AND delta_1 = delta_2 =", temp[[i]]$true_param["delta1"])) + labs(y="observed cases") +
-    scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y") + ylim(0,500) +
+    scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y")  +
     theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted") +
     scale_colour_manual(values=legend_colors) + labs(colour="")
-
-
+  
+  
   # # also estimate attack rates by year for each plot...... NOT WORKING
   # data$season <- c(rep(1:5, each=52),6)
   # seasonal_incidence <- data %>% group_by(season) %>% summarise(tot_v1 = sum(v1_obs), tot_v2 = sum(v2_obs))
@@ -218,11 +222,20 @@ for(i in 1:9){
   # v2_susceptible <- start_season$X_SS + start_season$X_ES + start_season$X_IS + start_season$X_TS + start_season$X_RS
   # seasonal_incidence$tot_v1/v1_susceptible*100
   # seasonal_incidence$tot_v2/v2_susceptible*100 # order of magnitude of at least 10 to small
-
+  
 }
 grid.arrange(plot_list[[1]],plot_list[[2]],plot_list[[3]],ncol=1)
 grid.arrange(plot_list[[4]],plot_list[[5]],plot_list[[6]],ncol=1)
 grid.arrange(plot_list[[7]],plot_list[[8]],plot_list[[9]],ncol=1)
+
+# check out for a single dataset each of the different compartment behaviours
+i <- 2
+temp_data <- temp[[i]]$data
+# reshape data from long to wide
+temp_wide <- temp_data %>% dplyr::select(-c(time, '.id')) %>% gather(.,compartment, value, X_SS:v2_obs, factor_key = T)
+
+# plot
+ggplot(aes(x=time_date, y = value), data=temp_wide) + geom_line() + facet_wrap(.~compartment, scales="free") 
 
 ##########################################################
 ## Start testing each method for estimating interaction ##
@@ -237,7 +250,7 @@ if(likelihood==FALSE){
   #------------ setup ---------------#
   # Automatically determine the best lag doing several models with lags
   # 1-5 (approximately 1 month) then choose the best lag number based on BIC
-    
+  
   # initialising lists to put results in 
   lags <- list()
   lag_v1 <- list()
@@ -288,40 +301,40 @@ if(likelihood==FALSE){
   #         lag_v1 = total number lag to use with v1_obs time series
   #         lag_v2 = total number lag to use with v2_obs time series
   te_func <- function(v1_obs, v2_obs, lag_v1, lag_v2){
-      # Interpreting transfer entropy (note: TE \in [0,1]):
-      # If test significant suggests T_{X->Y} > 0 and the uncertainty about 
-      # Y is reduced by the addition of X, that is X causes Y.
+    # Interpreting transfer entropy (note: TE \in [0,1]):
+    # If test significant suggests T_{X->Y} > 0 and the uncertainty about 
+    # Y is reduced by the addition of X, that is X causes Y.
     
-      # Output: provides not the transfer entropy and bias corrected effective transfer entropy  
-      # Transfer entropy estimates are biased by small sample sizes. For large sample sizes TE and ETE 
-      # will be approximately the same. For a single season the sample size is quite small so we want to 
-      # go with ETE... see Behrendt et al. 2019 for more details
-      shannon_te <- transfer_entropy(v1_obs, v2_obs, lx = min(lag_v1, lag_v2), ly=min(lag_v1, lag_v2))
-      temp_res <- data.frame(coef(shannon_te))
+    # Output: provides not the transfer entropy and bias corrected effective transfer entropy  
+    # Transfer entropy estimates are biased by small sample sizes. For large sample sizes TE and ETE 
+    # will be approximately the same. For a single season the sample size is quite small so we want to 
+    # go with ETE... see Behrendt et al. 2019 for more details
+    shannon_te <- transfer_entropy(v1_obs, v2_obs, lx = min(lag_v1, lag_v2), ly=min(lag_v1, lag_v2))
+    temp_res <- data.frame(coef(shannon_te))
     
-      # creating the 95% CIs about ETE - note that in the code for transfer_entropy to calculate the 
-      # se they simply look at the sd of the bootstrap samples NOT SE=sd/sqrt(n)
-      temp_res$lower95 <- temp_res$ete - 1.96*temp_res$se
-      temp_res$upper95 <- temp_res$ete + 1.96*temp_res$se
-      return(temp_res)
-    }
-    
+    # creating the 95% CIs about ETE - note that in the code for transfer_entropy to calculate the 
+    # se they simply look at the sd of the bootstrap samples NOT SE=sd/sqrt(n)
+    temp_res$lower95 <- temp_res$ete - 1.96*temp_res$se
+    temp_res$upper95 <- temp_res$ete + 1.96*temp_res$se
+    return(temp_res)
+  }
+  
   # apply transfer entropy function to all simulated datasets and save results
   results$transfer_entropy <- te_func(v1_obs = results$data$v1_obs, v2_obs = results$data$v2_obs, 
-                                           lag_v1 = lag_v1, lag_v2 = lag_v2) 
-    
-    
+                                      lag_v1 = lag_v1, lag_v2 = lag_v2) 
+  
+  
   #---- Granger causality analysis  ----# 
   # separated this method out as a bit more code required
   source("granger_analysis.R")
   # apply the granger analysis to each simulated data set and save the results
   data <- results$data %>% dplyr::select(v1_obs, v2_obs)
   results$granger <- granger_func(data = data, lag_v1 = lag_v1, lag_v2 = lag_v2)
-    
+  
   #------- Convergent Cross mapping analysis -------# 
   # separated this method out as a bit more code required
   source("CCM.R")
-    
+  
   # apply the CCM approach to each simulated data set 
   data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
   results$CCM <- ccm_func(data = data)
@@ -329,9 +342,9 @@ if(likelihood==FALSE){
   # save out the results
   save(results, file=sprintf('results_%s.RData',jobid))
 } else {
-
+  
   #----- Likelihood approach -----# 
-
+  
   # max time that we want to allow the optmizer to run for
   maxtime <- 12*60*60  # 12 hrs - want this to run for as long as possible so that I don't have to re-run to get the MLE
   
