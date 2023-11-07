@@ -148,29 +148,29 @@ sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,n_sur
              globals = components_l[['globs']],
              dmeasure = components_l[['dmeas']],
              rmeasure = components_l[['rmeas']],
-             #rprocess = euler(step.fun = components_l[['rsim']], delta.t = 1),
+             rprocess = euler(step.fun = components_l[['rsim']], delta.t = 1),
              skeleton = vectorfield(components_l[['skel']]), # putting in deterministic for testing
              rinit = components_l[['rinit']]
   )
   
   # ----simulating data----#
-  #s1 <- simulate(po, times=1:tot_weeks, format="data.frame")
+  s1 <- simulate(po, times=1:tot_weeks, format="data.frame")
   # deterministic simulation 
-  d1 <- trajectory(po, times=1:tot_weeks, format = "data.frame") %>% dplyr::select(-'.id') %>%
-    mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params["rho1"]),
-           v2_obs = rbinom(n=length(v2_T),size=round(v2_T), prob=true_params["rho2"]))
+  # d1 <- trajectory(po, times=1:tot_weeks, format = "data.frame") %>% dplyr::select(-'.id') %>%
+  #   mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params["rho1"]),
+  #          v2_obs = rbinom(n=length(v2_T),size=round(v2_T), prob=true_params["rho2"]))
   
   # remove first 2 years where simulation isn't yet at equilibrium 
-  #s1 <- s1 %>% filter(time > 104) 
-  d1 <- d1 %>% filter(time > 104)
+  s1 <- s1 %>% filter(time > 104) 
+  #d1 <- d1 %>% filter(time > 104)
   
   # make time into dates based off week number
-  #s1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(s1$time)
-  d1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(d1$time)
+  s1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(s1$time)
+  #d1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(d1$time)
   
   # save results
-  #results$data <- s1  
-  results$data <- d1  
+  results$data <- s1  
+  #results$data <- d1  
   return(results)
 }
 
