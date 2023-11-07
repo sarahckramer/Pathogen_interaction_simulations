@@ -65,8 +65,6 @@ T_gamma2 = gamma2;
 T_delta1 = log(delta1);
 T_delta2 = log(delta2);
 
-// T_mu = mu;
-// T_nu = nu;
 
 T_w1 = log(w1);
 T_w2 = log(w2);
@@ -77,7 +75,7 @@ T_theta_lambda1 = logitCons(theta_lambda1,0,10);
 T_theta_lambda2 = logitCons(theta_lambda2,0,10);
 
 T_A1 = logit(A1);
-T_phi1 = logitCons(phi1,20,42); // 4 month period ofter Oct
+T_phi1 = logitCons(phi1,20,42); // 4 month period around Oct
 T_A2 = logit(A2);
 T_phi2 = logitCons(phi2,20,42);
 
@@ -86,113 +84,20 @@ T_beta_sd2 = beta_sd2;
 T_N = N;
 T_nsurges = nsurges;
 
-// int *t_vec = (int *) &t_si_1;
-// int *T_t_vec = (int *) &t_si_1;
-// for (int i = 0; i < (int) n_surge; i++) {
-//  T_t_vec[i] = t_vec[i];
-// }
+// dates of surges 
+int *t_vec = (int *) &t_si_1;
+int *T_t_vec = (int *) &t_si_1;
+for (int i = 0; i < (int) nsurges; i++) {
+  T_t_vec[i] = t_vec[i];
+}
 
-// double T_delta_i_1[n_surge]; 
-// double delta_i_1[n_surge];   
-// for (int i = 0; i < n_surge; i++) {
-//   T_delta_i_1[i] = log(delta_i_1[i]);
-// }
-
-T_t_si_1 = t_si_1;
-T_t_si_2 = t_si_2;
-T_t_si_3 = t_si_3;
-T_t_si_4 = t_si_4;
-T_t_si_5 = t_si_5;
-
-T_t_si_6 = t_si_6;
-T_t_si_7 = t_si_7;
-T_t_si_8 = t_si_8;
-T_t_si_9 = t_si_9;
-T_t_si_10 = t_si_10;
-
-T_t_si_11 = t_si_11;
-T_t_si_12 = t_si_12;
-T_t_si_13 = t_si_13;
-T_t_si_14 = t_si_14;
-T_t_si_15 = t_si_15;
-
-T_t_si_16 = t_si_16;
-T_t_si_17 = t_si_17;
-T_t_si_18 = t_si_18;
-T_t_si_19 = t_si_19;
-T_t_si_20 = t_si_20;
-// 
-// T_t_si_21 = t_si_21;
-// T_t_si_22 = t_si_22;
-// T_t_si_23 = t_si_23;
-// T_t_si_24 = t_si_24;
-// T_t_si_25 = t_si_25;
-// 
-// T_t_si_26 = t_si_26;
-// T_t_si_27 = t_si_27;
-// T_t_si_28 = t_si_28;
-// T_t_si_29 = t_si_29;
-// T_t_si_30 = t_si_30;
-// 
-// T_t_si_31 = t_si_31;
-// T_t_si_32 = t_si_32;
-// T_t_si_33 = t_si_33;
-// T_t_si_34 = t_si_34;
-// T_t_si_35 = t_si_35;
-// 
-// T_t_si_36 = t_si_36;
-// T_t_si_37 = t_si_37;
-// T_t_si_38 = t_si_38;
-// T_t_si_39 = t_si_39;
-// T_t_si_40 = t_si_40;
-
-T_delta_i_1 = log(delta_i_1);
-T_delta_i_2 = log(delta_i_2);
-T_delta_i_3 = log(delta_i_3);
-T_delta_i_4 = log(delta_i_4);
-T_delta_i_5 = log(delta_i_5);
-
-T_delta_i_6 = log(delta_i_6);
-T_delta_i_7 = log(delta_i_7);
-T_delta_i_8 = log(delta_i_8);
-T_delta_i_9 = log(delta_i_9);
-T_delta_i_10 = log(delta_i_10);
-
-T_delta_i_11 = log(delta_i_11);
-T_delta_i_12 = log(delta_i_12);
-T_delta_i_13 = log(delta_i_13);
-T_delta_i_14 = log(delta_i_14);
-T_delta_i_15 = log(delta_i_15);
-
-T_delta_i_16 = log(delta_i_16);
-T_delta_i_17 = log(delta_i_17);
-T_delta_i_18 = log(delta_i_18);
-T_delta_i_19 = log(delta_i_19);
-T_delta_i_20 = log(delta_i_20);
-// 
-// T_delta_i_21 = log(delta_i_21);
-// T_delta_i_22 = log(delta_i_22);
-// T_delta_i_23 = log(delta_i_23);
-// T_delta_i_24 = log(delta_i_24);
-// T_delta_i_25 = log(delta_i_25);
-// 
-// T_delta_i_6 = log(delta_i_26);
-// T_delta_i_7 = log(delta_i_27);
-// T_delta_i_8 = log(delta_i_28);
-// T_delta_i_9 = log(delta_i_29);
-// T_delta_i_10 = log(delta_i_30);
-// 
-// T_delta_i_31 = log(delta_i_31);
-// T_delta_i_32 = log(delta_i_32);
-// T_delta_i_33 = log(delta_i_33);
-// T_delta_i_34 = log(delta_i_34);
-// T_delta_i_35 = log(delta_i_35);
-// 
-// T_delta_i_36 = log(delta_i_36);
-// T_delta_i_37 = log(delta_i_37);
-// T_delta_i_38 = log(delta_i_38);
-// T_delta_i_39 = log(delta_i_39);
-// T_delta_i_40 = log(delta_i_40);
+// surge in loss immunity  ** NOTE this is still not working... but we are not estimating 
+// the surges so come back to this later
+int *delta_vec = (int *) &delta_i_1;
+int *T_delta_vec = (int *) &delta_i_1;
+for (int i = 0; i < (int) nsurges; i++) {
+  T_delta_vec[i] = log(delta_vec[i]);
+}
 
 // we need to specify a transform on the sum of E and R
 // such that the compartments are not allowed to turn
@@ -217,9 +122,6 @@ gamma2 = T_gamma2;
 delta1 = exp(T_delta1);
 delta2 = exp(T_delta2);
 
-// mu = T_mu;
-// nu = T_nu;
-
 w1 = exp(T_w1);
 w2 = exp(T_w2);
 
@@ -238,114 +140,19 @@ beta_sd2 = T_beta_sd2;
 N = T_N;
 nsurges = T_nsurges;
 
-//int *t_vec = (int *) &t_si_1;
-//int *T_t_vec = (int *) &t_si_1;
-// for (int i = 0; i < (int) n_surge; i++) {
-//   t_vec[i] = T_t_vec[i];
-// }
+// dates of surges 
+int *t_vec = (int *) &t_si_1;
+int *T_t_vec = (int *) &t_si_1;
+for (int i = 0; i < (int) nsurges; i++) {
+  t_vec[i] = T_t_vec[i];
+}
 
-// double T_delta_i_1[n_surge]; 
-// double delta_i_1[n_surge];   
-// for (int i = 0; i < n_surge; i++) {
-//   delta_i_1[i] = exp(T_delta_i_1[i]);
-// }
-
-t_si_1 = T_t_si_1;
-t_si_2 = T_t_si_2;
-t_si_3 = T_t_si_3;
-t_si_4 = T_t_si_4;
-t_si_5 = T_t_si_5;
-
-t_si_6 = T_t_si_6;
-t_si_7 = T_t_si_7;
-t_si_8 = T_t_si_8;
-t_si_9 = T_t_si_9;
-t_si_10 = T_t_si_10;
-
-t_si_11 = T_t_si_11;
-t_si_12 = T_t_si_12;
-t_si_13 = T_t_si_13;
-t_si_14 = T_t_si_14;
-t_si_15 = T_t_si_15;
-
-t_si_16 = T_t_si_16;
-t_si_17 = T_t_si_17;
-t_si_18 = T_t_si_18;
-t_si_19 = T_t_si_19;
-t_si_20 = T_t_si_20;
-// 
-// t_si_21 = T_t_si_21;
-// t_si_22 = T_t_si_22;
-// t_si_23 = T_t_si_23;
-// t_si_24 = T_t_si_24;
-// t_si_25 = T_t_si_25;
-// 
-// t_si_26 = T_t_si_26;
-// t_si_27 = T_t_si_27;
-// t_si_28 = T_t_si_28;
-// t_si_29 = T_t_si_29;
-// t_si_30 = T_t_si_30;
-// 
-// t_si_31 = T_t_si_31;
-// t_si_32 = T_t_si_32;
-// t_si_33 = T_t_si_33;
-// t_si_34 = T_t_si_34;
-// t_si_35 = T_t_si_35;
-// 
-// t_si_36 = T_t_si_36;
-// t_si_37 = T_t_si_37;
-// t_si_38 = T_t_si_38;
-// t_si_39 = T_t_si_39;
-// t_si_40 = T_t_si_40;
-
-delta_i_1 = exp(T_delta_i_1);
-delta_i_2 = exp(T_delta_i_2);
-delta_i_3 = exp(T_delta_i_3);
-delta_i_4 = exp(T_delta_i_4);
-delta_i_5 = exp(T_delta_i_5);
-
-delta_i_6 = exp(T_delta_i_6);
-delta_i_7 = exp(T_delta_i_7);
-delta_i_8 = exp(T_delta_i_8);
-delta_i_9 = exp(T_delta_i_9);
-delta_i_10 = exp(T_delta_i_10);
-
-delta_i_11 = exp(T_delta_i_11);
-delta_i_12 = exp(T_delta_i_12);
-delta_i_13 = exp(T_delta_i_13);
-delta_i_14 = exp(T_delta_i_14);
-delta_i_15 = exp(T_delta_i_15);
-
-delta_i_16 = exp(T_delta_i_16);
-delta_i_17 = exp(T_delta_i_17);
-delta_i_18 = exp(T_delta_i_18);
-delta_i_19 = exp(T_delta_i_19);
-delta_i_20 = exp(T_delta_i_20);
-// 
-// delta_i_21 = exp(T_delta_i_21);
-// delta_i_22 = exp(T_delta_i_22);
-// delta_i_23 = exp(T_delta_i_23);
-// delta_i_24 = exp(T_delta_i_24);
-// delta_i_25 = exp(T_delta_i_25);
-// 
-// delta_i_26 = exp(T_delta_i_26);
-// delta_i_27 = exp(T_delta_i_27);
-// delta_i_28 = exp(T_delta_i_28);
-// delta_i_29 = exp(T_delta_i_29);
-// delta_i_30 = exp(T_delta_i_30);
-// 
-// delta_i_31 = exp(T_delta_i_31);
-// delta_i_32 = exp(T_delta_i_32);
-// delta_i_33 = exp(T_delta_i_33);
-// delta_i_34 = exp(T_delta_i_34);
-// delta_i_35 = exp(T_delta_i_35);
-// 
-// delta_i_36 = exp(T_delta_i_36);
-// delta_i_37 = exp(T_delta_i_37);
-// delta_i_38 = exp(T_delta_i_38);
-// delta_i_39 = exp(T_delta_i_39);
-// delta_i_40 = exp(T_delta_i_40);
-
+// surges in loss of immunity
+int *delta_vec = (int *) &delta_i_1;
+int *T_delta_vec = (int *) &delta_i_1;  
+for (int i = 0; i < (int) nsurges; i++) {
+  delta_vec[i] = exp(T_delta_vec[i]);
+}
  
 double sum_init = 0.0;
 sum_init = exp(E01) + exp(E02) + exp(R01) + exp(R02) + exp(R12);

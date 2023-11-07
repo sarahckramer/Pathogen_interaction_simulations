@@ -83,7 +83,7 @@ n_surge <- length(t_si)
 
 # initialize the rate of loss of immunity corresponding to each of the 
 # surge times 
-delta_i <- runif(n=length(t_si), min = 0.01*7, max=0.12*7)
+delta_i <- runif(n=length(t_si), min = 0.01*7, max=0.1*7)
 
 # create a function to specify multiple sets of parameter inputs
 theta_lambda1 <- c(0,1,2)
@@ -116,7 +116,7 @@ sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,n_sur
                    w1=1/52, w2=1/28,
                    rho1 = 0.002, rho2 = 0.002,
                    theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
-                   A1=0.05, phi1=26,
+                   A1=0.01, phi1=26,
                    A2=0.2, phi2=20,
                    beta_sd1=0, beta_sd2=0, 
                    N=3700000,
