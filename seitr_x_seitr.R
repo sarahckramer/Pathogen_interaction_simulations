@@ -56,9 +56,9 @@ for (nm in components_nm) {
 set.seed(2908)
 
 # total number of weeks of data we are going to want 
-#tot_weeks <- 625 # 12 years 
+tot_weeks <- 625 # 12 years 
 #tot_weeks <- 1145 # 22 years 
-tot_weeks <- 5304 # 102 years 
+#tot_weeks <- 5304 # 102 years 
 
 # total number of seasons
 tot_seasons <- round((tot_weeks/52) - 2)
@@ -108,11 +108,11 @@ sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,n_sur
   # setting parameters to weekly rates - params listed as daily in 
   # spreadsheet list of model parameters.xlsx
   # note also v1 = influenza; v2 = RSV
-  true_params <- c(Ri1=1.3, Ri2=1.7,
+  true_params <- c(Ri1=1.1, Ri2=1.7,
                    sigma1=7, sigma2=7/5,
                    gamma1=7/5, gamma2=7/10,
                    delta1=delta_1, delta2=delta_2,
-                   w1=1/52, w2=1/28,
+                   w1=1/78, w2=1/52,
                    mu = 0.0002, nu = 0.0002,
                    rho1 = 0.002, rho2 = 0.002,
                    theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
@@ -193,6 +193,7 @@ all_param_comb <- all_param_comb[order(all_param_comb$theta_lambda1),]
 # creating multiple plots at once
 temp <- vector(mode = "list", length = 15)
 plot_list <- vector(mode = "list", length = 15)
+attack_plots <- vector(mode = "list", length = 15)
 res_all <- NULL
 for(i in 1:15){
   theta_lambda1 <- all_param_comb[i,]$theta_lambda1
@@ -213,8 +214,8 @@ for(i in 1:15){
 
 
  # also estimate attack rates by year for each plot...... NOT WORKING
-  #data$season <- c(rep(1:tot_seasons, each=52),tot_seasons+1)
-  data$season <- rep(1:tot_seasons, each=52)
+  data$season <- c(rep(1:tot_seasons, each=52),tot_seasons+1)
+  #data$season <- rep(1:tot_seasons, each=52)
   seasonal_incidence <- data %>% group_by(season) %>%
                           summarise(obs_v1 = sum(v1_obs), obs_v2 = sum(v2_obs),
                                     tot_v1 = sum(v1_T), tot_v2 = sum(v2_T))
@@ -228,7 +229,14 @@ for(i in 1:15){
   # trying to calculate the attack rate based on true number of cases from the model
   tot_v1_attack <- seasonal_incidence$tot_v1/3700000 * 100
   tot_v2_attack <- seasonal_incidence$tot_v2/3700000 * 100
-
+  tot_v1_attack <- tot_v1_attack[-c(length(tot_v1_attack))] 
+  tot_v2_attack <- tot_v2_attack[-c(length(tot_v2_attack))] 
+  
+  plot_dat <- data.frame(cbind(tot_v1_attack = tot_v1_attack, tot_v2_attack = tot_v2_attack))
+  attack_plots[[i]] <- ggplot(aes(x=tot_v2_attack,y=tot_v1_attack), data=plot_dat) + geom_point() +
+    ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param["theta_lambda1"],
+                  "AND delta_1 = delta_2 =", temp[[i]]$true_param["delta1"])) 
+  
   range_tot_v1_att <- range(tot_v1_attack[-length(tot_v1_attack)]) # 71 - 95
   range_tot_v2_att <- range(tot_v2_attack[-length(tot_v2_attack)]) # 90 - 97
 
@@ -241,12 +249,19 @@ for(i in 1:15){
 
 }
 
+# plot simulated timeseries data
 grid.arrange(plot_list[[1]],plot_list[[2]],plot_list[[3]],ncol=1)
 grid.arrange(plot_list[[4]],plot_list[[5]],plot_list[[6]],ncol=1)
 grid.arrange(plot_list[[7]],plot_list[[8]],plot_list[[9]],ncol=1)
 grid.arrange(plot_list[[10]],plot_list[[11]],plot_list[[12]],ncol=1)
 grid.arrange(plot_list[[13]],plot_list[[14]],plot_list[[15]],ncol=1)
 
+# plot scatter plots of seasonal attack rates
+grid.arrange(attack_plots[[1]],attack_plots[[2]],attack_plots[[3]],ncol=1)
+grid.arrange(attack_plots[[4]],attack_plots[[5]],attack_plots[[6]],ncol=1)
+grid.arrange(attack_plots[[7]],attack_plots[[8]],attack_plots[[9]],ncol=1)
+grid.arrange(attack_plots[[10]],attack_plots[[11]],attack_plots[[12]],ncol=1)
+grid.arrange(attack_plots[[13]],attack_plots[[14]],attack_plots[[15]],ncol=1)
 
 ##########################################################
 ## Start testing each method for estimating interaction ##
@@ -298,7 +313,7 @@ if(likelihood==FALSE){
   
   
   #--- GAM approach ---# 
-  source("gam_cor.R")
+  source("./methods/gam_cor.R")
   
   # apply the GAM correlation approach to each simulated data set and save the results
   data <- results$data %>% dplyr::select(time,v1_obs, v2_obs)
@@ -337,14 +352,14 @@ if(likelihood==FALSE){
   
   #---- Granger causality analysis  ----# 
   # separated this method out as a bit more code required
-  source("granger_analysis.R")
+  source("./methods/granger_analysis.R")
   # apply the granger analysis to each simulated data set and save the results
   data <- results$data %>% dplyr::select(v1_obs, v2_obs)
   results$granger <- granger_func(data = data, lag_v1 = lag_v1, lag_v2 = lag_v2)
   
   #------- Convergent Cross mapping analysis -------# 
   # separated this method out as a bit more code required
-  source("CCM.R")
+  source("./methods/CCM.R")
   
   # apply the CCM approach to each simulated data set 
   data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
@@ -366,7 +381,7 @@ if(likelihood==FALSE){
   
   # run likelihood estimation - these results will not be saved to the overall results
   # list here but instead to individual RDS files
-  source("Likelihood_estimation.R")
+  source("./methods/Likelihood_estimation.R")
   results$likelihood <- lik(data=data, true_params, components_l = components_l, sobol_size, jobid, no_jobs = no_jobs, maxtime)
   
   # save out the results
