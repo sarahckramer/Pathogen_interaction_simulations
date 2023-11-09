@@ -1,10 +1,10 @@
 # simple run before adding likelihood function to the code
 
-sbatch --array=1-9, seitr_x_seitr_sim.sh
+sbatch --array=1-15, --export=LIKELIHOOD="FALSE" seitr_x_seitr_sim.sh
 
 # to view the queue
 squeue -u sarpi
 
 # run after adding likelihood function to the code
 
-sbatch --array=2, --export=LIKELIHOOD="TRUE",SOBOLSIZE="500" seitr_x_seitr_sim.sh
+sbatch --array=1-15, --export=LIKELIHOOD="TRUE",SOBOLSIZE="500" seitr_x_seitr_sim.sh

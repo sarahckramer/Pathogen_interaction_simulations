@@ -56,12 +56,12 @@ for (nm in components_nm) {
 set.seed(2908)
 
 # total number of weeks of data we are going to want 
-#tot_weeks <- 365 # 7 years
 #tot_weeks <- 625 # 12 years 
-tot_weeks <- 1145 # 22 years 
-#tot_weeks <- 2184 # 42 years
-#tot_weeks <- 2704 # 52 years 
-#tot_weeks <- 5304 # 102 years 
+#tot_weeks <- 1145 # 22 years 
+tot_weeks <- 5304 # 102 years 
+
+# total number of seasons
+tot_seasons <- round((tot_weeks/52) - 2)
 
 # initialize time of surges (based on week) from start of season (1 July)
 # by drawing from a normal distribution 
@@ -86,10 +86,10 @@ n_surge <- length(t_si)
 delta_i <- runif(n=length(t_si), min = 0.01*7, max=0.1*7)
 
 # create a function to specify multiple sets of parameter inputs
-theta_lambda1 <- c(0,1,2)
-theta_lambda2 <- c(0,1,2)
-delta_1 <- c(1,1/2,1/3)
-delta_2 <- c(1,1/2,1/3)
+theta_lambda1 <- c(0,0.5,1,2,4)
+theta_lambda2 <- c(0,0.5,1,2,4)
+delta_1 <- c(1,1/4,1/24)
+delta_2 <- c(1,1/4,1/24)
 
 # Get all combinations of the interaction parameters
 all_param_comb <- expand.grid(theta_lambda1, theta_lambda2, delta_1, delta_2)
@@ -112,16 +112,16 @@ sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,n_sur
                    sigma1=7, sigma2=7/5,
                    gamma1=7/5, gamma2=7/10,
                    delta1=delta_1, delta2=delta_2,
-                   #mu = 0.0002, nu=0.0007, 
                    w1=1/52, w2=1/28,
+                   mu = 0.0002, nu = 0.0002,
                    rho1 = 0.002, rho2 = 0.002,
                    theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
                    A1=0.01, phi1=26,
                    A2=0.2, phi2=20,
                    beta_sd1=0, beta_sd2=0, 
                    N=3700000,
-                   E01=0.0001, E02=0.0001,
-                   R01=0.4, R02=0.2, R12=0.001, nsurges=n_surge,
+                   E01=0.001, E02=0.001,
+                   R01=0.4, R02=0.25, R12=0.001, nsurges=n_surge,
                    t_si_=t(t_si), delta_i_=t(delta_i))
   
   #---- Create list to save the parameter sets and results of our different methods ---# 
@@ -187,10 +187,14 @@ results <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_la
 # changing the surge times to dates
 t_si_date <- lubridate::ymd("2012-July-01") + lubridate::weeks(t_si)
 
+# order starting parameters by theta
+all_param_comb <- all_param_comb[order(all_param_comb$theta_lambda1),]
+
 # creating multiple plots at once
-temp <- vector(mode = "list", length = 3)
-plot_list <- vector(mode = "list", length = 3)
-for(i in 1:9){
+temp <- vector(mode = "list", length = 15)
+plot_list <- vector(mode = "list", length = 15)
+res_all <- NULL
+for(i in 1:15){
   theta_lambda1 <- all_param_comb[i,]$theta_lambda1
   theta_lambda2 <- all_param_comb[i,]$theta_lambda2
   delta_1 <- all_param_comb[i,]$delta_1
@@ -198,7 +202,7 @@ for(i in 1:9){
   temp[[i]] <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2,
                         delta_1=delta_1, delta_2=delta_2, n_surge=n_surge, components_l=components_l)
   data <- temp[[i]]$data
-  
+
   legend_colors <- c("v1_obs" = "black", "v2_obs" = "blue")
   plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs, colour="v1_obs"),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs,colour="v2_obs")) +
     ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param["theta_lambda1"],
@@ -206,36 +210,43 @@ for(i in 1:9){
     scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y")  +
     theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted") +
     scale_colour_manual(values=legend_colors) + labs(colour="")
-  
-  
-  # # also estimate attack rates by year for each plot...... NOT WORKING
-  # data$season <- c(rep(1:5, each=52),6)
-  # seasonal_incidence <- data %>% group_by(season) %>% summarise(tot_v1 = sum(v1_obs), tot_v2 = sum(v2_obs))
-  # seasonal_incidence$tot_v1/3700000 * 100
-  # seasonal_incidence$tot_v2/3700000 * 100
-  # 
-  # # looking for start of season so I can determine the number of susceptiable to each virus at the start of that season
-  # start_season <- data %>% group_by(season) %>% summarise(min(time_date))
-  # start_season <- data %>% filter(time_date %in% start_season$`min(time_date)`)
-  # 
-  # v1_susceptible <- start_season$X_SS + start_season$X_SE + start_season$X_SI + start_season$X_ST + start_season$X_SR
-  # v2_susceptible <- start_season$X_SS + start_season$X_ES + start_season$X_IS + start_season$X_TS + start_season$X_RS
-  # seasonal_incidence$tot_v1/v1_susceptible*100
-  # seasonal_incidence$tot_v2/v2_susceptible*100 # order of magnitude of at least 10 to small
-  
+
+
+ # also estimate attack rates by year for each plot...... NOT WORKING
+  #data$season <- c(rep(1:tot_seasons, each=52),tot_seasons+1)
+  data$season <- rep(1:tot_seasons, each=52)
+  seasonal_incidence <- data %>% group_by(season) %>%
+                          summarise(obs_v1 = sum(v1_obs), obs_v2 = sum(v2_obs),
+                                    tot_v1 = sum(v1_T), tot_v2 = sum(v2_T))
+  # trying to calculate the attack rate based on observed data
+  obs_v1_attack <- seasonal_incidence$obs_v1/3700000 * 100
+  obs_v2_attack <- seasonal_incidence$obs_v2/3700000 * 100
+
+  range_obs_v1_att <- range(obs_v1_attack[-length(obs_v1_attack)]) # 0.14 - 0.19
+  range_obs_v2_att <- range(obs_v2_attack[-length(obs_v2_attack)]) # 0.18 - 0.20
+
+  # trying to calculate the attack rate based on true number of cases from the model
+  tot_v1_attack <- seasonal_incidence$tot_v1/3700000 * 100
+  tot_v2_attack <- seasonal_incidence$tot_v2/3700000 * 100
+
+  range_tot_v1_att <- range(tot_v1_attack[-length(tot_v1_attack)]) # 71 - 95
+  range_tot_v2_att <- range(tot_v2_attack[-length(tot_v2_attack)]) # 90 - 97
+
+  res <- cbind(all_param_comb[i,],
+               range_obs_v1_att[1],range_obs_v1_att[2],
+               range_obs_v2_att[1],range_obs_v2_att[2],
+               range_tot_v1_att[1],range_tot_v1_att[2],
+               range_tot_v2_att[1],range_tot_v2_att[2])
+  res_all <- rbind(res_all, res)
+
 }
+
 grid.arrange(plot_list[[1]],plot_list[[2]],plot_list[[3]],ncol=1)
 grid.arrange(plot_list[[4]],plot_list[[5]],plot_list[[6]],ncol=1)
 grid.arrange(plot_list[[7]],plot_list[[8]],plot_list[[9]],ncol=1)
+grid.arrange(plot_list[[10]],plot_list[[11]],plot_list[[12]],ncol=1)
+grid.arrange(plot_list[[13]],plot_list[[14]],plot_list[[15]],ncol=1)
 
-# check out for a single dataset each of the different compartment behaviours
-i <- 2
-temp_data <- temp[[i]]$data
-# reshape data from long to wide
-temp_wide <- temp_data %>% dplyr::select(-c(time, '.id')) %>% gather(.,compartment, value, X_SS:v2_obs, factor_key = T)
-
-# plot
-ggplot(aes(x=time_date, y = value), data=temp_wide) + geom_line() + facet_wrap(.~compartment, scales="free") 
 
 ##########################################################
 ## Start testing each method for estimating interaction ##
