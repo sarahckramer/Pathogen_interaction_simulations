@@ -52,7 +52,11 @@ names(gam_res_df) <- c("gam_cor", "gam_CI_lower95", "gam_CI_upper95")
 results_df <- cbind(results_df,gam_res_df)
 
 # extract transfer entropy 
-te_res <- purrr::map(list_names, ~ get(.x)$transfer_entropy)
+te_res_v1_to_v2 <- purrr::map(list_names, ~ get(.x)$transfer_entropy[1,])
+te_res_v2_to_v1 <- purrr::map(list_names, ~ get(.x)$transfer_entropy[2,])
+
+te_res_v1_to_v2_df <- data.frame(bind_rows(te_res_v1_to_v2), row.names = NULL)
+te_res_v2_to_v1_df <- data.frame(bind_rows(te_res_v2_to_v1), row.names = NULL)
 
 #------- likelihood results extraction ----# 
 str(results, max.level=1)

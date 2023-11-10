@@ -13,13 +13,15 @@
 ccm_func <- function(data){
   # load packages
   library(rEDM) 
+  library(foreach)
+  library(doParallel)
   
   # Determining Embedding dimension (i.e. the number of lags used to build up the shadow manifold)
   # Based on the prediction skill of the model. See rEDM vingette https://ha0ye.github.io/rEDM/articles/rEDM.html 
   
   # specify library set = how much data to fit too 
   # choosing to fit to half the data here
-  lib_max <- dim(data)[1]/2
+  lib_max <- round(dim(data)[1]/2)
   lib <- paste0("1 ", lib_max)
   
   # specify pred = which data to predict on 
@@ -143,8 +145,11 @@ ccm_func <- function(data){
   names(v2_data) <- c('time', 'v2_obs', paste('T', as.character(seq(1,num_surr)), sep = ''))
 
   # Cross mapping
-  for (j in 1:num_surr) {
-
+  # setting up parallelism for the foreach loop
+  registerDoParallel(cl <- makeCluster(10))
+  results_foreach <- 
+    foreach (j=1:num_surr, .packages=c("rEDM","tidyverse")) %dopar% {
+      
     targetCol <- paste('T', j, sep = '' ) # as in v1T_data
     ccm_out_v1 <- ccm(v1_data, E = E_v1, lib_column = "v1_obs", target_column = targetCol,
                   lib_sizes = seq(50, lib_max_null, 2), num_samples = R, tp=optimal_tp_v1xv2,
@@ -156,13 +161,34 @@ ccm_func <- function(data){
 
     col_v1 <- paste('v1_obs', ':', targetCol, sep = '')
     col_v2 <- paste('v2_obs', ':', targetCol, sep = '')
+    
     # pulling out the quantiles for the null 
-    rho_surr_v1_xmap_v2 = cbind(rho_surr_v1_xmap_v2,ccm_out_v1[,col_v1])
-    rho_surr_v2_xmap_v1 = cbind(rho_surr_v2_xmap_v1,ccm_out_v2[,col_v2])
-
-  }
-  names(rho_surr_v1_xmap_v2) <- c("LibSize", paste0("T", 1:num_surr))
-  names(rho_surr_v2_xmap_v1) <- c("LibSize", paste0("T", 1:num_surr))
+    rho_surr_v1_xmap_v2 = ccm_out_v1 %>% dplyr::select(LibSize,all_of(col_v1),E,tau,tp,nn)
+    rho_surr_v2_xmap_v1 = ccm_out_v2 %>% dplyr::select(LibSize,all_of(col_v2),E,tau,tp,nn)
+    
+    res_temp <- list(rho_surr_v1_xmap_v2 = rho_surr_v1_xmap_v2, 
+                rho_surr_v2_xmap_v1 = rho_surr_v2_xmap_v1)
+    res_temp
+    }
+  # collapsing the list so that I have the correct column of output from each 
+  # surrogate CCM run for X->Y and Y->X
+   temp_output <- do.call(cbind, lapply(results_foreach, function(inner_list) {
+   lapply(inner_list, function(dataframe){
+   dataframe[,2]})
+  }))
+  
+   # collapsing list down to a dataframe of the output for each surrogate
+   # v1 -> v2 
+   rho_surr_v1_xmap_v2 <-  do.call(cbind, temp_output[1,])
+   colnames(rho_surr_v1_xmap_v2) <- paste0("T", 1:num_surr)
+   # cbind the library size
+   rho_surr_v1_xmap_v2 <- cbind(LibSize = seq(50, lib_max_null, 2), rho_surr_v1_xmap_v2)
+   
+   # v2 -> v1
+   rho_surr_v2_xmap_v1 <-  do.call(cbind, temp_output[2,])
+   colnames(rho_surr_v2_xmap_v1) <- paste0("T", 1:num_surr)
+   # cbind the library size
+   rho_surr_v2_xmap_v1 <- cbind(LibSize = seq(50, lib_max_null, 2), rho_surr_v2_xmap_v1)
 
   # finding the lower and upper quantiles for a 95% CI
   # v1
