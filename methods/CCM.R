@@ -263,21 +263,7 @@ ccm_func <- function(data){
   p_surr_v1_xmap_v2 <- 1 - ecdf(as.numeric(rho_surr_v1_xmap_v2[nrow(res),-1]))(res[dim(res)[1],"mean_v1_obs:v2_obs"])
   p_surr_v2_xmap_v1 <- 1 - ecdf(as.numeric(rho_surr_v2_xmap_v1[nrow(res),-1]))(res[dim(res)[1],"mean_v2_obs:v1_obs"])
    
-  # trying kolmogorov-Smirnov test
-  d1 <- res[dim(res)[1],"mean_v1_obs:v2_obs"]
-  d2 <- rho_surr_v1_xmap_v2[nrow(res),-1]
-  ks.test(d1,d2, alternative="two.sided")
   
-  
-  # estimating p-value using Kolmogorov-Smirnov test
-  d1 <- rho_surr_v1_xmap_v2[nrow(res),-1]
-  d2 <- intervals_surr_v1_xmap_v2$mean_rho
-  
-  d3 <- rho_surr_v2_xmap_v1[nrow(res),-1]
-  d4 <- intervals_surr_v2_xmap_v1$mean_rho
-   
-  p_ks_surr_v1_xmap_v2 <- ks.test(d1,d2, alternative="two.sided")
-  p_ks_surr_v2_xmap_v1 <- ks.test(d3,d4, alternative="two.sided")
   
   #---- write out results ---# 
   
