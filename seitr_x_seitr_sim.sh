@@ -11,9 +11,8 @@
 #SBATCH --mail-user=pirikahu@mpiib-berlin.mpg.de
 
 # --- resource specification (which resources for how long) ---
-#SBATCH --partition=general 
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=10
+#SBATCH --nodes=2
+#SBATCH --ntasks-per-node=72
 
 #SBATCH --mem=10000 # memory in MB required by the job
 #SBATCH --time=24:00:00 # run time in h:m:s, up to 24h possible

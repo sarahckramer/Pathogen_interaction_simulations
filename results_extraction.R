@@ -19,6 +19,7 @@ library(tidyverse)
 setwd("~/Desktop/Simulated data/10yrs/results/")
 # pick up all the results file names
 file_names = list.files(pattern = "*.RData", recursive = F)
+
 # load all the data sets in 
 for (i in 1:length(file_names)) {
   load(file_names[i], verbose = TRUE)
@@ -33,30 +34,44 @@ params <- c("delta1", "delta2", "theta_lambda1", "theta_lambda2", "Ri1", "Ri2",
             "R01", "R02", "R12")
 
 # extract true parameters from each list and put into a data frame
-list_names <- paste0("results", 1:13) # change this to length(file_names) when have all results
+list_names <- paste0("results", 1:7) # change this to length(file_names) when have all results
 first_elements <- purrr::map(list_names, ~ get(.x)$true_param)
 results_df <- bind_rows(first_elements)
 results_df <- results_df[,params]
 
-# extract Spearmann correlation coefficients
+#---- extract Spearmann correlation coefficients ----#
 cor_res <- purrr::map(list_names, ~ get(.x)$cor)
 cor_res_df <- bind_rows(cor_res)
-names(cor_res_df) <- c("cor", "cor_CI_lower_95", "cor_CI_upper_95", "cor_pvalue")
+names(cor_res_df) <- c("cor", "cor_CI_2.5", "cor_CI_97.5", "cor_pvalue")
 results_df <- cbind(results_df,cor_res_df)
 
-# extract GAM correlations 
+#---- extract GAM correlations ----# 
 gam_res <- purrr::map(list_names, ~ get(.x)$gam_cor)
 gam_res_df <- data.frame(bind_rows(gam_res), row.names = NULL)
 gam_res_df <- gam_res_df %>% dplyr::select(cor, CI_lower95, CI_upper95)
-names(gam_res_df) <- c("gam_cor", "gam_CI_lower95", "gam_CI_upper95")
+names(gam_res_df) <- c("gam_cor", "gam_CI_2.5", "gam_CI_97.5")
 results_df <- cbind(results_df,gam_res_df)
 
-# extract transfer entropy 
+#---- extract transfer entropy ----# 
 te_res_v1_to_v2 <- purrr::map(list_names, ~ get(.x)$transfer_entropy[1,])
 te_res_v2_to_v1 <- purrr::map(list_names, ~ get(.x)$transfer_entropy[2,])
 
 te_res_v1_to_v2_df <- data.frame(bind_rows(te_res_v1_to_v2), row.names = NULL)
 te_res_v2_to_v1_df <- data.frame(bind_rows(te_res_v2_to_v1), row.names = NULL)
+
+# renaming and just keeping important columns 
+te_res_v1_to_v2_df <- te_res_v1_to_v2_df %>% dplyr::select(-se)
+te_res_v2_to_v1_df <- te_res_v2_to_v1_df %>% dplyr::select(-se)
+
+names(te_res_v1_to_v2_df) <- c("v1_to_v2_te","v1_to_v2_ete","v1_to_v2_pvalue","v1_to_v2_CI2.5", "v1_to_v2_CI97.5")
+names(te_res_v2_to_v1_df) <- c("v2_to_v1_te","v2_to_v1_ete","v2_to_v1_pvalue","v2_to_v1_CI2.5", "v2_to_v1_CI97.5")
+
+results_df <- cbind(results_df, te_res_v1_to_v2_df,te_res_v2_to_v1_df)
+
+#---- extract granger ----# 
+granger_res <- purrr::map(list_names, ~ get(.x)$granger$summary)
+
+granger_res_df <- data.frame(bind_rows(granger_res), row.names = NULL)
 
 #------- likelihood results extraction ----# 
 str(results, max.level=1)

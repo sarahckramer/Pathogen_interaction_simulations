@@ -104,14 +104,14 @@ ccm_func <- function(data){
   
   # calculate median aswell as lower and upper bounds (2.5, 97.5%) on rho for each lib size
   intervals_perc_v1 <- all_predictions_v1 %>% group_by(LibSize) %>%
-    summarize(rho2.5 = quantile(rho, probs = 0.025), 
-              rho50 = quantile(rho, probs = 0.5),
-              rho97.5 = quantile(rho, probs = 0.975))
+    summarize(rho2.5_v1_xmap_v2 = quantile(rho, probs = 0.025), 
+              rho50_v1_xmap_v2 = quantile(rho, probs = 0.5),
+              rho97.5_v1_xmap_v2 = quantile(rho, probs = 0.975))
   
   intervals_perc_v2 <- all_predictions_v2 %>% group_by(LibSize) %>%
-    summarize(rho2.5 = quantile(rho, probs = 0.025), 
-              rho50 = quantile(rho, probs = 0.5),
-              rho97.5 = quantile(rho, probs = 0.975))
+    summarize(rho2.5_v2_xmap_v1 = quantile(rho, probs = 0.025), 
+              rho50_v2_xmap_v1 = quantile(rho, probs = 0.5),
+              rho97.5_v2_xmap_v1 = quantile(rho, probs = 0.975))
   
   # join the interval datasets together 
   interval_perc <- intervals_perc_v1 %>% left_join(intervals_perc_v2, by ="LibSize")
@@ -121,8 +121,7 @@ ccm_func <- function(data){
   
   # ------Creating the null hypothesis for comparison with our CCM output-----#
   
-  #num_surr <- 100 # number of surrogate datasets
-  num_surr <- 10 
+  num_surr <- 100 # number of surrogate datasets
   
   # using seasonal data to create null hypothesis 
   surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = 52)
@@ -217,7 +216,7 @@ ccm_func <- function(data){
   intervals_surr_v1_xmap_v2 <- cbind(intervals_surr_v1_xmap_v2,mean_rho=apply(rho_surr_v1_xmap_v2[,2:(num_surr+1)], 1, max, na.rm = TRUE))
   intervals_surr_v1_xmap_v2 <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v1_xmap_v2) # add libSizes to df
   intervals_surr_v1_xmap_v2 <- data.frame(intervals_surr_v1_xmap_v2)
-  names(intervals_surr_v1_xmap_v2) <- c("LibSizes", "rho2.5", "rho50","rho97.5", "mean_rho", "sd_rho", "min_rho", "max_rho")
+  names(intervals_surr_v1_xmap_v2) <- c("LibSizes", "rho2.5_v1_xmap_v2", "rho50_v1_xmap_v2","rho97.5_v1_xmap_v2", "mean_rho", "sd_rho", "min_rho", "max_rho")
 
   # v2
   intervals_surr_v2_xmap_v1 <- apply(rho_surr_v2_xmap_v1[,2:(num_surr+1)], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
@@ -227,7 +226,7 @@ ccm_func <- function(data){
   intervals_surr_v2_xmap_v1 <- cbind(intervals_surr_v2_xmap_v1,mean_rho=apply(rho_surr_v2_xmap_v1[,2:(num_surr+1)], 1, max, na.rm = TRUE))
   intervals_surr_v2_xmap_v1 <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v2_xmap_v1) # add libSizes to df
   intervals_surr_v2_xmap_v1 <- data.frame(intervals_surr_v2_xmap_v1)
-  names(intervals_surr_v2_xmap_v1) <- c("LibSizes", "rho2.5", "rho50","rho97.5", "mean_rho", "min_rho", "max_rho")
+  names(intervals_surr_v2_xmap_v1) <- c("LibSizes", "rho2.5_v2_xmap_v1", "rho50_v2_xmap_v1","rho97.5_v2_xmap_v1", "mean_rho", "min_rho", "max_rho")
   
   # save out final libsize data
   surr_max_lib_data_v1_x_v2 <-  rho_surr_v1_xmap_v2[nrow(res),] 
@@ -235,34 +234,40 @@ ccm_func <- function(data){
     
   #--- plotting---#
   # v1 xmap v2 - median 
-  p_v1_xmap_v2_median <- ggplot(aes(x=LibSize, y=`median_v1_xmap_v2`), data=res) + geom_line() +
-  geom_ribbon(aes(ymin=rho2.5, ymax=rho97.5,alpha=0.05))  +
-  geom_line(aes(x=LibSizes,y=median), data=intervals_surr_v1_xmap_v2, colour = "blue") +
-  geom_ribbon(aes(x=LibSizes,ymin=rho2.5, ymax=rho97.5,alpha=0.05), data=intervals_surr_v1_xmap_v2, inherit.aes = FALSE, fill = "lightblue")
+  p_v1_xmap_v2_median <- ggplot(aes(x=LibSize, y=`rho50_v1_xmap_v2`), data=res) + geom_line() +
+  geom_ribbon(aes(ymin=rho2.5_v1_xmap_v2, ymax=rho97.5_v1_xmap_v2,alpha=0.05))  +
+  geom_line(aes(x=LibSizes,y=rho50_v1_xmap_v2), data=intervals_surr_v1_xmap_v2, colour = "blue") +
+  geom_ribbon(aes(x=LibSizes,ymin=rho2.5_v1_xmap_v2, ymax=rho97.5_v1_xmap_v2,alpha=0.05), data=intervals_surr_v1_xmap_v2, inherit.aes = FALSE, fill = "lightblue")
 
   # v1 xmap v2 - mean
   p_v1_xmap_v2_mean <- ggplot(aes(x=LibSize, y=`mean_v1_obs:v2_obs`), data=res) + geom_line() +
-  geom_ribbon(aes(ymin=rho2.5, ymax=rho97.5,alpha=0.05))  +
+  geom_ribbon(aes(ymin=rho2.5_v1_xmap_v2, ymax=rho97.5_v1_xmap_v2,alpha=0.05))  +
   geom_line(aes(x=LibSizes,y=mean_rho), data=intervals_surr_v1_xmap_v2, colour = "blue") +
-  geom_ribbon(aes(x=LibSizes,ymin=rho2.5, ymax=rho97.5,alpha=0.05), data=intervals_surr_v1_xmap_v2, inherit.aes = FALSE, fill = "lightblue")
+  geom_ribbon(aes(x=LibSizes,ymin=rho2.5_v1_xmap_v2, ymax=rho97.5_v1_xmap_v2,alpha=0.05), data=intervals_surr_v1_xmap_v2, inherit.aes = FALSE, fill = "lightblue")
   
   # v2 xmap v1 - median
-  p_v2_xmap_v1_median <- ggplot(aes(x=LibSize, y=`median_v2_xmap_v1`), data=res) + geom_line() +
-  geom_ribbon(aes(ymin=rho2.5, ymax=rho97.5,alpha=0.05))  +
-  geom_line(aes(x=LibSizes,y=median), data=intervals_surr_v2_xmap_v1, colour = "blue") +
-  geom_ribbon(aes(x=LibSizes,ymin=rho2.5, ymax=rho97.5,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
+  p_v2_xmap_v1_median <- ggplot(aes(x=LibSize, y=`rho50_v2_xmap_v1`), data=res) + geom_line() +
+  geom_ribbon(aes(ymin=rho2.5_v2_xmap_v1, ymax=rho97.5_v2_xmap_v1,alpha=0.05))  +
+  geom_line(aes(x=LibSizes,y=rho50_v2_xmap_v1), data=intervals_surr_v2_xmap_v1, colour = "blue") +
+  geom_ribbon(aes(x=LibSizes,ymin=rho2.5_v2_xmap_v1, ymax=rho97.5_v2_xmap_v1,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
 
   # v2 xmap v1 - mean
   p_v2_xmap_v1_mean <- ggplot(aes(x=LibSize, y=`mean_v2_obs:v1_obs`), data=res) + geom_line() +
-  geom_ribbon(aes(ymin=rho2.5, ymax=rho97.5,alpha=0.05))  +
+  geom_ribbon(aes(ymin=rho2.5_v2_xmap_v1, ymax=rho97.5_v2_xmap_v1,alpha=0.05))  +
   geom_line(aes(x=LibSizes,y=mean_rho), data=intervals_surr_v2_xmap_v1, colour = "blue") +
-  geom_ribbon(aes(x=LibSizes,ymin=rho2.5, ymax=rho97.5,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
+  geom_ribbon(aes(x=LibSizes,ymin=rho2.5_v2_xmap_v1, ymax=rho97.5_v2_xmap_v1,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
   
   
   # estimating p-value using empirical cumulative distribution 
   p_surr_v1_xmap_v2 <- 1 - ecdf(as.numeric(rho_surr_v1_xmap_v2[nrow(res),-1]))(res[dim(res)[1],"mean_v1_obs:v2_obs"])
   p_surr_v2_xmap_v1 <- 1 - ecdf(as.numeric(rho_surr_v2_xmap_v1[nrow(res),-1]))(res[dim(res)[1],"mean_v2_obs:v1_obs"])
    
+  # Checking convergence using Mann Kendall - significant p-value implies converegence acheived
+  MannK_v1_xmap_v2_data <- MannKendall(res$`mean_v1_obs:v2_obs`)$sl[1] # pulling out p-value only
+  MannK_v1_xmap_v2_null <- MannKendall(intervals_surr_v1_xmap_v2$mean_rho)$sl[1]
+  
+  MannK_v2_xmap_v1_data <- MannKendall(res$`mean_v2_obs:v1_obs`)$sl[1] 
+  MannK_v2_xmap_v1_null <- MannKendall(intervals_surr_v2_xmap_v1$mean_rho)$sl[1]
   
   
   #---- write out results ---# 
@@ -270,8 +275,10 @@ ccm_func <- function(data){
   # our point estimate is simply going to be the cross mapping skill for the largest library size as we have
   # based max library size on our sample size
   temp_res <- res[dim(res)[1],]
-  # add ks p_values
-  temp_res <- cbind(temp_res,ecdf_p_v1_x_v2 = p_surr_v1_xmap_v2, ecdf_p_v2_x_v1 = p_surr_v2_xmap_v1)
+  # add seasonal surrogate test p-values and mann kendall p-values
+  temp_res <- cbind(temp_res,ecdf_p_v1_x_v2 = p_surr_v1_xmap_v2, ecdf_p_v2_x_v1 = p_surr_v2_xmap_v1,
+                    MannK_v1_xmap_v2_data = MannK_v1_xmap_v2_data, MannK_v1_xmap_v2_null = MannK_v1_xmap_v2_null,
+                    MannK_v2_xmap_v1_data = MannK_v2_xmap_v1_data, MannK_v2_xmap_v1_null = MannK_v2_xmap_v1_null)
   # create list 
   overall_res_list <- list(summary=temp_res, v1_xmap_v2_preds=all_predictions_v1,
                            v2_xmap_v1_preds = all_predictions_v2, 
