@@ -2,6 +2,8 @@
 
 sbatch --array=1-15, --export=LIKELIHOOD="FALSE" seitr_x_seitr_sim.sh
 
+
+sbatch --array=1, --export=LIKELIHOOD="FALSE" seitr_x_seitr_sim.sh
 # to view the queue
 squeue -u sarpi
 
