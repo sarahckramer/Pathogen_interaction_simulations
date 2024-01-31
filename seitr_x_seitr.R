@@ -56,8 +56,8 @@ for (nm in components_nm) {
 set.seed(2908)
 
 # total number of weeks of data we are going to want 
-#tot_weeks <- 625 # 12 years 
-tot_weeks <- 1145 # 22 years 
+tot_weeks <- 625 # 12 years 
+#tot_weeks <- 1145 # 22 years 
 #tot_weeks <- 5304 # 102 years 
 
 # total number of seasons
@@ -88,8 +88,8 @@ delta_i <- runif(n=length(t_si), min = 0.01*7, max=0.1*7)
 # create a function to specify multiple sets of parameter inputs
 theta_lambda1 <- c(0,0.5,1,2,4)
 theta_lambda2 <- c(0,0.5,1,2,4)
-delta_1 <- c(1,1/4,1/24)
-delta_2 <- c(1,1/4,1/24)
+delta_1 <- c(1,1/4,1/12,1/24)
+delta_2 <- c(1,1/4,1/12,1/24)
 
 # Get all combinations of the interaction parameters
 all_param_comb <- expand.grid(theta_lambda1, theta_lambda2, delta_1, delta_2)
@@ -363,6 +363,12 @@ if(likelihood==FALSE){
   
   # apply the CCM approach to each simulated data set 
   data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
+  # normalise data
+  data_norm <- data
+  data_norm$v1_obs <- (data$v1_obs - mean(data$v1_obs))/sd(data$v1_obs)
+  data_norm$v2_obs <- (data$v2_obs - mean(data$v2_obs))/sd(data$v2_obs)
+  data <- data_norm 
+  # run CCM 
   results$CCM <- ccm_func(data = data)
   
   # save out the results

@@ -46,7 +46,7 @@ ccm_func <- function(data){
   data <- data %>% dplyr::select(-time)
   vars <- names(data)
   # generate all combinations of lib_column, target_column, tp
-  params <- expand.grid(lib_column = vars, target_column = vars, tp = -5:5) # ~1 months either side
+  params <- expand.grid(lib_column = vars, target_column = vars, tp = -12:12) # ~3 months either side
   # remove cases where lib == target
   params <- params[params$lib_column != params$target_column, ]
   
@@ -58,7 +58,7 @@ ccm_func <- function(data){
   
   # explore prediction skill over range of tp values 
   # for a single library size set it to max
-  lib_size_tp <- dim(data)[1] - 5 - 1 - max(params$E) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
+  lib_size_tp <- dim(data)[1] - 12 - 1 - max(params$E) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
   
   output <- do.call(rbind, lapply(seq_len(NROW(params)), function(i) {
     ccm(data, E = params$E[i], lib_sizes = lib_size_tp, 
@@ -124,21 +124,8 @@ ccm_func <- function(data){
   num_surr <- 100 # number of surrogate datasets
   
   # using seasonal data to create null hypothesis 
-  surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = 52)
-  surr_v2 <- make_surrogate_data(data$v2_obs, method = "seasonal", num_surr = num_surr, T_period = 52) # why are we getting -ves here? Is it doing a transform, then back transform somewhere? 
-
-  # turn any negative surrogates into 0 - can't have a negative number of cases
-  surr_v1 = apply(surr_v1, 2, function(x) {
-    i = which(x < 0)
-    x[i] = 0
-    x
-  })
-  
-  surr_v2 = apply(surr_v2, 2, function(x) {
-    i = which(x < 0)
-    x[i] = 0
-    x
-  })
+  surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = 54)
+  surr_v2 <- make_surrogate_data(data$v2_obs, method = "seasonal", num_surr = num_surr, T_period = 54) 
   
   
   # run ccm for surrogate data
@@ -159,6 +146,11 @@ ccm_func <- function(data){
   v2_data <- as.data.frame(cbind(seq(1:length(data$v2_obs)), data$v2_obs, surr_v1))
   names(v2_data) <- c('time', 'v2_obs', paste('T', as.character(seq(1,num_surr)), sep = ''))
 
+  # number of samples to use in the ccm for the surrogates
+  # because we are doing a large number of replicates it is ok here to reduce 
+  # the number of samples 
+  R <- 1
+  
   # Cross mapping
   # setting up parallelism for the foreach loop
   registerDoParallel(cl <- makeCluster(10))
@@ -280,12 +272,12 @@ ccm_func <- function(data){
                     MannK_v1_xmap_v2_data = MannK_v1_xmap_v2_data, MannK_v1_xmap_v2_null = MannK_v1_xmap_v2_null,
                     MannK_v2_xmap_v1_data = MannK_v2_xmap_v1_data, MannK_v2_xmap_v1_null = MannK_v2_xmap_v1_null)
   # create list 
-  overall_res_list <- list(summary=temp_res, v1_xmap_v2_preds=all_predictions_v1,
-                           v2_xmap_v1_preds = all_predictions_v2, 
-                           v1_xmap_v2_null = intervals_surr_v1_xmap_v2,
-                           v2_xmap_v1_null = intervals_surr_v2_xmap_v1,
-                           surr_rho_v1_x_v2 = surr_max_lib_data_v1_x_v2,
-                           surr_rho_v2_x_v1 = surr_max_lib_data_v2_x_v1)
+  overall_res_list <- list(summary=temp_res, v1_xmap_v2_preds=all_predictions_v1)#,
+                           # v2_xmap_v1_preds = all_predictions_v2, 
+                           # v1_xmap_v2_null = intervals_surr_v1_xmap_v2,
+                           # v2_xmap_v1_null = intervals_surr_v2_xmap_v1,
+                           # surr_rho_v1_x_v2 = surr_max_lib_data_v1_x_v2,
+                           # surr_rho_v2_x_v1 = surr_max_lib_data_v2_x_v1)
   res_list <- list(summary = overall_res_list, 
                    fig_v1_xmap_v2_median = p_v1_xmap_v2_median,
                    fig_v1_xmap_v2_mean = p_v1_xmap_v2_mean,
