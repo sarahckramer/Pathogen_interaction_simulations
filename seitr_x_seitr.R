@@ -88,8 +88,8 @@ delta_i <- runif(n=length(t_si), min = 0.01*7, max=0.1*7)
 # create a function to specify multiple sets of parameter inputs
 theta_lambda1 <- c(0,0.5,1,2,4)
 theta_lambda2 <- c(0,0.5,1,2,4)
-delta_1 <- c(1,1/4,1/12,1/24)
-delta_2 <- c(1,1/4,1/12,1/24)
+delta_1 <- c(1,1/4,1/24)
+delta_2 <- c(1,1/4,1/24)
 
 # Get all combinations of the interaction parameters
 all_param_comb <- expand.grid(theta_lambda1, theta_lambda2, delta_1, delta_2)
@@ -189,8 +189,8 @@ t_si_date <- lubridate::ymd("2012-July-01") + lubridate::weeks(t_si)
 
 # order starting parameters by theta
 all_param_comb <- all_param_comb[order(all_param_comb$theta_lambda1),]
-# 
-# # creating multiple plots at once
+ 
+# creating multiple plots at once
 # temp <- vector(mode = "list", length = 15)
 # plot_list <- vector(mode = "list", length = 15)
 # attack_plots <- vector(mode = "list", length = 15)
@@ -229,14 +229,14 @@ all_param_comb <- all_param_comb[order(all_param_comb$theta_lambda1),]
 #   # trying to calculate the attack rate based on true number of cases from the model
 #   tot_v1_attack <- seasonal_incidence$tot_v1/3700000 * 100
 #   tot_v2_attack <- seasonal_incidence$tot_v2/3700000 * 100
-#   tot_v1_attack <- tot_v1_attack[-c(length(tot_v1_attack))] 
-#   tot_v2_attack <- tot_v2_attack[-c(length(tot_v2_attack))] 
-#   
+#   tot_v1_attack <- tot_v1_attack[-c(length(tot_v1_attack))]
+#   tot_v2_attack <- tot_v2_attack[-c(length(tot_v2_attack))]
+# 
 #   plot_dat <- data.frame(cbind(tot_v1_attack = tot_v1_attack, tot_v2_attack = tot_v2_attack))
 #   attack_plots[[i]] <- ggplot(aes(x=tot_v2_attack,y=tot_v1_attack), data=plot_dat) + geom_point() +
 #     ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param["theta_lambda1"],
-#                   "AND delta_1 = delta_2 =", temp[[i]]$true_param["delta1"])) 
-#   
+#                   "AND delta_1 = delta_2 =", temp[[i]]$true_param["delta1"]))
+# 
 #   range_tot_v1_att <- range(tot_v1_attack[-length(tot_v1_attack)]) # 71 - 95
 #   range_tot_v2_att <- range(tot_v2_attack[-length(tot_v2_attack)]) # 90 - 97
 # 
@@ -249,13 +249,13 @@ all_param_comb <- all_param_comb[order(all_param_comb$theta_lambda1),]
 # 
 # }
 # 
-# # plot simulated timeseries data
+# # # plot simulated timeseries data
 # grid.arrange(plot_list[[1]],plot_list[[2]],plot_list[[3]],ncol=1)
 # grid.arrange(plot_list[[4]],plot_list[[5]],plot_list[[6]],ncol=1)
 # grid.arrange(plot_list[[7]],plot_list[[8]],plot_list[[9]],ncol=1)
 # grid.arrange(plot_list[[10]],plot_list[[11]],plot_list[[12]],ncol=1)
 # grid.arrange(plot_list[[13]],plot_list[[14]],plot_list[[15]],ncol=1)
-# 
+
 # # plot scatter plots of seasonal attack rates
 # grid.arrange(attack_plots[[1]],attack_plots[[2]],attack_plots[[3]],ncol=1)
 # grid.arrange(attack_plots[[4]],attack_plots[[5]],attack_plots[[6]],ncol=1)
@@ -363,11 +363,6 @@ if(likelihood==FALSE){
   
   # apply the CCM approach to each simulated data set 
   data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
-  # normalise data
-  data_norm <- data
-  data_norm$v1_obs <- (data$v1_obs - mean(data$v1_obs))/sd(data$v1_obs)
-  data_norm$v2_obs <- (data$v2_obs - mean(data$v2_obs))/sd(data$v2_obs)
-  data <- data_norm 
   # run CCM 
   results$CCM <- ccm_func(data = data)
   

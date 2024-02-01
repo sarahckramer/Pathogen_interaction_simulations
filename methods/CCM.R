@@ -127,6 +127,18 @@ ccm_func <- function(data){
   surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = 54)
   surr_v2 <- make_surrogate_data(data$v2_obs, method = "seasonal", num_surr = num_surr, T_period = 54) 
   
+  # turn any negative surrogates into 0 - can't have a negative number of cases
+  surr_v1 = apply(surr_v1, 2, function(x) {
+    i = which(x < 0)
+    x[i] = 0
+    x
+  })
+
+  surr_v2 = apply(surr_v2, 2, function(x) {
+    i = which(x < 0)
+    x[i] = 0
+    x
+  })
   
   # run ccm for surrogate data
   # estimating max lib value 
@@ -149,7 +161,7 @@ ccm_func <- function(data){
   # number of samples to use in the ccm for the surrogates
   # because we are doing a large number of replicates it is ok here to reduce 
   # the number of samples 
-  R <- 1
+  # R <- 1
   
   # Cross mapping
   # setting up parallelism for the foreach loop
@@ -225,24 +237,12 @@ ccm_func <- function(data){
   surr_max_lib_data_v2_x_v1 <-  rho_surr_v2_xmap_v1[nrow(res),] 
     
   #--- plotting---#
-  # v1 xmap v2 - median 
-  p_v1_xmap_v2_median <- ggplot(aes(x=LibSize, y=`rho50_v1_xmap_v2`), data=res) + geom_line() +
-  geom_ribbon(aes(ymin=rho2.5_v1_xmap_v2, ymax=rho97.5_v1_xmap_v2,alpha=0.05))  +
-  geom_line(aes(x=LibSizes,y=rho50_v1_xmap_v2), data=intervals_surr_v1_xmap_v2, colour = "blue") +
-  geom_ribbon(aes(x=LibSizes,ymin=rho2.5_v1_xmap_v2, ymax=rho97.5_v1_xmap_v2,alpha=0.05), data=intervals_surr_v1_xmap_v2, inherit.aes = FALSE, fill = "lightblue")
-
   # v1 xmap v2 - mean
   p_v1_xmap_v2_mean <- ggplot(aes(x=LibSize, y=`mean_v1_obs:v2_obs`), data=res) + geom_line() +
   geom_ribbon(aes(ymin=rho2.5_v1_xmap_v2, ymax=rho97.5_v1_xmap_v2,alpha=0.05))  +
   geom_line(aes(x=LibSizes,y=mean_rho), data=intervals_surr_v1_xmap_v2, colour = "blue") +
   geom_ribbon(aes(x=LibSizes,ymin=rho2.5_v1_xmap_v2, ymax=rho97.5_v1_xmap_v2,alpha=0.05), data=intervals_surr_v1_xmap_v2, inherit.aes = FALSE, fill = "lightblue")
   
-  # v2 xmap v1 - median
-  p_v2_xmap_v1_median <- ggplot(aes(x=LibSize, y=`rho50_v2_xmap_v1`), data=res) + geom_line() +
-  geom_ribbon(aes(ymin=rho2.5_v2_xmap_v1, ymax=rho97.5_v2_xmap_v1,alpha=0.05))  +
-  geom_line(aes(x=LibSizes,y=rho50_v2_xmap_v1), data=intervals_surr_v2_xmap_v1, colour = "blue") +
-  geom_ribbon(aes(x=LibSizes,ymin=rho2.5_v2_xmap_v1, ymax=rho97.5_v2_xmap_v1,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
-
   # v2 xmap v1 - mean
   p_v2_xmap_v1_mean <- ggplot(aes(x=LibSize, y=`mean_v2_obs:v1_obs`), data=res) + geom_line() +
   geom_ribbon(aes(ymin=rho2.5_v2_xmap_v1, ymax=rho97.5_v2_xmap_v1,alpha=0.05))  +

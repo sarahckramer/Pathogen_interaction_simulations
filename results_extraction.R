@@ -16,7 +16,7 @@ library(tidyverse)
 #------- all methods except likelihood extraction ------# 
 
 # reading in all results for 10 years of data
-setwd("~/Desktop/Simulated data/10yrs/results/")
+setwd("~/Documents/Simulation_estimating_interaction/20years")
 # pick up all the results file names
 file_names = list.files(pattern = "*.RData", recursive = F)
 
@@ -34,7 +34,7 @@ params <- c("delta1", "delta2", "theta_lambda1", "theta_lambda2", "Ri1", "Ri2",
             "R01", "R02", "R12")
 
 # extract true parameters from each list and put into a data frame
-list_names <- paste0("results", 1:7) # change this to length(file_names) when have all results
+list_names <- paste0("results", 1:5) # change this to length(file_names) when have all results
 first_elements <- purrr::map(list_names, ~ get(.x)$true_param)
 results_df <- bind_rows(first_elements)
 results_df <- results_df[,params]
@@ -53,25 +53,46 @@ names(gam_res_df) <- c("gam_cor", "gam_CI_2.5", "gam_CI_97.5")
 results_df <- cbind(results_df,gam_res_df)
 
 #---- extract transfer entropy ----# 
-te_res_v1_to_v2 <- purrr::map(list_names, ~ get(.x)$transfer_entropy[1,])
-te_res_v2_to_v1 <- purrr::map(list_names, ~ get(.x)$transfer_entropy[2,])
+te_res_v1_x_v2 <- purrr::map(list_names, ~ get(.x)$transfer_entropy[1,])
+te_res_v2_x_v1 <- purrr::map(list_names, ~ get(.x)$transfer_entropy[2,])
 
-te_res_v1_to_v2_df <- data.frame(bind_rows(te_res_v1_to_v2), row.names = NULL)
-te_res_v2_to_v1_df <- data.frame(bind_rows(te_res_v2_to_v1), row.names = NULL)
+te_res_v1_x_v2_df <- data.frame(bind_rows(te_res_v1_x_v2), row.names = NULL)
+te_res_v2_x_v1_df <- data.frame(bind_rows(te_res_v2_x_v1), row.names = NULL)
 
 # renaming and just keeping important columns 
-te_res_v1_to_v2_df <- te_res_v1_to_v2_df %>% dplyr::select(-se)
-te_res_v2_to_v1_df <- te_res_v2_to_v1_df %>% dplyr::select(-se)
+te_res_v1_x_v2_df <- te_res_v1_x_v2_df %>% dplyr::select(-se)
+te_res_v2_x_v1_df <- te_res_v2_x_v1_df %>% dplyr::select(-se)
 
-names(te_res_v1_to_v2_df) <- c("v1_to_v2_te","v1_to_v2_ete","v1_to_v2_pvalue","v1_to_v2_CI2.5", "v1_to_v2_CI97.5")
-names(te_res_v2_to_v1_df) <- c("v2_to_v1_te","v2_to_v1_ete","v2_to_v1_pvalue","v2_to_v1_CI2.5", "v2_to_v1_CI97.5")
+names(te_res_v1_x_v2_df) <- c("TE_v1_x_v2_te","TE_v1_x_v2_ete","TE_v1_x_v2_pvalue","TE_v1_x_v2_CI2.5", "TE_v1_x_v2_CI97.5")
+names(te_res_v2_x_v1_df) <- c("TE_v2_x_v1_te","TE_v2_x_v1_ete","TE_v2_x_v1_pvalue","TE_v2_x_v1_CI2.5", "TE_v2_x_v1_CI97.5")
 
-results_df <- cbind(results_df, te_res_v1_to_v2_df,te_res_v2_to_v1_df)
+results_df <- cbind(results_df, te_res_v1_x_v2_df,te_res_v2_x_v1_df)
 
 #---- extract granger ----# 
-granger_res <- purrr::map(list_names, ~ get(.x)$granger$summary)
+granger_res_v1_xmap_v2 <- purrr::map(list_names, ~ get(.x)$granger$summary[1,])
+granger_res_v2_xmap_v1 <- purrr::map(list_names, ~ get(.x)$granger$summary[2,])
 
-granger_res_df <- data.frame(bind_rows(granger_res), row.names = NULL)
+granger_res_v1_xmap_v2 <- data.frame(bind_rows(granger_res_v1_xmap_v2), row.names = NULL)
+names(granger_res_v1_xmap_v2) <- c("granger_est_v1_x_v2", "granger_bkbootmean_v1_x_v2",
+                                   "granger_blockboot_CI_2.5_v1_x_v2","granger_blockboot_CI_97.5_v1_x_v2",
+                                   "granger_blockboot_CIperc_2.5_v1_x_v2", "granger_blockboot_CIperc_97.5_v1_x_v2",
+                                   "granger_p_v1_x_v2", "granger_adf_p_v1_x_v2", "granger_kpss_p_v1_x_v2")
+granger_res_v2_xmap_v1 <- data.frame(bind_rows(granger_res_v2_xmap_v1), row.names = NULL)
+names(granger_res_v2_xmap_v1) <- c("granger_est_v2_x_v1", "granger_bkbootmean_v2_x_v1",
+                                   "granger_blockboot_CI_2.5_v2_x_v1","granger_blockboot_CI_97.5_v2_x_v1",
+                                   "granger_blockboot_CIperc_2.5_v2_x_v1", "granger_blockboot_CIperc_97.5_v2_x_v1",
+                                   "granger_p_v2_x_v1", "granger_adf_p_v2_x_v1", "granger_kpss_p_v2_x_v1")
+
+results_df <- cbind(results_df, granger_res_v1_xmap_v2, granger_res_v2_xmap_v1)
+
+#------- extract convergent cross mapping ----# 
+
+
+
+
+
+
+
 
 #------- likelihood results extraction ----# 
 str(results, max.level=1)
