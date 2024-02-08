@@ -1,10 +1,8 @@
 ################################################################################
 #                       Results extraction 
 #
-# In this script we extract the results of the simulation study for likelihood 
-# and all other methods seprately - as the likelihood is more computationally 
-# expensive it is run on its own, whereas all other methods are performed 
-# together
+# In this script we extract the results of the simulation study
+# excluding any ad hoc likelihood computation
 # 
 # Created by: Sarah Pirikahu
 # Creation date: 20 Oct 2023
@@ -13,6 +11,7 @@
 # load packages
 library(tidyverse)
 library(openxlsx) 
+library(gridExtra)
 
 #------- all methods except likelihood extraction ------# 
 
@@ -106,3 +105,112 @@ results_df <- results_df[order(results_df$delta1, decreasing=T),]
 # output as csv
 #write.xlsx(results_df, file="results_symmetric_10yrs.xlsx")
 
+
+##################################################
+#------- plotting out the observed data ---------#
+##################################################
+
+# getting the timing of the influenza surges
+set.seed(2908)
+# total number of seasons
+tot_seasons <- round((tot_weeks/52) - 2)
+
+# initialize time of surges (based on week) from start of season (1 July)
+# by drawing from a normal distribution 
+n_surge <- round(tot_weeks/52) - 1 # total number of surges
+mu_Imloss <- 38 # average surge occuring in mid Oct
+sd_Imloss <- 4 # allow variation of 4 weeks
+
+t_si <- rnorm(n=n_surge, mean=mu_Imloss,sd=sd_Imloss)
+# correcting t_si to give t based on week of the year rather than 
+# week from start of season (note: July 1 is week 26)
+t_si <- round(seq(26, 52*n_surge, by=52) + t_si)
+
+# remove all t_si which are less than 2years - allowing this amount
+# of time for the system to reach an equilibrium (2 yrs ~ 104 weeks)
+t_si <- t_si[-which(t_si <= 104)]
+# changing the surge times to dates
+t_si_date <- lubridate::ymd("2012-July-01") + lubridate::weeks(t_si)
+
+# parameter inputs:
+theta_lambda1 <- c(0,0.5,1,2,4)
+theta_lambda2 <- c(0,0.5,1,2,4)
+delta_1 <- c(1,1/4,1/24)
+delta_2 <- c(1,1/4,1/24)
+
+# Get all combinations of the interaction parameters
+all_param_comb <- expand.grid(theta_lambda1, theta_lambda2, delta_1, delta_2)
+names(all_param_comb) <- c("theta_lambda1", "theta_lambda2", "delta_1", "delta_2")
+
+# for now just keep symmetric interactions 
+all_param_comb <- all_param_comb %>% filter(theta_lambda1 == theta_lambda2 & delta_1 == delta_2)
+
+
+# plotting 
+temp <- vector(mode = "list", length = 15)
+plot_list <- vector(mode = "list", length = 15)
+attack_plots <- vector(mode = "list", length = 15)
+res_all <- NULL
+for(i in 1:15){
+  
+  data <- get(paste0("results", i))$data
+  data <- data %>% dplyr::select(time_date,v1_obs,v2_obs,v1_T,v2_T)
+
+  legend_colors <- c("v1_obs" = "black", "v2_obs" = "blue")
+  plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs, colour="v1_obs"),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs,colour="v2_obs")) +
+    ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param["theta_lambda1"],
+                  "AND delta_1 = delta_2 =", temp[[i]]$true_param["delta1"])) + labs(y="observed cases") +
+    scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y")  +
+    theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted") +
+    scale_colour_manual(values=legend_colors) + labs(colour="")
+
+
+ # also estimate attack rates by year for each plot...... NOT WORKING
+  data$season <- c(rep(1:tot_seasons, each=52),tot_seasons+1)
+  #data$season <- rep(1:tot_seasons, each=52)
+  seasonal_incidence <- data %>% group_by(season) %>%
+                          summarise(obs_v1 = sum(v1_obs), obs_v2 = sum(v2_obs),
+                                    tot_v1 = sum(v1_T), tot_v2 = sum(v2_T))
+  # trying to calculate the attack rate based on observed data
+  obs_v1_attack <- seasonal_incidence$obs_v1/3700000 * 100
+  obs_v2_attack <- seasonal_incidence$obs_v2/3700000 * 100
+
+  range_obs_v1_att <- range(obs_v1_attack[-length(obs_v1_attack)]) # 0.14 - 0.19
+  range_obs_v2_att <- range(obs_v2_attack[-length(obs_v2_attack)]) # 0.18 - 0.20
+
+  # trying to calculate the attack rate based on true number of cases from the model
+  tot_v1_attack <- seasonal_incidence$tot_v1/3700000 * 100
+  tot_v2_attack <- seasonal_incidence$tot_v2/3700000 * 100
+  tot_v1_attack <- tot_v1_attack[-c(length(tot_v1_attack))]
+  tot_v2_attack <- tot_v2_attack[-c(length(tot_v2_attack))]
+
+  plot_dat <- data.frame(cbind(tot_v1_attack = tot_v1_attack, tot_v2_attack = tot_v2_attack))
+  attack_plots[[i]] <- ggplot(aes(x=tot_v2_attack,y=tot_v1_attack), data=plot_dat) + geom_point() +
+    ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param["theta_lambda1"],
+                  "AND delta_1 = delta_2 =", temp[[i]]$true_param["delta1"]))
+
+  range_tot_v1_att <- range(tot_v1_attack[-length(tot_v1_attack)]) # 71 - 95
+  range_tot_v2_att <- range(tot_v2_attack[-length(tot_v2_attack)]) # 90 - 97
+
+  res <- cbind(all_param_comb[i,],
+               range_obs_v1_att[1],range_obs_v1_att[2],
+               range_obs_v2_att[1],range_obs_v2_att[2],
+               range_tot_v1_att[1],range_tot_v1_att[2],
+               range_tot_v2_att[1],range_tot_v2_att[2])
+  res_all <- rbind(res_all, res)
+
+}
+
+# plot simulated timeseries data
+grid.arrange(plot_list[[1]],plot_list[[2]],plot_list[[3]],ncol=1)
+grid.arrange(plot_list[[4]],plot_list[[5]],plot_list[[6]],ncol=1)
+grid.arrange(plot_list[[7]],plot_list[[8]],plot_list[[9]],ncol=1)
+grid.arrange(plot_list[[10]],plot_list[[11]],plot_list[[12]],ncol=1)
+grid.arrange(plot_list[[13]],plot_list[[14]],plot_list[[15]],ncol=1)
+
+# plot scatter plots of seasonal attack rates
+grid.arrange(attack_plots[[1]],attack_plots[[2]],attack_plots[[3]],ncol=1)
+grid.arrange(attack_plots[[4]],attack_plots[[5]],attack_plots[[6]],ncol=1)
+grid.arrange(attack_plots[[7]],attack_plots[[8]],attack_plots[[9]],ncol=1)
+grid.arrange(attack_plots[[10]],attack_plots[[11]],attack_plots[[12]],ncol=1)
+grid.arrange(attack_plots[[13]],attack_plots[[14]],attack_plots[[15]],ncol=1)

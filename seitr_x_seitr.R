@@ -25,7 +25,7 @@ library(ggfortify)
 library(vars)
 library(RTransferEntropy) 
 library(future) # allows for parallel processing
-library(gridExtra)
+
 
 #---- set up cluster inputs ---# 
 # Get cluster environmental variables:
@@ -88,7 +88,7 @@ n_surge <- length(t_si)
 # surge times 
 delta_i <- runif(n=length(t_si), min = 0.01*7, max=0.1*7)
 
-# create a function to specify multiple sets of parameter inputs
+# parameter inputs:
 theta_lambda1 <- c(0,0.5,1,2,4)
 theta_lambda2 <- c(0,0.5,1,2,4)
 delta_1 <- c(1,1/4,1/24)
@@ -185,87 +185,6 @@ delta_2 <- all_param_comb[jobid,]$delta_2
 results <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
                     delta_1=delta_1, delta_2=delta_2, beta_sd1=beta_sd1, beta_sd2=beta_sd2,
                     n_surge = n_surge, components_l = components_l)
-
-# ---- Plotting simulated data ----#
-# changing the surge times to dates
-t_si_date <- lubridate::ymd("2012-July-01") + lubridate::weeks(t_si)
-
-# order starting parameters by theta
-all_param_comb <- all_param_comb[order(all_param_comb$theta_lambda1),]
- 
-# creating multiple plots at once
-# temp <- vector(mode = "list", length = 15)
-# plot_list <- vector(mode = "list", length = 15)
-# attack_plots <- vector(mode = "list", length = 15)
-# res_all <- NULL
-# for(i in 1:15){
-#   theta_lambda1 <- all_param_comb[i,]$theta_lambda1
-#   theta_lambda2 <- all_param_comb[i,]$theta_lambda2
-#   delta_1 <- all_param_comb[i,]$delta_1
-#   delta_2 <- all_param_comb[i,]$delta_2
-#   temp[[i]] <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2,
-#                         delta_1=delta_1, delta_2=delta_2, beta_sd1=beta_sd1, beta_sd2=beta_sd2,
-#                         n_surge=n_surge, components_l=components_l)
-#   data <- temp[[i]]$data
-# 
-#   legend_colors <- c("v1_obs" = "black", "v2_obs" = "blue")
-#   plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs, colour="v1_obs"),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs,colour="v2_obs")) +
-#     ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param["theta_lambda1"],
-#                   "AND delta_1 = delta_2 =", temp[[i]]$true_param["delta1"])) + labs(y="observed cases") +
-#     scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y")  +
-#     theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted") +
-#     scale_colour_manual(values=legend_colors) + labs(colour="")
-# 
-# 
-#  # also estimate attack rates by year for each plot...... NOT WORKING
-#   data$season <- c(rep(1:tot_seasons, each=52),tot_seasons+1)
-#   #data$season <- rep(1:tot_seasons, each=52)
-#   seasonal_incidence <- data %>% group_by(season) %>%
-#                           summarise(obs_v1 = sum(v1_obs), obs_v2 = sum(v2_obs),
-#                                     tot_v1 = sum(v1_T), tot_v2 = sum(v2_T))
-#   # trying to calculate the attack rate based on observed data
-#   obs_v1_attack <- seasonal_incidence$obs_v1/3700000 * 100
-#   obs_v2_attack <- seasonal_incidence$obs_v2/3700000 * 100
-# 
-#   range_obs_v1_att <- range(obs_v1_attack[-length(obs_v1_attack)]) # 0.14 - 0.19
-#   range_obs_v2_att <- range(obs_v2_attack[-length(obs_v2_attack)]) # 0.18 - 0.20
-# 
-#   # trying to calculate the attack rate based on true number of cases from the model
-#   tot_v1_attack <- seasonal_incidence$tot_v1/3700000 * 100
-#   tot_v2_attack <- seasonal_incidence$tot_v2/3700000 * 100
-#   tot_v1_attack <- tot_v1_attack[-c(length(tot_v1_attack))]
-#   tot_v2_attack <- tot_v2_attack[-c(length(tot_v2_attack))]
-# 
-#   plot_dat <- data.frame(cbind(tot_v1_attack = tot_v1_attack, tot_v2_attack = tot_v2_attack))
-#   attack_plots[[i]] <- ggplot(aes(x=tot_v2_attack,y=tot_v1_attack), data=plot_dat) + geom_point() +
-#     ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param["theta_lambda1"],
-#                   "AND delta_1 = delta_2 =", temp[[i]]$true_param["delta1"]))
-# 
-#   range_tot_v1_att <- range(tot_v1_attack[-length(tot_v1_attack)]) # 71 - 95
-#   range_tot_v2_att <- range(tot_v2_attack[-length(tot_v2_attack)]) # 90 - 97
-# 
-#   res <- cbind(all_param_comb[i,],
-#                range_obs_v1_att[1],range_obs_v1_att[2],
-#                range_obs_v2_att[1],range_obs_v2_att[2],
-#                range_tot_v1_att[1],range_tot_v1_att[2],
-#                range_tot_v2_att[1],range_tot_v2_att[2])
-#   res_all <- rbind(res_all, res)
-# 
-# }
-# 
-# # # plot simulated timeseries data
-# grid.arrange(plot_list[[1]],plot_list[[2]],plot_list[[3]],ncol=1)
-# grid.arrange(plot_list[[4]],plot_list[[5]],plot_list[[6]],ncol=1)
-# grid.arrange(plot_list[[7]],plot_list[[8]],plot_list[[9]],ncol=1)
-# grid.arrange(plot_list[[10]],plot_list[[11]],plot_list[[12]],ncol=1)
-# grid.arrange(plot_list[[13]],plot_list[[14]],plot_list[[15]],ncol=1)
-
-# # plot scatter plots of seasonal attack rates
-# grid.arrange(attack_plots[[1]],attack_plots[[2]],attack_plots[[3]],ncol=1)
-# grid.arrange(attack_plots[[4]],attack_plots[[5]],attack_plots[[6]],ncol=1)
-# grid.arrange(attack_plots[[7]],attack_plots[[8]],attack_plots[[9]],ncol=1)
-# grid.arrange(attack_plots[[10]],attack_plots[[11]],attack_plots[[12]],ncol=1)
-# grid.arrange(attack_plots[[13]],attack_plots[[14]],attack_plots[[15]],ncol=1)
 
 ##########################################################
 ## Start testing each method for estimating interaction ##
@@ -370,6 +289,10 @@ if(likelihood==FALSE){
   
   # save out the results
   save(results, file=sprintf('results_%s.RData',jobid))
+  
+  # run results extraction to get a spreadsheet with just summary stats for each method
+  #source("results_extraction.R")
+  
 } else {
   
   #----- Likelihood approach -----# 
