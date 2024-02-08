@@ -33,6 +33,14 @@ jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on 
 likelihood <- as.logical(Sys.getenv("LIKELIHOOD")); print(likelihood) # will be TRUE or FALSE
 # how many different starting params are we going to run for numerical optimizer for each job 
 sobol_size <- as.integer(Sys.getenv("SOBOLSIZE")); print(sobol_size)  
+# number of weeks of data to simulate - note: first 2yrs of data discarded to allow mechanistic model to achieve equilibrium
+tot_weeks <- as.integer(Sys.getenv("WEEKSSIM")); print(tot_weeks)  
+# the amount of demographic stochasticity 
+beta_sd1 <- as.integer(Sys.getenv("BETASD1")); print(beta_sd1)  
+beta_sd2 <- as.integer(Sys.getenv("BETASD1")); print(beta_sd2)  
+# the period for the surrogate generation in CCM 
+Tperiod_v1 <- as.integer(Sys.getenv("TPERIODV1")); print(beta_sd1)  
+Tperiod_v2 <- as.integer(Sys.getenv("TPERIODV2")); print(beta_sd2)  
 
 #--- reading in CSnippets ---# 
 # read in the C code for the pomp model 
@@ -54,11 +62,6 @@ for (nm in components_nm) {
 
 # set seed:
 set.seed(2908)
-
-# total number of weeks of data we are going to want 
-tot_weeks <- 625 # 12 years 
-#tot_weeks <- 1145 # 22 years 
-#tot_weeks <- 5304 # 102 years 
 
 # total number of seasons
 tot_seasons <- round((tot_weeks/52) - 2)
@@ -102,7 +105,7 @@ rm(theta_lambda1, theta_lambda2, delta_1, delta_2)
 
 # function to create list of true parameter inputs and simulated data 
 # function takes a vector of the interaction parameters 
-sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,n_surge,components_l=components_l){
+sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,beta_sd1,beta_sd2,n_surge,components_l=components_l){
   set.seed(2908)
   
   # setting parameters to weekly rates - params listed as daily in 
@@ -118,7 +121,7 @@ sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,n_sur
                    theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
                    A1=0.01, phi1=26,
                    A2=0.2, phi2=20,
-                   beta_sd1=0, beta_sd2=0, 
+                   beta_sd1=beta_sd1, beta_sd2=beta_sd2, 
                    N=3700000,
                    E01=0.001, E02=0.001,
                    R01=0.4, R02=0.25, R12=0.001, nsurges=n_surge,
@@ -180,8 +183,8 @@ theta_lambda2 <- all_param_comb[jobid,]$theta_lambda2
 delta_1 <- all_param_comb[jobid,]$delta_1
 delta_2 <- all_param_comb[jobid,]$delta_2
 results <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
-                    delta_1=delta_1, delta_2=delta_2, n_surge = n_surge, components_l = components_l)
-
+                    delta_1=delta_1, delta_2=delta_2, beta_sd1=beta_sd1, beta_sd2=beta_sd2,
+                    n_surge = n_surge, components_l = components_l)
 
 # ---- Plotting simulated data ----#
 # changing the surge times to dates
@@ -201,7 +204,8 @@ all_param_comb <- all_param_comb[order(all_param_comb$theta_lambda1),]
 #   delta_1 <- all_param_comb[i,]$delta_1
 #   delta_2 <- all_param_comb[i,]$delta_2
 #   temp[[i]] <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2,
-#                         delta_1=delta_1, delta_2=delta_2, n_surge=n_surge, components_l=components_l)
+#                         delta_1=delta_1, delta_2=delta_2, beta_sd1=beta_sd1, beta_sd2=beta_sd2,
+#                         n_surge=n_surge, components_l=components_l)
 #   data <- temp[[i]]$data
 # 
 #   legend_colors <- c("v1_obs" = "black", "v2_obs" = "blue")
@@ -295,7 +299,6 @@ if(likelihood==FALSE){
   rm(lags)
   
   #---- Correlation coefficents --------# 
-  
   # function to estimate correlation 
   # inputs: v1_obs = time series for v1_obs
   #         v2_obs = time series for v2_obs
@@ -320,7 +323,6 @@ if(likelihood==FALSE){
   results$gam_cor <- gam_cor(data=data)
   
   #----- Transfer entropy analysis ------# 
-  
   # create function to give transfer entropy results
   # inputs: v1_obs = time series for v1_obs
   #         v2_obs = time series for v2_obs
@@ -364,13 +366,15 @@ if(likelihood==FALSE){
   # apply the CCM approach to each simulated data set 
   data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
   # run CCM 
-  results$CCM <- ccm_func(data = data)
+  results$CCM <- ccm_func(data = data, Tperiod_v1=Tperiod_v1, Tperiod_v2=Tperiod_v2, tot_weeks=tot_weeks)
   
   # save out the results
   save(results, file=sprintf('results_%s.RData',jobid))
 } else {
   
   #----- Likelihood approach -----# 
+  # Note this is very computationally intensive and may not always achieve convergence to the MLE
+  # so was only run ad hoc - not for the entire simulation study
   
   # max time that we want to allow the optmizer to run for
   maxtime <- 12*60*60  # 12 hrs - want this to run for as long as possible so that I don't have to re-run to get the MLE

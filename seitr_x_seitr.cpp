@@ -364,7 +364,6 @@ double R0_2 = Ri2 / (1.0 - (R02 + R12)); // virus 2
 // initialisation of the transmission terms 
 double beta1, beta2;
 // incorporate extra demographic stochasticity with the gamma distributed white noise process
-
 // dt is the time step hence it is not defined but is a variable created within pomp
 if (p1 > 0.0 && beta_sd1 > 0.0) { 
   beta1 = rgammawn(sqrt(R0_1 / (p1 * N * beta_sd1 * dt)), R0_1 * gamma1);

@@ -1,7 +1,7 @@
 ###############################################################
 #                 Convergent Cross Mapping       
 #
-# Useful documentation describing and giving examples:
+# Useful documentation describing CCM and giving examples:
 # https://ha0ye.github.io/rEDM/articles/rEDM.html
 # 
 # inputs: data = data with time, v1_obs, v2_obs 
@@ -10,12 +10,13 @@
 # Creation date: 24 March 2023
 ###############################################################
 
-ccm_func <- function(data){
+ccm_func <- function(data, Tperiod_v1, Tperiod_v2, tot_weeks){
   # load packages
   library(rEDM) 
   library(foreach)
   library(doParallel)
   library(Kendall)
+  library(tidyverse)
   
   # Determining Embedding dimension (i.e. the number of lags used to build up the shadow manifold)
   # Based on the prediction skill of the model. See rEDM vingette https://ha0ye.github.io/rEDM/articles/rEDM.html 
@@ -74,7 +75,6 @@ ccm_func <- function(data){
    
   v2xv1 <- output %>% filter(E==E_v2) 
   optimal_tp_v2xv1 <- v2xv1[which.max(v2xv1$`v2_obs:v1_obs`),]$tp
-  
 
   #----- run CCM ------#
   
@@ -123,9 +123,24 @@ ccm_func <- function(data){
   
   num_surr <- 100 # number of surrogate datasets
   
-  # using seasonal data to create null hypothesis 
-  surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = 54)
-  surr_v2 <- make_surrogate_data(data$v2_obs, method = "seasonal", num_surr = num_surr, T_period = 54) 
+  # Create seasonal surrogate data to describe the null hypothesis of no causal effect
+  # between v1 and v2 whilst accounting for shared seasonality  
+
+  # work out the amount of variability to allow into our surrogate generation based on the 
+  # standard deviation of seasonal cycles
+  
+  # adding seasons to the data frame
+  tot_seasons <- round((tot_weeks/52) - 2)
+  data$season <- c(rep(1:tot_seasons, each=52),tot_seasons+1)
+  # calculating sd for each season
+  season_summary <- data %>% group_by(season) %>% summarise(mean_v1 = mean(v1_obs), sd_v1 = sd(v1_obs), mean_v2 = mean(v2_obs), sd_v2 = sd(v2_obs))
+  # sd can be surprisingly variable...
+  alpha_v1 <- median(season_summary$sd_v1, na.rm=T)
+  alpha_v2 <- median(season_summary$sd_v2, na.rm=T)
+  
+  # generate surrogates
+  surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = Tperiod_v1, alpha=alpha_v1)
+  surr_v2 <- make_surrogate_data(data$v2_obs, method = "seasonal", num_surr = num_surr, T_period = Tperiod_v2, alpha=alpha_v2) 
   
   # turn any negative surrogates into 0 - can't have a negative number of cases
   surr_v1 = apply(surr_v1, 2, function(x) {
@@ -158,6 +173,22 @@ ccm_func <- function(data){
   v2_data <- as.data.frame(cbind(seq(1:length(data$v2_obs)), data$v2_obs, surr_v1))
   names(v2_data) <- c('time', 'v2_obs', paste('T', as.character(seq(1,num_surr)), sep = ''))
 
+  # plotting out surrogates
+  # v1 xmap v2 (therefore looking at v2 surrogates)
+  v1_long <- v1_data %>% gather(.,surr,value, v1_obs:T100)
+  v1_long <- v1_long %>% filter(surr!="v1_obs")
+  
+  plot_v2_surr <- ggplot(aes(x=time,y=value, colour=surr), data=v1_long) + geom_line() + 
+    scale_colour_manual(values=rep("grey",num_surr)) +  theme(legend.position="none") + 
+    geom_line(aes(x=time, y=v2_obs), colour="black",data=v2_data) + ylab("v2_obs")
+  
+  v2_long <- v2_data %>% gather(.,surr,value, v2_obs:T100)
+  v2_long <- v2_long %>% filter(surr!="v2_obs")
+  
+  plot_v1_surr <- ggplot(aes(x=time,y=value, colour=surr), data=v2_long) + geom_line() + 
+    scale_colour_manual(values=rep("grey",num_surr)) +  theme(legend.position="none") + 
+    geom_line(aes(x=time, y=v1_obs), colour="black",data=v1_data) + ylab("v1_obs")
+  
   # number of samples to use in the ccm for the surrogates
   # because we are doing a large number of replicates it is ok here to reduce 
   # the number of samples 
@@ -165,7 +196,8 @@ ccm_func <- function(data){
   
   # Cross mapping
   # setting up parallelism for the foreach loop
-  registerDoParallel(cl <- makeCluster(10))
+  registerDoParallel(cl <- makeCluster(50))
+  #registerDoParallel(cl <- makeCluster(10))
   results_foreach <- 
     foreach (j=1:num_surr, .packages=c("rEDM","tidyverse")) %dopar% {
       
@@ -231,10 +263,6 @@ ccm_func <- function(data){
   intervals_surr_v2_xmap_v1 <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v2_xmap_v1) # add libSizes to df
   intervals_surr_v2_xmap_v1 <- data.frame(intervals_surr_v2_xmap_v1)
   names(intervals_surr_v2_xmap_v1) <- c("LibSizes", "rho2.5_v2_xmap_v1", "rho50_v2_xmap_v1","rho97.5_v2_xmap_v1", "mean_rho", "min_rho", "max_rho")
-  
-  # save out final libsize data
-  surr_max_lib_data_v1_x_v2 <-  rho_surr_v1_xmap_v2[nrow(res),] 
-  surr_max_lib_data_v2_x_v1 <-  rho_surr_v2_xmap_v1[nrow(res),] 
     
   #--- plotting---#
   # v1 xmap v2 - mean
@@ -261,28 +289,24 @@ ccm_func <- function(data){
   MannK_v2_xmap_v1_data <- MannKendall(res$`mean_v2_obs:v1_obs`)$sl[1] 
   MannK_v2_xmap_v1_null <- MannKendall(intervals_surr_v2_xmap_v1$mean_rho)$sl[1]
   
-  
   #---- write out results ---# 
   
-  # our point estimate is simply going to be the cross mapping skill for the largest library size as we have
-  # based max library size on our sample size
-  temp_res <- res[dim(res)[1],]
+  # pull out point estimates for the max library size that can be achieved by all possible simulations (i.e. some 
+  # simulations will have results for larger library sizes but for the results to be comparable across my simulation 
+  # runs we need to be looking at the results for the same library size)
+  theoretic_min_lib <- dim(data)[1]-12-1-10 # data size - max abs tp - tau - max abs E
+  temp_res <- res %>% filter(LibSize==theoretic_min_lib)
   # add seasonal surrogate test p-values and mann kendall p-values
   temp_res <- cbind(temp_res,ecdf_p_v1_x_v2 = p_surr_v1_xmap_v2, ecdf_p_v2_x_v1 = p_surr_v2_xmap_v1,
                     MannK_v1_xmap_v2_data = MannK_v1_xmap_v2_data, MannK_v1_xmap_v2_null = MannK_v1_xmap_v2_null,
-                    MannK_v2_xmap_v1_data = MannK_v2_xmap_v1_data, MannK_v2_xmap_v1_null = MannK_v2_xmap_v1_null)
+                    MannK_v2_xmap_v1_data = MannK_v2_xmap_v1_data, MannK_v2_xmap_v1_null = MannK_v2_xmap_v1_null,
+                    E_v1 = E_v1, E_v2 = E_v2, optimal_tp_v1xv2= optimal_tp_v1xv2, optimal_tp_v2xv1=optimal_tp_v2xv1)
   # create list 
-  overall_res_list <- list(summary=temp_res, v1_xmap_v2_preds=all_predictions_v1)#,
-                           # v2_xmap_v1_preds = all_predictions_v2, 
-                           # v1_xmap_v2_null = intervals_surr_v1_xmap_v2,
-                           # v2_xmap_v1_null = intervals_surr_v2_xmap_v1,
-                           # surr_rho_v1_x_v2 = surr_max_lib_data_v1_x_v2,
-                           # surr_rho_v2_x_v1 = surr_max_lib_data_v2_x_v1)
-  res_list <- list(summary = overall_res_list, 
-                   fig_v1_xmap_v2_median = p_v1_xmap_v2_median,
+  res_list <- list(summary = temp_res, 
                    fig_v1_xmap_v2_mean = p_v1_xmap_v2_mean,
-                   fig_v2_xmap_v1_median = p_v2_xmap_v1_median,
-                   fig_v2_xmap_v1_mean = p_v2_xmap_v1_mean)
+                   fig_v2_xmap_v1_mean = p_v2_xmap_v1_mean,
+                   plot_v1_surr = plot_v1_surr,
+                   plot_v2_surr = plot_v2_surr)
   return(res_list)
 }
 
