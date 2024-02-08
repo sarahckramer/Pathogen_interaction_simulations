@@ -12,11 +12,11 @@
 
 # load packages
 library(tidyverse)
+library(openxlsx) 
 
 #------- all methods except likelihood extraction ------# 
 
 # reading in all results for 10 years of data
-setwd("~/Documents/Simulation_estimating_interaction/20years")
 # pick up all the results file names
 file_names = list.files(pattern = "*.RData", recursive = F)
 
@@ -34,7 +34,7 @@ params <- c("delta1", "delta2", "theta_lambda1", "theta_lambda2", "Ri1", "Ri2",
             "R01", "R02", "R12")
 
 # extract true parameters from each list and put into a data frame
-list_names <- paste0("results", 1:5) # change this to length(file_names) when have all results
+list_names <- paste0("results", 1:length(file_names))
 first_elements <- purrr::map(list_names, ~ get(.x)$true_param)
 results_df <- bind_rows(first_elements)
 results_df <- results_df[,params]
@@ -66,6 +66,7 @@ te_res_v2_x_v1_df <- te_res_v2_x_v1_df %>% dplyr::select(-se)
 names(te_res_v1_x_v2_df) <- c("TE_v1_x_v2_te","TE_v1_x_v2_ete","TE_v1_x_v2_pvalue","TE_v1_x_v2_CI2.5", "TE_v1_x_v2_CI97.5")
 names(te_res_v2_x_v1_df) <- c("TE_v2_x_v1_te","TE_v2_x_v1_ete","TE_v2_x_v1_pvalue","TE_v2_x_v1_CI2.5", "TE_v2_x_v1_CI97.5")
 
+## Note:: v1 x v2 here means v1 -> v2 unlike in CCM how it is backwards
 results_df <- cbind(results_df, te_res_v1_x_v2_df,te_res_v2_x_v1_df)
 
 #---- extract granger ----# 
@@ -86,48 +87,22 @@ names(granger_res_v2_xmap_v1) <- c("granger_est_v2_x_v1", "granger_bkbootmean_v2
 results_df <- cbind(results_df, granger_res_v1_xmap_v2, granger_res_v2_xmap_v1)
 
 #------- extract convergent cross mapping ----# 
+ccm_res <- purrr::map(list_names, ~ get(.x)$CCM$summary[1,])
+
+ccm_res <- data.frame(bind_rows(ccm_res), row.names = NULL)
+names(ccm_res) <- c("ccm_libsize", "ccm_mean_rho_v1_x_v2", "ccm_mean_rho_v2_x_v1", 
+                    "ccm_rho2.5_v1_x_v2", "ccm_rho50_v1_x_v2", "ccm_rho97.5_v1_x_v2",
+                    "ccm_rho2.5_v2_x_v1", "ccm_rho50_v2_x_v1", "ccm_rho97.5_v2_x_v1",
+                    "ccm_p_v1_x_v2", "ccm_p_v2_x_v1", 
+                    "ccm_mannken_v1_x_v2_data","ccm_mannken_v1_x_v2_null",
+                    "ccm_mannken_v2_x_v1_data","ccm_mannken_v2_x_v1_null",
+                    "ccm_E_v1", "ccm_E_v2", "ccm_tp_v1_x_v2", "ccm_tp_v2_x_v1")
 
 
+results_df <- cbind(results_df, ccm_res)
 
+# order results by delta
+results_df <- results_df[order(results_df$delta1, decreasing=T),]
+# output as csv
+#write.xlsx(results_df, file="results_symmetric_10yrs.xlsx")
 
-
-
-
-
-#------- likelihood results extraction ----# 
-str(results, max.level=1)
-
-res <- NULL
-for(i in 1:500){
-  res <- cbind(res, results$likelihood[[i]]$estpars)
-  
-}
-
-res <- t(res)
-res <- data.frame(res)
-# make data long so I can plot it
-
-res_long <- gather(res, parameter, estimate, Ri1:w2, factor_key=TRUE)
-ggplot(aes(x=estimate), data=res_long) + geom_histogram() + facet_wrap(.~parameter, scales="free")
-
-true_ests <- results$true_param %>% dplyr::select(Ri1,Ri2,E01,E02,R01,R02,R12,rho1,rho2,A1,phi1,A2,
-                                                  phi2,delta1,delta2,theta_lambda1,theta_lambda2,w1,w2)
-
-res_long
-res_summary <- res_long %>% group_by(parameter) %>% summarise(mean=mean(estimate), median=median(estimate),
-                                                              sd=sd(estimate)) 
-
-res_summary <- cbind(res_summary, t(true_ests))
-names(res_summary)[5] <- "true"
-
-test <- res_long %>% filter(parameter=="delta1" & estimate < 100)
-summary(test)
-test <- res_long %>% filter(parameter=="delta2" & estimate < 100)
-summary(test)
-
-ggplot(aes(x=estimate),data=test) + geom_histogram(binwidth=0.5) + geom_vline(xintercept=1, colour="blue")
-
-
-ggplot(aes(x=estimate), data=res_long) + geom_histogram() +
-  facet_wrap(.~parameter, scales="free") +
-  geom_vline(data = res_summary, mapping = aes(xintercept = true), colour="blue") 
