@@ -27,18 +27,20 @@ sbatch --array=12-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="1145",BETASD1="0",BE
 
 
 
-# 52 years
-sbatch --array=1-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="2704",BETASD1="0",BETASD2="0"  seitr_x_seitr_sim.sh
-# 102 years
-sbatch --array=1-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="5304",BETASD1="0",BETASD2="0"  seitr_x_seitr_sim.sh
-
-
-# addition of small amount of demographic stochasticity 
-# 12years
-sbatch --array=1-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="625",BETASD1="0.1",BETASD2="0.1" seitr_x_seitr_sim.sh
+########################
+#------102 years-------#
+########################
+sbatch --array=1-10, --export=LIKELIHOOD="FALSE",WEEKSSIM="5304",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52"  seitr_x_seitr_sim.sh
+sbatch --array=11, --export=LIKELIHOOD="FALSE",WEEKSSIM="5304",BETASD1="0",BETASD2="0",TPERIODV1="104",TPERIODV2="104" seitr_x_seitr_sim.sh
+sbatch --array=12-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="5304",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52" seitr_x_seitr_sim.sh
 
 
 
+
+
+########################
+# Likelihood approach ##
+########################
 
 sbatch --array=1, --export=LIKELIHOOD="FALSE" seitr_x_seitr_sim.sh
 # to view the queue

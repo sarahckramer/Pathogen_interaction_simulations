@@ -135,9 +135,10 @@ ccm_func <- function(data, Tperiod_v1, Tperiod_v2, tot_weeks){
   # calculating sd for each season
   season_summary <- data %>% group_by(season) %>% summarise(mean_v1 = mean(v1_obs), sd_v1 = sd(v1_obs), mean_v2 = mean(v2_obs), sd_v2 = sd(v2_obs))
   # sd can be surprisingly variable...
-  alpha_v1 <- median(season_summary$sd_v1, na.rm=T)
-  alpha_v2 <- median(season_summary$sd_v2, na.rm=T)
-  
+  alpha_v1 <- 10
+  #alpha_v2 <- as.numeric(quantile(season_summary$sd_v2, probs=0.25, na.rm=T))
+  alpha_v2 <- 20
+    
   # generate surrogates
   surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = Tperiod_v1, alpha=alpha_v1)
   surr_v2 <- make_surrogate_data(data$v2_obs, method = "seasonal", num_surr = num_surr, T_period = Tperiod_v2, alpha=alpha_v2) 
@@ -192,11 +193,11 @@ ccm_func <- function(data, Tperiod_v1, Tperiod_v2, tot_weeks){
   # number of samples to use in the ccm for the surrogates
   # because we are doing a large number of replicates it is ok here to reduce 
   # the number of samples 
-  # R <- 1
+  R <- 10
   
   # Cross mapping
   # setting up parallelism for the foreach loop
-  registerDoParallel(cl <- makeCluster(50))
+  registerDoParallel(cl <- makeCluster(100))
   #registerDoParallel(cl <- makeCluster(10))
   results_foreach <- 
     foreach (j=1:num_surr, .packages=c("rEDM","tidyverse")) %dopar% {

@@ -12,6 +12,9 @@
 #  - convergent cross mapping
 #  - likelihood estimation (this method is going to be done separately due to the increased computational power required)
 #
+# GAM, Grangers, CCM and likelihood methods have been coded up seprately and sourced in due to their increased 
+# complexity
+# 
 # Created by: Sarah Pirikahu 
 # Creation date: 22 May 2023
 ##################################################################################################################
@@ -31,7 +34,7 @@ library(future) # allows for parallel processing
 # Get cluster environmental variables:
 jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size 
 likelihood <- as.logical(Sys.getenv("LIKELIHOOD")); print(likelihood) # will be TRUE or FALSE
-# how many different starting params are we going to run for numerical optimizer for each job 
+# how many different starting params are we going to run for numerical optimizer for each job -- likelihood approach
 sobol_size <- as.integer(Sys.getenv("SOBOLSIZE")); print(sobol_size)  
 # number of weeks of data to simulate - note: first 2yrs of data discarded to allow mechanistic model to achieve equilibrium
 tot_weeks <- as.integer(Sys.getenv("WEEKSSIM")); print(tot_weeks)  
@@ -88,7 +91,7 @@ n_surge <- length(t_si)
 # surge times 
 delta_i <- runif(n=length(t_si), min = 0.01*7, max=0.1*7)
 
-# parameter inputs:
+# parameter inputs for simulation:
 theta_lambda1 <- c(0,0.5,1,2,4)
 theta_lambda2 <- c(0,0.5,1,2,4)
 delta_1 <- c(1,1/4,1/24)
@@ -191,7 +194,7 @@ results <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_la
 ##########################################################
 
 # Since the likelihood approach requires a significantly larger amount of compute power will only 
-# perform this method if it is specifically asked for at the cmd line
+# perform this method if it is specifically asked for at the cmd line generally on an ad hoc basis
 
 # If likelihood is true we don't run the non-likelihood methods at all 
 if(likelihood==FALSE){ 
@@ -270,16 +273,13 @@ if(likelihood==FALSE){
   results$transfer_entropy <- te_func(v1_obs = results$data$v1_obs, v2_obs = results$data$v2_obs, 
                                       lag_v1 = lag_v1, lag_v2 = lag_v2) 
   
-  
   #---- Granger causality analysis  ----# 
-  # separated this method out as a bit more code required
   source("./methods/granger_analysis.R")
   # apply the granger analysis to each simulated data set and save the results
   data <- results$data %>% dplyr::select(v1_obs, v2_obs)
   results$granger <- granger_func(data = data, lag_v1 = lag_v1, lag_v2 = lag_v2)
   
   #------- Convergent Cross mapping analysis -------# 
-  # separated this method out as a bit more code required
   source("./methods/CCM.R")
   
   # apply the CCM approach to each simulated data set 
@@ -287,8 +287,9 @@ if(likelihood==FALSE){
   # run CCM 
   results$CCM <- ccm_func(data = data, Tperiod_v1=Tperiod_v1, Tperiod_v2=Tperiod_v2, tot_weeks=tot_weeks)
   
-  # save out the results
-  save(results, file=sprintf('results_%s.RData',jobid))
+  #------Finish up by saving out results -------#
+  # save out the results: results_jobid_totweeks_noise
+  save(results, file=sprintf('results_%s_%s_%s.RData',jobid, tot_weeks, beta_sd1*100))  
   
   # run results extraction to get a spreadsheet with just summary stats for each method
   #source("results_extraction.R")

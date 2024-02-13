@@ -15,8 +15,7 @@ library(gridExtra)
 
 #------- all methods except likelihood extraction ------# 
 
-# reading in all results for 10 years of data
-# pick up all the results file names
+# reading in all results 
 file_names = list.files(pattern = "*.RData", recursive = F)
 
 # load all the data sets in 
@@ -103,7 +102,33 @@ results_df <- cbind(results_df, ccm_res)
 # order results by delta
 results_df <- results_df[order(results_df$delta1, decreasing=T),]
 # output as csv
-#write.xlsx(results_df, file="results_symmetric_10yrs.xlsx")
+#write.xlsx(results_df, file="results_symmetric_20yrs.xlsx")
+
+##################################################
+#-------- Extract cross map skill plots----------#
+##################################################
+
+for(i in 1:15){
+  # pulling out jobid name since results name differs from jobid due to ordering 
+  jobid <- gsub("results_(\\d+)_.*\\.RData", "\\1", file_names)
+  # getting file name sorted 
+  res_names_v1xv2 <- paste0("jobid", jobid, "_v1xv2_mean.png")
+  p1_v1xv2_name <- res_names_v1xv2[i]
+  
+  # printing v2 -> v1
+  png(p1_v1xv2_name, width=800, height=400)
+  p1 <- get(paste0("results", i))$CCM$fig_v1_xmap_v2_mean
+  print(p1)
+  dev.off()
+  
+  # printing v1 -> v2
+  res_names_v2xv1 <- paste0("jobid", jobid, "_v2xv1_mean.png")
+  p2_v2xv1_name <- res_names_v2xv1[i]
+  png(p2_v2xv1_name, width=800, height=400)
+  p2 <- get(paste0("results", i))$CCM$fig_v2_xmap_v1_mean
+  print(p2)
+  dev.off()
+}
 
 
 ##################################################
@@ -142,9 +167,16 @@ delta_2 <- c(1,1/4,1/24)
 all_param_comb <- expand.grid(theta_lambda1, theta_lambda2, delta_1, delta_2)
 names(all_param_comb) <- c("theta_lambda1", "theta_lambda2", "delta_1", "delta_2")
 
+# order starting parameters by theta
+all_param_comb <- all_param_comb[order(all_param_comb$theta_lambda1),]
+
 # for now just keep symmetric interactions 
 all_param_comb <- all_param_comb %>% filter(theta_lambda1 == theta_lambda2 & delta_1 == delta_2)
 
+# specifying all global variables
+beta_sd1 <- 0
+beta_sd2 <- 0
+tot_weeks <- 5304
 
 # plotting 
 temp <- vector(mode = "list", length = 15)
@@ -153,7 +185,18 @@ attack_plots <- vector(mode = "list", length = 15)
 res_all <- NULL
 for(i in 1:15){
   
-  data <- get(paste0("results", i))$data
+  # if using data after simulation 
+  #data <- get(paste0("results", i))$data
+  # if getting plots before simulation 
+  theta_lambda1 <- all_param_comb[i,]$theta_lambda1
+  theta_lambda2 <- all_param_comb[i,]$theta_lambda2
+  delta_1 <- all_param_comb[i,]$delta_1
+  delta_2 <- all_param_comb[i,]$delta_2
+  temp[[i]] <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2,
+                          delta_1=delta_1, delta_2=delta_2, beta_sd1=beta_sd1, beta_sd2=beta_sd2,
+                          n_surge=n_surge, components_l=components_l)
+  data <- temp[[i]]$data
+  
   data <- data %>% dplyr::select(time_date,v1_obs,v2_obs,v1_T,v2_T)
 
   legend_colors <- c("v1_obs" = "black", "v2_obs" = "blue")
@@ -166,7 +209,9 @@ for(i in 1:15){
 
 
  # also estimate attack rates by year for each plot...... NOT WORKING
-  data$season <- c(rep(1:tot_seasons, each=52),tot_seasons+1)
+  #data$season <- c(rep(1:tot_seasons, each=52),tot_seasons+1)
+  data$season <- c(rep(1:tot_seasons, each=52)) # for 100 years
+  
   #data$season <- rep(1:tot_seasons, each=52)
   seasonal_incidence <- data %>% group_by(season) %>%
                           summarise(obs_v1 = sum(v1_obs), obs_v2 = sum(v2_obs),
