@@ -71,13 +71,9 @@ gam_cor <- function(data){
   # standard approach assuming normality of the sampling dist
   CI_lower95 <-  corr_mat[2,1] - 1.96*sd(boot_corr$boot_out.t)
   CI_upper95 <-  corr_mat[2,1] + 1.96*sd(boot_corr$boot_out.t)
-  # percentile bootstrap 
-  CIperc_lower95 <- as_vector(apply(boot_corr, 2, quantile, probs = 0.025))
-  CIperc_upper95 <- as_vector(apply(boot_corr, 2, quantile, probs = 0.975))
   
   # summarise results to output
   res <- data.frame(cbind(cor = corr_mat[2,1],
-                          CI_lower95 = CI_lower95, CI_upper95 = CI_upper95,
-                          CIperc_lower95 = CIperc_lower95, CIperc_upper95 = CIperc_upper95), row.names = "")
+                          CI_lower95 = CI_lower95, CI_upper95 = CI_upper95), row.names = "")
   return(res)
 }

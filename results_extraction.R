@@ -74,12 +74,10 @@ granger_res_v2_xmap_v1 <- purrr::map(list_names, ~ get(.x)$granger$summary[2,])
 granger_res_v1_xmap_v2 <- data.frame(bind_rows(granger_res_v1_xmap_v2), row.names = NULL)
 names(granger_res_v1_xmap_v2) <- c("granger_est_v1_x_v2", "granger_bkbootmean_v1_x_v2",
                                    "granger_blockboot_CI_2.5_v1_x_v2","granger_blockboot_CI_97.5_v1_x_v2",
-                                   "granger_blockboot_CIperc_2.5_v1_x_v2", "granger_blockboot_CIperc_97.5_v1_x_v2",
                                    "granger_p_v1_x_v2", "granger_adf_p_v1_x_v2", "granger_kpss_p_v1_x_v2")
 granger_res_v2_xmap_v1 <- data.frame(bind_rows(granger_res_v2_xmap_v1), row.names = NULL)
 names(granger_res_v2_xmap_v1) <- c("granger_est_v2_x_v1", "granger_bkbootmean_v2_x_v1",
                                    "granger_blockboot_CI_2.5_v2_x_v1","granger_blockboot_CI_97.5_v2_x_v1",
-                                   "granger_blockboot_CIperc_2.5_v2_x_v1", "granger_blockboot_CIperc_97.5_v2_x_v1",
                                    "granger_p_v2_x_v1", "granger_adf_p_v2_x_v1", "granger_kpss_p_v2_x_v1")
 
 results_df <- cbind(results_df, granger_res_v1_xmap_v2, granger_res_v2_xmap_v1)
