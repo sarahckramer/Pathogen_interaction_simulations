@@ -44,6 +44,9 @@ beta_sd2 <- as.integer(Sys.getenv("BETASD1")); print(beta_sd2)
 # the period for the surrogate generation in CCM 
 Tperiod_v1 <- as.integer(Sys.getenv("TPERIODV1")); print(beta_sd1)  
 Tperiod_v2 <- as.integer(Sys.getenv("TPERIODV2")); print(beta_sd2)  
+# the amount of noise to allow into the CCM surrogates 
+alpha_v1 <- as.integer(Sys.getenv("ALPHAV1")); print(alpha_v1)  
+alpha_v2 <- as.integer(Sys.getenv("ALPHAV2")); print(alpha_v2)  
 
 #--- reading in CSnippets ---# 
 # read in the C code for the pomp model 
@@ -285,7 +288,8 @@ if(likelihood==FALSE){
   # apply the CCM approach to each simulated data set 
   data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
   # run CCM 
-  results$CCM <- ccm_func(data = data, Tperiod_v1=Tperiod_v1, Tperiod_v2=Tperiod_v2, tot_weeks=tot_weeks)
+  results$CCM <- ccm_func(data = data, Tperiod_v1=Tperiod_v1, Tperiod_v2=Tperiod_v2,
+                          alpha_v1 = alpha_v1, alpha_v2 = alpha_v2, tot_weeks=tot_weeks)
   
   #------Finish up by saving out results -------#
   # save out the results: results_jobid_totweeks_noise

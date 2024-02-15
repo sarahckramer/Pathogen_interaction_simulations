@@ -7,9 +7,9 @@
 
 ## ----No extra demographic stochasticity ----#
 # note split up due to the differing periods needed in surrogate generation for the CCM 
-sbatch --array=1-10, --export=LIKELIHOOD="FALSE",WEEKSSIM="625",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52" seitr_x_seitr_sim.sh
-sbatch --array=11, --export=LIKELIHOOD="FALSE",WEEKSSIM="625",BETASD1="0",BETASD2="0",TPERIODV1="104",TPERIODV2="104" seitr_x_seitr_sim.sh
-sbatch --array=12-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="625",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52" seitr_x_seitr_sim.sh
+sbatch --array=1-10, --export=LIKELIHOOD="FALSE",WEEKSSIM="625",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52",ALPHAV1="0",ALPHAV2="20"  seitr_x_seitr_sim.sh
+sbatch --array=11, --export=LIKELIHOOD="FALSE",WEEKSSIM="625",BETASD1="0",BETASD2="0",TPERIODV1="104",TPERIODV2="104",ALPHAV1="0",ALPHAV2="20"  seitr_x_seitr_sim.sh
+sbatch --array=12-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="625",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52",ALPHAV1="0",ALPHAV2="20"  seitr_x_seitr_sim.sh
 
 ## ---- betasd=0.01 addition of demographic stochasticity ----#
 sbatch --array=1-10, --export=LIKELIHOOD="FALSE",WEEKSSIM="625",BETASD1="0.01",BETASD2="0.01",TPERIODV1="52",TPERIODV2="52" seitr_x_seitr_sim.sh
@@ -21,18 +21,30 @@ sbatch --array=12-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="625",BETASD1="0.01",
 ########################
 #------22 years--------#
 ########################
-sbatch --array=1-10, --export=LIKELIHOOD="FALSE",WEEKSSIM="1145",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52"  seitr_x_seitr_sim.sh
-sbatch --array=11, --export=LIKELIHOOD="FALSE",WEEKSSIM="1145",BETASD1="0",BETASD2="0",TPERIODV1="104",TPERIODV2="104" seitr_x_seitr_sim.sh
-sbatch --array=12-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="1145",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52" seitr_x_seitr_sim.sh
+sbatch --array=1-10, --export=LIKELIHOOD="FALSE",WEEKSSIM="1145",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52",ALPHAV1="20",ALPHAV2="20"  seitr_x_seitr_sim.sh
+sbatch --array=11, --export=LIKELIHOOD="FALSE",WEEKSSIM="1145",BETASD1="0",BETASD2="0",TPERIODV1="104",TPERIODV2="104",ALPHAV1="20",ALPHAV2="20" seitr_x_seitr_sim.sh
+sbatch --array=12-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="1145",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52",ALPHAV1="20",ALPHAV2="20"  seitr_x_seitr_sim.sh
+
+
+
+########################
+#------52 years-------#
+########################
+sbatch --array=1-10, --export=LIKELIHOOD="FALSE",WEEKSSIM="2704",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52",ALPHAV1="20",ALPHAV2="20"  seitr_x_seitr_sim.sh
+sbatch --array=11, --export=LIKELIHOOD="FALSE",WEEKSSIM="2704",BETASD1="0",BETASD2="0",TPERIODV1="104",TPERIODV2="104",ALPHAV1="20",ALPHAV2="20" seitr_x_seitr_sim.sh
+sbatch --array=12-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="2704",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52",ALPHAV1="20",ALPHAV2="20"  seitr_x_seitr_sim.sh
+
+
 
 
 
 ########################
 #------102 years-------#
 ########################
-sbatch --array=1-10, --export=LIKELIHOOD="FALSE",WEEKSSIM="5304",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52"  seitr_x_seitr_sim.sh
-sbatch --array=11, --export=LIKELIHOOD="FALSE",WEEKSSIM="5304",BETASD1="0",BETASD2="0",TPERIODV1="104",TPERIODV2="104" seitr_x_seitr_sim.sh
-sbatch --array=12-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="5304",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52" seitr_x_seitr_sim.sh
+# wouldn't complete in 24 hrs at completely parallelised
+sbatch --array=1-10, --export=LIKELIHOOD="FALSE",WEEKSSIM="5304",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52",ALPHAV1="10",ALPHAV2="20"   seitr_x_seitr_sim.sh
+sbatch --array=11, --export=LIKELIHOOD="FALSE",WEEKSSIM="5304",BETASD1="0",BETASD2="0",TPERIODV1="104",TPERIODV2="104",ALPHAV1="10",ALPHAV2="20"  seitr_x_seitr_sim.sh
+sbatch --array=12-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="5304",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52",ALPHAV1="10",ALPHAV2="20"  seitr_x_seitr_sim.sh
 
 
 

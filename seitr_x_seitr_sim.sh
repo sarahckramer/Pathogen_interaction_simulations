@@ -12,7 +12,7 @@
 
 # --- resource specification (which resources for how long) ---
 #SBATCH --nodes=2
-#SBATCH --ntasks-per-node=72
+#SBATCH --ntasks-per-node=50
 
 #SBATCH --time=24:00:00 # run time in h:m:s, up to 24h possible
  
