@@ -42,11 +42,13 @@ tot_weeks <- as.integer(Sys.getenv("WEEKSSIM")); print(tot_weeks)
 beta_sd1 <- as.integer(Sys.getenv("BETASD1")); print(beta_sd1)  
 beta_sd2 <- as.integer(Sys.getenv("BETASD1")); print(beta_sd2)  
 # the period for the surrogate generation in CCM 
-Tperiod_v1 <- as.integer(Sys.getenv("TPERIODV1")); print(beta_sd1)  
-Tperiod_v2 <- as.integer(Sys.getenv("TPERIODV2")); print(beta_sd2)  
+Tperiod_v1 <- as.integer(Sys.getenv("TPERIODV1")); print(Tperiod_v1)  
+Tperiod_v2 <- as.integer(Sys.getenv("TPERIODV2")); print(Tperiod_v2)  
 # the amount of noise to allow into the CCM surrogates 
 alpha_v1 <- as.integer(Sys.getenv("ALPHAV1")); print(alpha_v1)  
 alpha_v2 <- as.integer(Sys.getenv("ALPHAV2")); print(alpha_v2)  
+# weather to perform the symmetric or asymmetric simulation
+symmetric <- as.logical(Sys.getenv("SYMMETRIC")); print(symmetric) 
 
 #--- reading in CSnippets ---# 
 # read in the C code for the pomp model 
@@ -95,17 +97,35 @@ n_surge <- length(t_si)
 delta_i <- runif(n=length(t_si), min = 0.01*7, max=0.1*7)
 
 # parameter inputs for simulation:
-theta_lambda1 <- c(0,0.5,1,2,4)
-theta_lambda2 <- c(0,0.5,1,2,4)
-delta_1 <- c(1,1/4,1/24)
-delta_2 <- c(1,1/4,1/24)
+if(symmetric == TRUE){
+  theta_lambda1 <- c(0,0.5,1,2,4)
+  theta_lambda2 <- c(0,0.5,1,2,4)
+  delta_1 <- c(1,1/4,1/24)
+  delta_2 <- c(1,1/4,1/24)
+  
+  # Get all combinations of the interaction parameters
+  all_param_comb <- expand.grid(theta_lambda1, theta_lambda2, delta_1, delta_2)
+  names(all_param_comb) <- c("theta_lambda1", "theta_lambda2", "delta_1", "delta_2")
+  
+  # for symmetric interactions 
+  all_param_comb <- all_param_comb %>% filter(theta_lambda1 == theta_lambda2 & delta_1 == delta_2)
+} else{
+  theta_lambda1 <- c(0,1,4)
+  theta_lambda2 <- c(0,1,4)
+  delta_1 <- c(1,1/4,1/24)
+  delta_2 <- c(1,1/4,1/24)
+  
+  # Get all combinations of the interaction parameters
+  all_param_comb <- expand.grid(theta_lambda1, theta_lambda2, delta_1, delta_2)
+  names(all_param_comb) <- c("theta_lambda1", "theta_lambda2", "delta_1", "delta_2")
+  
+  # for asymmetric interactions
+  # create data frame of all symmetric parameter combos
+  symm_combos <- all_param_comb %>% filter(theta_lambda1 == theta_lambda2 & delta_1 == delta_2) 
+  # remove all those symmertric combos from the full dataset with all parameters
+  all_param_comb <- all_param_comb %>% anti_join(symm_combos)
+}
 
-# Get all combinations of the interaction parameters
-all_param_comb <- expand.grid(theta_lambda1, theta_lambda2, delta_1, delta_2)
-names(all_param_comb) <- c("theta_lambda1", "theta_lambda2", "delta_1", "delta_2")
-
-# for now just keep symmetric interactions 
-all_param_comb <- all_param_comb %>% filter(theta_lambda1 == theta_lambda2 & delta_1 == delta_2)
 # remove parameter vectors 
 rm(theta_lambda1, theta_lambda2, delta_1, delta_2)
 

@@ -125,18 +125,6 @@ ccm_func <- function(data, Tperiod_v1, Tperiod_v2, alpha_v1, alpha_v2, tot_weeks
   
   # Create seasonal surrogate data to describe the null hypothesis of no causal effect
   # between v1 and v2 whilst accounting for shared seasonality  
-
-  # work out the amount of variability to allow into our surrogate generation based on the 
-  # standard deviation of seasonal cycles
-  
-  # adding seasons to the data frame
-  tot_seasons <- round((tot_weeks/52) - 2)
-  data$season <- c(rep(1:tot_seasons, each=52),tot_seasons+1)
-  # calculating sd for each season
-  season_summary <- data %>% group_by(season) %>% summarise(mean_v1 = mean(v1_obs), sd_v1 = sd(v1_obs), mean_v2 = mean(v2_obs), sd_v2 = sd(v2_obs))
-  # sd can be surprisingly variable...
-  #alpha_v2 <- as.numeric(quantile(season_summary$sd_v2, probs=0.25, na.rm=T))
-
     
   # generate surrogates
   surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = Tperiod_v1, alpha=alpha_v1)
@@ -295,6 +283,8 @@ ccm_func <- function(data, Tperiod_v1, Tperiod_v2, alpha_v1, alpha_v2, tot_weeks
   # simulations will have results for larger library sizes but for the results to be comparable across my simulation 
   # runs we need to be looking at the results for the same library size)
   theoretic_min_lib <- dim(data)[1]-12-1-10 # data size - max abs tp - tau - max abs E
+  # need to make the theoretical minimum library size even as I only go up in library sizes by 2
+  theoretic_min_lib <- 2*round(theoretic_min_lib/2) 
   temp_res <- res %>% filter(LibSize==theoretic_min_lib)
   # add seasonal surrogate test p-values and mann kendall p-values
   temp_res <- cbind(temp_res,ecdf_p_v1_x_v2 = p_surr_v1_xmap_v2, ecdf_p_v2_x_v1 = p_surr_v2_xmap_v1,

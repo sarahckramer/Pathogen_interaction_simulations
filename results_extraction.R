@@ -74,10 +74,12 @@ granger_res_v2_xmap_v1 <- purrr::map(list_names, ~ get(.x)$granger$summary[2,])
 granger_res_v1_xmap_v2 <- data.frame(bind_rows(granger_res_v1_xmap_v2), row.names = NULL)
 names(granger_res_v1_xmap_v2) <- c("granger_est_v1_x_v2", "granger_bkbootmean_v1_x_v2",
                                    "granger_blockboot_CI_2.5_v1_x_v2","granger_blockboot_CI_97.5_v1_x_v2",
+                                   "granger_blockboot_percCI_2.5_v1_x_v2","granger_blockboot_percCI_97.5_v1_x_v2",
                                    "granger_p_v1_x_v2", "granger_adf_p_v1_x_v2", "granger_kpss_p_v1_x_v2")
 granger_res_v2_xmap_v1 <- data.frame(bind_rows(granger_res_v2_xmap_v1), row.names = NULL)
 names(granger_res_v2_xmap_v1) <- c("granger_est_v2_x_v1", "granger_bkbootmean_v2_x_v1",
                                    "granger_blockboot_CI_2.5_v2_x_v1","granger_blockboot_CI_97.5_v2_x_v1",
+                                   "granger_blockboot_percCI_2.5_v2_x_v1","granger_blockboot_percCI_97.5_v2_x_v1",
                                    "granger_p_v2_x_v1", "granger_adf_p_v2_x_v1", "granger_kpss_p_v2_x_v1")
 
 results_df <- cbind(results_df, granger_res_v1_xmap_v2, granger_res_v2_xmap_v1)
@@ -100,7 +102,7 @@ results_df <- cbind(results_df, ccm_res)
 # order results by delta
 results_df <- results_df[order(results_df$delta1, decreasing=T),]
 # output as csv
-#write.xlsx(results_df, file="results_symmetric_20yrs.xlsx")
+#write.xlsx(results_df, file="results_symmetric_5yrs.xlsx")
 
 ##################################################
 #-------- Extract cross map skill plots----------#
@@ -156,8 +158,10 @@ t_si <- t_si[-which(t_si <= 104)]
 t_si_date <- lubridate::ymd("2012-July-01") + lubridate::weeks(t_si)
 
 # parameter inputs:
-theta_lambda1 <- c(0,0.5,1,2,4)
-theta_lambda2 <- c(0,0.5,1,2,4)
+#theta_lambda1 <- c(0,0.5,1,2,4)
+#theta_lambda2 <- c(0,0.5,1,2,4)
+theta_lambda1 <- c(0,1,4)
+theta_lambda2 <- c(0,1,4)
 delta_1 <- c(1,1/4,1/24)
 delta_2 <- c(1,1/4,1/24)
 
@@ -174,14 +178,14 @@ all_param_comb <- all_param_comb %>% filter(theta_lambda1 == theta_lambda2 & del
 # specifying all global variables
 beta_sd1 <- 0
 beta_sd2 <- 0
-tot_weeks <- 5304
+tot_weeks <- 625
 
 # plotting 
-temp <- vector(mode = "list", length = 15)
-plot_list <- vector(mode = "list", length = 15)
-attack_plots <- vector(mode = "list", length = 15)
+temp <- vector(mode = "list", length = dim(all_param_comb)[1])
+plot_list <- vector(mode = "list", length = dim(all_param_comb)[1])
+attack_plots <- vector(mode = "list", length = dim(all_param_comb)[1])
 res_all <- NULL
-for(i in 1:15){
+for(i in 1:dim(all_param_comb)[1]){
   
   # if using data after simulation 
   #data <- get(paste0("results", i))$data
@@ -199,16 +203,18 @@ for(i in 1:15){
 
   legend_colors <- c("v1_obs" = "black", "v2_obs" = "blue")
   plot_list[[i]] <- ggplot(aes(x=time_date, y=v1_obs, colour="v1_obs"),data=data) + geom_line() + geom_line(aes(x=time_date, y=v2_obs,colour="v2_obs")) +
-    ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param["theta_lambda1"],
-                  "AND delta_1 = delta_2 =", temp[[i]]$true_param["delta1"])) + labs(y="observed cases") +
+    ggtitle(paste("theta_lambda1 =", temp[[i]]$true_param["theta_lambda1"], 
+                  "AND theta_lambda2 =",temp[[i]]$true_param["theta_lambda2"],
+                  "AND delta_1 =", temp[[i]]$true_param["delta1"],
+                  "AND delta_2 =", temp[[i]]$true_param["delta2"]))  + labs(y="observed cases") +
     scale_x_date(date_breaks = "3 month", date_labels =  "%b %Y")  +
     theme(axis.text.x=element_text(angle=60, hjust=1)) +  geom_vline(xintercept = t_si_date, linetype="dotted") +
     scale_colour_manual(values=legend_colors) + labs(colour="")
 
 
  # also estimate attack rates by year for each plot...... NOT WORKING
-  #data$season <- c(rep(1:tot_seasons, each=52),tot_seasons+1)
-  data$season <- c(rep(1:tot_seasons, each=52)) # for 100 years
+  data$season <- c(rep(1:tot_seasons, each=52),tot_seasons+1)
+  #data$season <- c(rep(1:tot_seasons, each=52)) # for 100 years
   
   #data$season <- rep(1:tot_seasons, each=52)
   seasonal_incidence <- data %>% group_by(season) %>%
@@ -229,8 +235,10 @@ for(i in 1:15){
 
   plot_dat <- data.frame(cbind(tot_v1_attack = tot_v1_attack, tot_v2_attack = tot_v2_attack))
   attack_plots[[i]] <- ggplot(aes(x=tot_v2_attack,y=tot_v1_attack), data=plot_dat) + geom_point() +
-    ggtitle(paste("theta_lambda1 and theta_lambda2 =", temp[[i]]$true_param["theta_lambda1"],
-                  "AND delta_1 = delta_2 =", temp[[i]]$true_param["delta1"]))
+    ggtitle(paste("theta_lambda1 =", temp[[i]]$true_param["theta_lambda1"], 
+                  "AND theta_lambda2 =",temp[[i]]$true_param["theta_lambda2"],
+                  "AND delta_1 =", temp[[i]]$true_param["delta1"],
+                   "AND delta_2 =", temp[[i]]$true_param["delta1"]))
 
   range_tot_v1_att <- range(tot_v1_attack[-length(tot_v1_attack)]) # 71 - 95
   range_tot_v2_att <- range(tot_v2_attack[-length(tot_v2_attack)]) # 90 - 97
@@ -245,15 +253,13 @@ for(i in 1:15){
 }
 
 # plot simulated timeseries data
-grid.arrange(plot_list[[1]],plot_list[[2]],plot_list[[3]],ncol=1)
-grid.arrange(plot_list[[4]],plot_list[[5]],plot_list[[6]],ncol=1)
-grid.arrange(plot_list[[7]],plot_list[[8]],plot_list[[9]],ncol=1)
-grid.arrange(plot_list[[10]],plot_list[[11]],plot_list[[12]],ncol=1)
-grid.arrange(plot_list[[13]],plot_list[[14]],plot_list[[15]],ncol=1)
+for(i in seq(from=1,to=dim(all_param_comb)[1], by=3)){
+  grid.arrange(plot_list[[i]],plot_list[[i+1]],plot_list[[i+2]],ncol=1)
+}
+
 
 # plot scatter plots of seasonal attack rates
-grid.arrange(attack_plots[[1]],attack_plots[[2]],attack_plots[[3]],ncol=1)
-grid.arrange(attack_plots[[4]],attack_plots[[5]],attack_plots[[6]],ncol=1)
-grid.arrange(attack_plots[[7]],attack_plots[[8]],attack_plots[[9]],ncol=1)
-grid.arrange(attack_plots[[10]],attack_plots[[11]],attack_plots[[12]],ncol=1)
-grid.arrange(attack_plots[[13]],attack_plots[[14]],attack_plots[[15]],ncol=1)
+for(i in seq(from=1,to=dim(all_param_comb)[1], by=3)){
+  grid.arrange(attack_plots[[i]],attack_plots[[i+1]],attack_plots[[i+2]],ncol=1)
+}
+
