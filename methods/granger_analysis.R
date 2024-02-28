@@ -128,11 +128,23 @@ granger_func <- function(data, lag_v1, lag_v2){
   CI_lower95_v2_x_v1 <- logRSS_v2 - 1.96*sd(bootstrap_samples$logRSS_v2_x_v1)
   CI_upper95_v2_x_v1 <- logRSS_v2 + 1.96*sd(bootstrap_samples$logRSS_v2_x_v1)
   
+  
+  # percentile bootstrap 
+  # v1 x v2
+  CIperc_lower95_v1_x_v2 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.025))[1]
+  CIperc_upper95_v1_x_v2 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.975))[1]
+  # v2 x v1
+  CIperc_lower95_v2_x_v1 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.025))[2]
+  CIperc_upper95_v2_x_v1 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.975))[2]
+  
+
   # output results 
   temp_res <- data.frame(cbind(original_estimate = orig_est,  
                blockbootMean = apply(boot_out$t,2,mean),
                blockboot_CI_lower95_v1_x_v2 = c(CI_lower95_v1_x_v2,CI_lower95_v2_x_v1),
                blockboot_CI_upper95_v1_x_v2 = c(CI_upper95_v1_x_v2,CI_upper95_v2_x_v1),
+               blockboot_CIperc_lower95_v1_x_v2 = c(CIperc_lower95_v1_x_v2,CIperc_lower95_v2_x_v1),
+               blockboot_CIperc_upper95_v1_x_v2 = c(CIperc_upper95_v1_x_v2,CIperc_upper95_v2_x_v1),
                granger_p = c(p_gt1, p_gt2),
                adf_p = c(adf_v1$p.value, adf_v2$p.value),
                kpss_p = c(kpss_v1$p.value, kpss_v2$p.value)))
@@ -140,7 +152,7 @@ granger_func <- function(data, lag_v1, lag_v2){
   
   # create a list of outputs which includes the results and the bootstrap 
   # distributions
-  res_list <- list(summary = temp_res)
+  res_list <- list(summary = temp_res, block_bootstraps = boot_out$t)
   return(res_list)
 }
 

@@ -110,8 +110,8 @@ if(symmetric == TRUE){
   # for symmetric interactions 
   all_param_comb <- all_param_comb %>% filter(theta_lambda1 == theta_lambda2 & delta_1 == delta_2)
 } else{
-  theta_lambda1 <- c(0,1,4)
-  theta_lambda2 <- c(0,1,4)
+  theta_lambda1 <- c(0,0.5,1,2,4)
+  theta_lambda2 <- c(0,0.5,1,2,4)
   delta_1 <- c(1,1/4,1/24)
   delta_2 <- c(1,1/4,1/24)
   
@@ -183,7 +183,7 @@ sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,beta_
   )
   
   # ----simulating data----#
-  s1 <- simulate(po, times=1:tot_weeks, format="data.frame")
+  s1 <- simulate(po, nsim=100, times=1:tot_weeks, format="data.frame")
   # deterministic simulation 
   # d1 <- trajectory(po, times=1:tot_weeks, format = "data.frame") %>% dplyr::select(-'.id') %>%
   #   mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params["rho1"]),
@@ -224,7 +224,7 @@ if(likelihood==FALSE){
   
   #------------ setup ---------------#
   # Automatically determine the best lag doing several models with lags
-  # 1-5 (approximately 1 month) then choose the best lag number based on BIC
+  # 1-12 (approximately 3 month) then choose the best lag number based on BIC
   
   # initialising lists to put results in 
   lags <- list()
@@ -234,7 +234,7 @@ if(likelihood==FALSE){
   # determine the number of lags for each simulated dataset
   df <- results$data %>% dplyr::select(v1_obs, v2_obs)
   
-  lags <- lapply(df, VARselect, lag.max=5) # lag of approx 1 month
+  lags <- lapply(df, VARselect, lag.max=12) # lag of approx 3 month
   rm(df)
   # pull out the lag with best BIC. Lower BIC = better (not BIC is labeled SV)
   # regardless of whether raw of normalised data used the lag chosen is the same

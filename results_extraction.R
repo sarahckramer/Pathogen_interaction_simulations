@@ -19,7 +19,7 @@ library(gridExtra)
 file_names = list.files(pattern = "*.RData", recursive = F)
 
 # load all the data sets in 
-for (i in 1:length(file_names)) {
+for (i in 1:15) {
   load(file_names[i], verbose = TRUE)
   assign(paste0("results", i), results)
   rm(results)
@@ -74,12 +74,10 @@ granger_res_v2_xmap_v1 <- purrr::map(list_names, ~ get(.x)$granger$summary[2,])
 granger_res_v1_xmap_v2 <- data.frame(bind_rows(granger_res_v1_xmap_v2), row.names = NULL)
 names(granger_res_v1_xmap_v2) <- c("granger_est_v1_x_v2", "granger_bkbootmean_v1_x_v2",
                                    "granger_blockboot_CI_2.5_v1_x_v2","granger_blockboot_CI_97.5_v1_x_v2",
-                                   "granger_blockboot_percCI_2.5_v1_x_v2","granger_blockboot_percCI_97.5_v1_x_v2",
                                    "granger_p_v1_x_v2", "granger_adf_p_v1_x_v2", "granger_kpss_p_v1_x_v2")
 granger_res_v2_xmap_v1 <- data.frame(bind_rows(granger_res_v2_xmap_v1), row.names = NULL)
 names(granger_res_v2_xmap_v1) <- c("granger_est_v2_x_v1", "granger_bkbootmean_v2_x_v1",
                                    "granger_blockboot_CI_2.5_v2_x_v1","granger_blockboot_CI_97.5_v2_x_v1",
-                                   "granger_blockboot_percCI_2.5_v2_x_v1","granger_blockboot_percCI_97.5_v2_x_v1",
                                    "granger_p_v2_x_v1", "granger_adf_p_v2_x_v1", "granger_kpss_p_v2_x_v1")
 
 results_df <- cbind(results_df, granger_res_v1_xmap_v2, granger_res_v2_xmap_v1)
@@ -100,9 +98,13 @@ names(ccm_res) <- c("ccm_libsize", "ccm_mean_rho_v1_x_v2", "ccm_mean_rho_v2_x_v1
 results_df <- cbind(results_df, ccm_res)
 
 # order results by delta
-results_df <- results_df[order(results_df$delta1, decreasing=T),]
+#results_df <- results_df[order(results_df$delta1, decreasing=T),]
+# add jobid
+results_df$jobid <- gsub("results_(\\d+)_.*\\.RData", "\\1", file_names)
+
+
 # output as csv
-#write.xlsx(results_df, file="results_symmetric_5yrs.xlsx")
+#write.xlsx(results_df, file="results_assymmetric_10yrs.xlsx")
 
 ##################################################
 #-------- Extract cross map skill plots----------#
