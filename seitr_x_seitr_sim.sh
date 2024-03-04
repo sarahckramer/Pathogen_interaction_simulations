@@ -11,8 +11,9 @@
 #SBATCH --mail-user=pirikahu@mpiib-berlin.mpg.de
 
 # --- resource specification (which resources for how long) ---
-#SBATCH --nodes=2
-#SBATCH --ntasks-per-node=50
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=10
+#SBATCH --mem=15000 # memory in MB required by the job
 
 #SBATCH --time=24:00:00 # run time in h:m:s, up to 24h possible
  
@@ -21,4 +22,4 @@ module purge
 module load R/4.2
 
 # --- run your executable via srun ---
-R --no-save --no-restore <seitr_x_seitr.R >Rout/R-tm-${SLURM_ARRAY_TASK_ID}.Rout
+R --no-save --no-restore <seitr_x_seitr_v2.R >Rout/R-tm-${SLURM_ARRAY_TASK_ID}.Rout

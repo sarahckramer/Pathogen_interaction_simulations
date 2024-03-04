@@ -10,13 +10,14 @@
 # Creation date: 24 March 2023
 ###############################################################
 
+# load packages
+library(rEDM) 
+library(foreach)
+library(doParallel)
+library(Kendall)
+library(tidyverse)
+
 ccm_func <- function(data, Tperiod_v1, Tperiod_v2, alpha_v1, alpha_v2, tot_weeks){
-  # load packages
-  library(rEDM) 
-  library(foreach)
-  library(doParallel)
-  library(Kendall)
-  library(tidyverse)
   
   # Determining Embedding dimension (i.e. the number of lags used to build up the shadow manifold)
   # Based on the prediction skill of the model. See rEDM vingette https://ha0ye.github.io/rEDM/articles/rEDM.html 

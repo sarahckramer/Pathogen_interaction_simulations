@@ -33,6 +33,15 @@ sbatch --array=11, --export=LIKELIHOOD="FALSE",WEEKSSIM="1145",BETASD1="0",BETAS
 sbatch --array=12-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="1145",BETASD1="0",BETASD2="0",TPERIODV1="52",TPERIODV2="52",ALPHAV1="20",ALPHAV2="20",SYMMETRIC="TRUE"  seitr_x_seitr_sim.sh
 
 
+########################################################################
+#--------10yrs all parameter combos with 100 repeat datasets ----------#
+########################################################################
+sbatch --array=1-225, seitr_x_seitr_sim.sh
+
+
+
+
+
 
 # to view the queue
 squeue -u sarpi
