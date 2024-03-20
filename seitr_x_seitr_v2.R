@@ -193,13 +193,16 @@ results$cor <- results$data %>% group_by(.id) %>% do((corr_func(.$v1_obs,.$v2_ob
 
 
 #--- GAM approach ---# 
-source("./methods/gam_cor_v2.R")
+source("./methods/gam_cor.R")
 
 # setting up parallelism for the foreach loop
 registerDoParallel(cl <- makeCluster(10))
 # apply the GAM correlation approach to each simulated data set and save the results
-res_gam_cor <- foreach(i=1:nsim, .packages=c("tidyverse","mgcv","vars")) %dopar%{
-  results$data %>% filter(.id==i) %>% gam_cor(.)
+res_gam_cor <- foreach(i=1:nsim, .packages=c("tidyverse","mgcv","vars","boot")) %dopar%{
+  # if the dataset was removed because the outbreak died out then skip it 
+  if(dim(results$data %>% filter(.id==i))[1]!=0){
+    results$data %>% filter(.id==i) %>% gam_cor(.)
+  } 
 }
 results$gam_cor <- do.call(rbind, res_gam_cor)
 
@@ -210,18 +213,23 @@ source("./methods/transfer_entropy_v2.R")
 registerDoParallel(cl <- makeCluster(10))
 # apply transfer entropy to each simulated data set and save the results
 res_te <- foreach(i=1:nsim, .packages=c("tidyverse","RTransferEntropy","vars")) %dopar%{
-  results$data %>% filter(.id==i) %>% te_func(.)
+  # if the dataset was removed because the outbreak died out then skip it 
+  if(dim(results$data %>% filter(.id==i))[1]!=0){
+      results$data %>% filter(.id==i) %>% te_func(.)
+  }
 }
 results$transfer_entropy <- do.call(rbind, res_te)
 
 #---- Granger causality analysis  ----# 
-source("./methods/granger_analysis_v2.R")
+source("./methods/granger_analysis.R")
 
 # apply granger analysis to each simulated data set and save the results
 results$granger <- results$data %>% group_by(.id) %>% do(granger_func(.))
 
+save(results, file=sprintf('results_%s_%s_%s_%s_%s.RData',jobid, theta_lambda1,theta_lambda2,delta_1,delta_2))  
+
 #------- Convergent Cross mapping analysis -------# 
-source("./methods/CCM_v2.R")
+source("./methods/CCM.R")
 
 # setting up parallelism for the foreach loop
 registerDoParallel(cl <- makeCluster(10))
@@ -229,8 +237,7 @@ registerDoParallel(cl <- makeCluster(10))
 res_ccm <- foreach(i=1:nsim, .packages=c("tidyverse","rEDM","Kendall")) %dopar%{
   results$data %>% filter(.id==i) %>% ccm_func(.)
 } 
-
 results$CCM <- do.call(rbind, res_ccm)
 
 # save out results
-saveRDS(results, file=sprintf('results_%s_%s_%s_%s_%s.RData',jobid, theta_lambda1,theta_lambda2,delta_1,delta2))  
+#saveRDS(results, file=sprintf('results_%s_%s_%s_%s_%s.rds',jobid, theta_lambda1,theta_lambda2,delta_1,delta_2))  

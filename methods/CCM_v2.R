@@ -43,7 +43,6 @@ ccm_func <- function(data){
   
   # determining if any time delay needs considering: i.e. tp parameter
   data <- data %>% dplyr::select(v1_obs,v2_obs)
-  data$.id <- NULL
   vars <- names(data)
   # generate all combinations of lib_column, target_column, tp
   params <- expand.grid(lib_column = vars, target_column = vars, tp = -12:12) # ~3 months either side

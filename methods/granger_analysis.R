@@ -5,19 +5,39 @@
 # stationary
 #
 # inputs: data = data with time, v1_obs, v2_obs
-#         lag_v1 = number of lags to use for v1_obs time series
-#         lag_v2 = number of lags to use for v2_obs time series 
 #
 # Created by: Sarah Pirikahu
 # Creation date: 23 March 2023
 ################################################################################
 
-granger_func <- function(data, lag_v1, lag_v2){
-  # load packages
-  library(tseries) 
-  library(lmtest) 
-  library(vars) 
-  library(boot)
+# load packages
+library(tseries) 
+library(lmtest) 
+library(vars) 
+library(boot)
+
+granger_func <- function(data){
+  
+  # Automatically determine the best lag doing several models with lags
+  # 1-12 (approximately 3 month) then choose the best lag number based on BIC
+  
+  # initialising lists to put results in 
+  lags <- list()
+  lag_v1 <- list()
+  lag_v2 <- list()
+  
+  # determine the number of lags for each simulated dataset
+  df <- data %>% dplyr::select(v1_obs, v2_obs)
+  df$.id <- NULL
+  
+  lags <- lapply(df, VARselect, lag.max=12) # lag of approx 3 month
+  rm(df)
+  # pull out the lag with best BIC. Lower BIC = better (not BIC is labeled SV)
+  # regardless of whether raw of normalised data used the lag chosen is the same
+  lag_v1 <- as.numeric(lags$v1_obs$selection[3])
+  lag_v2 <- as.numeric(lags$v2_obs$selection[3])
+  
+  rm(lags)
   
   #---- checking stationary of time series ---# 
   # simply plan to just report if the series is stationary or not rather 
@@ -64,11 +84,10 @@ granger_func <- function(data, lag_v1, lag_v2){
   ar_v2=ar(data$v2_obs,order=var1$p,aic=F,method="ols")
   
   # Estimating the effect size using log RSS (Barraquand et al. 2021)
-  # log RSS = log(RSS_multivariate/RSS_univariate) interpretation: 
+  # log RSS = log(RSS_univariate/RSS_multivariate) interpretation: 
   # 0 = no interaction
   # -ve = strong negative interaction 
   # +ve = strong positive interaction 
-  
   # v1 (v1 ~ v2)
   logRSS_v1 <- log(sum(residuals(ar_v1)^2,na.rm=T)/sum(residuals(var1)[,"v1_obs"]^2)); logRSS_v1 
   # v2 (v2 ~ v1)
@@ -78,8 +97,9 @@ granger_func <- function(data, lag_v1, lag_v2){
   # pulling out original data, residuals and estimates 
   orig_data <- data[,c("v1_obs","v2_obs")]
   residuals_orig <- data.frame(residuals(var1))
-  orig_est <- c(logRSS_v1, logRSS_v2)
-
+  # output estimates
+  orig_est <- data.frame(direction=c("v2 -> v1", "v1 -> v2"),logRSS = c(logRSS_v1, logRSS_v2))
+  
   ##---- Block bootstrapping -----# 
   
   # creating a function to define the statistics for the tsboot function which will do 
@@ -108,7 +128,7 @@ granger_func <- function(data, lag_v1, lag_v2){
   }
  
   # generate bootstrapped replicates in blocks of 4 weeks
-  R <- 300 # number of replicates
+  R <- 100 # number of replicates
   boot_out <- tsboot(tseries=residuals_orig, statistic=boot_func, R = R, sim="fixed", l=4,
                  orig_data = orig_data, var_model=var1, p=p); boot_out
   
@@ -127,33 +147,17 @@ granger_func <- function(data, lag_v1, lag_v2){
   # v2 x v1
   CI_lower95_v2_x_v1 <- logRSS_v2 - 1.96*sd(bootstrap_samples$logRSS_v2_x_v1)
   CI_upper95_v2_x_v1 <- logRSS_v2 + 1.96*sd(bootstrap_samples$logRSS_v2_x_v1)
-  
-  
-  # percentile bootstrap 
-  # v1 x v2
-  CIperc_lower95_v1_x_v2 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.025))[1]
-  CIperc_upper95_v1_x_v2 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.975))[1]
-  # v2 x v1
-  CIperc_lower95_v2_x_v1 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.025))[2]
-  CIperc_upper95_v2_x_v1 <- as_vector(apply(bootstrap_samples, 2, quantile, probs = 0.975))[2]
-  
 
   # output results 
   temp_res <- data.frame(cbind(original_estimate = orig_est,  
-               blockbootMean = apply(boot_out$t,2,mean),
                blockboot_CI_lower95_v1_x_v2 = c(CI_lower95_v1_x_v2,CI_lower95_v2_x_v1),
                blockboot_CI_upper95_v1_x_v2 = c(CI_upper95_v1_x_v2,CI_upper95_v2_x_v1),
-               blockboot_CIperc_lower95_v1_x_v2 = c(CIperc_lower95_v1_x_v2,CIperc_lower95_v2_x_v1),
-               blockboot_CIperc_upper95_v1_x_v2 = c(CIperc_upper95_v1_x_v2,CIperc_upper95_v2_x_v1),
                granger_p = c(p_gt1, p_gt2),
                adf_p = c(adf_v1$p.value, adf_v2$p.value),
                kpss_p = c(kpss_v1$p.value, kpss_v2$p.value)))
   temp_res <- data.frame(temp_res, row.names=NULL)
   
-  # create a list of outputs which includes the results and the bootstrap 
-  # distributions
-  res_list <- list(summary = temp_res, block_bootstraps = boot_out$t)
-  return(res_list)
+  return(temp_res)
 }
 
 

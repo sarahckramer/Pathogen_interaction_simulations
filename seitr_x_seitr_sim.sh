@@ -12,8 +12,9 @@
 
 # --- resource specification (which resources for how long) ---
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=10
-#SBATCH --mem=15000 # memory in MB required by the job
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=10
+#SBATCH --mem=50000 # memory in MB required by the job
 
 #SBATCH --time=24:00:00 # run time in h:m:s, up to 24h possible
  

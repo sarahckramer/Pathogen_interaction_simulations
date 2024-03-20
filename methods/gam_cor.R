@@ -33,7 +33,7 @@ gam_cor <- function(data){
   
   # estimating confidence interval for elements of correlation matrix
   # using block bootstrapping of the residuals
-  R <- 500 # number of bootstrap replicates to do 
+  R <- 100 # number of bootstrap replicates to do 
   boot_res <- NULL # initialising vector to save results to
   
   # creating function to run in the tsboot function 
