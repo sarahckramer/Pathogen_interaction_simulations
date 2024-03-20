@@ -18,6 +18,8 @@ library(Kendall)
 library(tidyverse)
 
 ccm_func <- function(data, Tperiod_v1, Tperiod_v2, alpha_v1, alpha_v2, tot_weeks){
+  data <- data %>% select(time,v1_obs,v2_obs)
+  data$.id <- NULL
   
   # Determining Embedding dimension (i.e. the number of lags used to build up the shadow manifold)
   # Based on the prediction skill of the model. See rEDM vingette https://ha0ye.github.io/rEDM/articles/rEDM.html 
@@ -98,6 +100,12 @@ ccm_func <- function(data, Tperiod_v1, Tperiod_v2, alpha_v1, alpha_v2, tot_weeks
   # combine the means for the two 
   mean_preds <- data.frame(cbind(mean_rho_v1_xmap_v2$LibSize, mean_rho_v1_xmap_v2$`v1_obs:v2_obs`, mean_rho_v2_xmap_v1$`v2_obs:v1_obs`))
   names(mean_preds) <- c("LibSize", "mean_v1_obs:v2_obs", "mean_v2_obs:v1_obs")  
+  res <- mean_preds 
+  
+  # make data long
+  res_long <- gather(res, direction, rho, `mean_v1_obs:v2_obs`:`mean_v2_obs:v1_obs`, factor_key=TRUE)
+  res_long$direction <- gsub("mean_v1_obs:v2_obs","v2 -> v1", res_long$direction)
+  res_long$direction <- gsub("mean_v2_obs:v1_obs","v1 -> v2", res_long$direction)
   
   # pull out all the predictions to get bootstrap CIs for the mean rho for each libsize
   all_predictions_v1 <- v1_xmap_v2$CCM1_PredictStat
@@ -108,17 +116,21 @@ ccm_func <- function(data, Tperiod_v1, Tperiod_v2, alpha_v1, alpha_v2, tot_weeks
     summarize(rho2.5_v1_xmap_v2 = quantile(rho, probs = 0.025), 
               rho50_v1_xmap_v2 = quantile(rho, probs = 0.5),
               rho97.5_v1_xmap_v2 = quantile(rho, probs = 0.975))
+  intervals_perc_v1$direction <- "v2 -> v1"
+  names(intervals_perc_v1) <- c("LibSize", "rho_2.5", "rho_50", "rho_97.5", "direction")
   
   intervals_perc_v2 <- all_predictions_v2 %>% group_by(LibSize) %>%
     summarize(rho2.5_v2_xmap_v1 = quantile(rho, probs = 0.025), 
               rho50_v2_xmap_v1 = quantile(rho, probs = 0.5),
               rho97.5_v2_xmap_v1 = quantile(rho, probs = 0.975))
+  intervals_perc_v2$direction <- "v1 -> v2"
+  names(intervals_perc_v2) <- c("LibSize", "rho_2.5", "rho_50", "rho_97.5", "direction")
   
   # join the interval datasets together 
-  interval_perc <- intervals_perc_v1 %>% left_join(intervals_perc_v2, by ="LibSize")
-  
+  interval_perc <- rbind(intervals_perc_v1, intervals_perc_v2)
+ 
   # join the CI intervals with the mean
-  res <- mean_preds %>% left_join(interval_perc)
+  res <- res_long %>% left_join(interval_perc, by=c("LibSize", "direction"))
   
   # ------Creating the null hypothesis for comparison with our CCM output-----#
   
@@ -128,8 +140,8 @@ ccm_func <- function(data, Tperiod_v1, Tperiod_v2, alpha_v1, alpha_v2, tot_weeks
   # between v1 and v2 whilst accounting for shared seasonality  
     
   # generate surrogates
-  surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = Tperiod_v1, alpha=alpha_v1)
-  surr_v2 <- make_surrogate_data(data$v2_obs, method = "seasonal", num_surr = num_surr, T_period = Tperiod_v2, alpha=alpha_v2) 
+  surr_v1 <- make_surrogate_data(data$v1_obs, method = "seasonal", num_surr = num_surr, T_period = 52, alpha=0)
+  surr_v2 <- make_surrogate_data(data$v2_obs, method = "seasonal", num_surr = num_surr, T_period = 52, alpha=20) 
   
   # turn any negative surrogates into 0 - can't have a negative number of cases
   surr_v1 = apply(surr_v1, 2, function(x) {
@@ -185,8 +197,7 @@ ccm_func <- function(data, Tperiod_v1, Tperiod_v2, alpha_v1, alpha_v2, tot_weeks
   
   # Cross mapping
   # setting up parallelism for the foreach loop
-  registerDoParallel(cl <- makeCluster(100))
-  #registerDoParallel(cl <- makeCluster(10))
+  registerDoParallel(cl <- makeCluster(10))
   results_foreach <- 
     foreach (j=1:num_surr, .packages=c("rEDM","tidyverse")) %dopar% {
       
@@ -223,13 +234,13 @@ ccm_func <- function(data, Tperiod_v1, Tperiod_v2, alpha_v1, alpha_v2, tot_weeks
    rho_surr_v1_xmap_v2 <-  do.call(cbind, temp_output[1,])
    colnames(rho_surr_v1_xmap_v2) <- paste0("T", 1:num_surr)
    # cbind the library size
-   rho_surr_v1_xmap_v2 <- cbind(LibSize = seq(50, lib_max_null, 2), rho_surr_v1_xmap_v2)
+   rho_surr_v1_xmap_v2 <- data.frame(cbind(LibSize = seq(50, lib_max_null, 2), rho_surr_v1_xmap_v2))
    
    # v2 -> v1
    rho_surr_v2_xmap_v1 <-  do.call(cbind, temp_output[2,])
    colnames(rho_surr_v2_xmap_v1) <- paste0("T", 1:num_surr)
    # cbind the library size
-   rho_surr_v2_xmap_v1 <- cbind(LibSize = seq(50, lib_max_null, 2), rho_surr_v2_xmap_v1)
+   rho_surr_v2_xmap_v1 <- data.frame(cbind(LibSize = seq(50, lib_max_null, 2), rho_surr_v2_xmap_v1))
 
   # finding the lower and upper quantiles for a 95% CI
   # v1
@@ -241,7 +252,7 @@ ccm_func <- function(data, Tperiod_v1, Tperiod_v2, alpha_v1, alpha_v2, tot_weeks
   intervals_surr_v1_xmap_v2 <- cbind(intervals_surr_v1_xmap_v2,mean_rho=apply(rho_surr_v1_xmap_v2[,2:(num_surr+1)], 1, max, na.rm = TRUE))
   intervals_surr_v1_xmap_v2 <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v1_xmap_v2) # add libSizes to df
   intervals_surr_v1_xmap_v2 <- data.frame(intervals_surr_v1_xmap_v2)
-  names(intervals_surr_v1_xmap_v2) <- c("LibSizes", "rho2.5_v1_xmap_v2", "rho50_v1_xmap_v2","rho97.5_v1_xmap_v2", "mean_rho", "sd_rho", "min_rho", "max_rho")
+  names(intervals_surr_v1_xmap_v2) <- c("LibSizes", "rho2.5", "rho50","rho97.5", "mean_rho", "sd_rho", "min_rho", "max_rho")
 
   # v2
   intervals_surr_v2_xmap_v1 <- apply(rho_surr_v2_xmap_v1[,2:(num_surr+1)], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
@@ -251,26 +262,27 @@ ccm_func <- function(data, Tperiod_v1, Tperiod_v2, alpha_v1, alpha_v2, tot_weeks
   intervals_surr_v2_xmap_v1 <- cbind(intervals_surr_v2_xmap_v1,mean_rho=apply(rho_surr_v2_xmap_v1[,2:(num_surr+1)], 1, max, na.rm = TRUE))
   intervals_surr_v2_xmap_v1 <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v2_xmap_v1) # add libSizes to df
   intervals_surr_v2_xmap_v1 <- data.frame(intervals_surr_v2_xmap_v1)
-  names(intervals_surr_v2_xmap_v1) <- c("LibSizes", "rho2.5_v2_xmap_v1", "rho50_v2_xmap_v1","rho97.5_v2_xmap_v1", "mean_rho", "min_rho", "max_rho")
+  names(intervals_surr_v2_xmap_v1) <- c("LibSizes", "rho2.5", "rho50","rho97.5", "mean_rho", "min_rho", "max_rho")
     
   #--- plotting---#
-  # v1 xmap v2 - mean
-  p_v1_xmap_v2_mean <- ggplot(aes(x=LibSize, y=`mean_v1_obs:v2_obs`), data=res) + geom_line() +
-  geom_ribbon(aes(ymin=rho2.5_v1_xmap_v2, ymax=rho97.5_v1_xmap_v2,alpha=0.05))  +
-  geom_line(aes(x=LibSizes,y=mean_rho), data=intervals_surr_v1_xmap_v2, colour = "blue") +
-  geom_ribbon(aes(x=LibSizes,ymin=rho2.5_v1_xmap_v2, ymax=rho97.5_v1_xmap_v2,alpha=0.05), data=intervals_surr_v1_xmap_v2, inherit.aes = FALSE, fill = "lightblue")
-  
-  # v2 xmap v1 - mean
-  p_v2_xmap_v1_mean <- ggplot(aes(x=LibSize, y=`mean_v2_obs:v1_obs`), data=res) + geom_line() +
-  geom_ribbon(aes(ymin=rho2.5_v2_xmap_v1, ymax=rho97.5_v2_xmap_v1,alpha=0.05))  +
-  geom_line(aes(x=LibSizes,y=mean_rho), data=intervals_surr_v2_xmap_v1, colour = "blue") +
-  geom_ribbon(aes(x=LibSizes,ymin=rho2.5_v2_xmap_v1, ymax=rho97.5_v2_xmap_v1,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
-  
+  # # v1 xmap v2 - mean
+  # p_v1_xmap_v2_mean <- ggplot(aes(x=LibSize, y=`mean_v1_obs:v2_obs`), data=res) + geom_line() +
+  # geom_ribbon(aes(ymin=rho2.5_v1_xmap_v2, ymax=rho97.5_v1_xmap_v2,alpha=0.05))  +
+  # geom_line(aes(x=LibSizes,y=mean_rho), data=intervals_surr_v1_xmap_v2, colour = "blue") +
+  # geom_ribbon(aes(x=LibSizes,ymin=rho2.5_v1_xmap_v2, ymax=rho97.5_v1_xmap_v2,alpha=0.05), data=intervals_surr_v1_xmap_v2, inherit.aes = FALSE, fill = "lightblue")
+  # 
+  # # v2 xmap v1 - mean
+  # p_v2_xmap_v1_mean <- ggplot(aes(x=LibSize, y=`mean_v2_obs:v1_obs`), data=res) + geom_line() +
+  # geom_ribbon(aes(ymin=rho2.5_v2_xmap_v1, ymax=rho97.5_v2_xmap_v1,alpha=0.05))  +
+  # geom_line(aes(x=LibSizes,y=mean_rho), data=intervals_surr_v2_xmap_v1, colour = "blue") +
+  # geom_ribbon(aes(x=LibSizes,ymin=rho2.5_v2_xmap_v1, ymax=rho97.5_v2_xmap_v1,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
+  # 
   
   # estimating p-value using empirical cumulative distribution 
-  p_surr_v1_xmap_v2 <- 1 - ecdf(as.numeric(rho_surr_v1_xmap_v2[nrow(res),-1]))(res[dim(res)[1],"mean_v1_obs:v2_obs"])
+  p_surr_v1_xmap_v2 <- 1 - ecdf(as.numeric(rho_surr_v1_xmap_v2[nrow(res),-1]))(res %>% filter(LibSize==dim(res)[1] & direction=="v2 -> v1"))
   p_surr_v2_xmap_v1 <- 1 - ecdf(as.numeric(rho_surr_v2_xmap_v1[nrow(res),-1]))(res[dim(res)[1],"mean_v2_obs:v1_obs"])
-   
+  res[dim(res)[1],"mean_v1_obs:v2_obs"]
+  
   # Checking convergence using Mann Kendall - significant p-value implies converegence acheived
   MannK_v1_xmap_v2_data <- MannKendall(res$`mean_v1_obs:v2_obs`)$sl[1] # pulling out p-value only
   MannK_v1_xmap_v2_null <- MannKendall(intervals_surr_v1_xmap_v2$mean_rho)$sl[1]
