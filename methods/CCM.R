@@ -17,7 +17,7 @@ library(doParallel)
 library(Kendall)
 library(tidyverse)
 
-ccm_func <- function(data, Tperiod_v1, Tperiod_v2, alpha_v1, alpha_v2, tot_weeks){
+ccm_func <- function(data){
   data <- data %>% select(time,v1_obs,v2_obs)
   data$.id <- NULL
   
