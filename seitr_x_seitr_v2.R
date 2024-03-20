@@ -232,12 +232,14 @@ save(results, file=sprintf('results_%s_%s_%s_%s_%s.RData',jobid, theta_lambda1,t
 source("./methods/CCM.R")
 
 # setting up parallelism for the foreach loop
-registerDoParallel(cl <- makeCluster(10))
+#registerDoParallel(cl <- makeCluster(10))
 # apply CCM to each simulated data set and save the results
-res_ccm <- foreach(i=1:nsim, .packages=c("tidyverse","rEDM","Kendall")) %dopar%{
-  results$data %>% filter(.id==i) %>% ccm_func(.)
-} 
-results$CCM <- do.call(rbind, res_ccm)
+# res_ccm <- foreach(i=1:nsim,.packages=c("tidyverse","rEDM","Kendall")) %dopar% {
+#   results$data %>% filter(.id==i) %>% ccm_func(.)
+# } 
+# results$CCM <- do.call(rbind, res_ccm)
+
+test <- results$data %>% group_by(.id) %>% do(ccm_func(.))
 
 # save out results
 #saveRDS(results, file=sprintf('results_%s_%s_%s_%s_%s.rds',jobid, theta_lambda1,theta_lambda2,delta_1,delta_2))  

@@ -176,28 +176,29 @@ ccm_func <- function(data){
 
   # plotting out surrogates
   # v1 xmap v2 (therefore looking at v2 surrogates)
-  v1_long <- v1_data %>% gather(.,surr,value, v1_obs:T100)
-  v1_long <- v1_long %>% filter(surr!="v1_obs")
   
-  plot_v2_surr <- ggplot(aes(x=time,y=value, colour=surr), data=v1_long) + geom_line() + 
-    scale_colour_manual(values=rep("grey",num_surr)) +  theme(legend.position="none") + 
-    geom_line(aes(x=time, y=v2_obs), colour="black",data=v2_data) + ylab("v2_obs")
-  
-  v2_long <- v2_data %>% gather(.,surr,value, v2_obs:T100)
-  v2_long <- v2_long %>% filter(surr!="v2_obs")
-  
-  plot_v1_surr <- ggplot(aes(x=time,y=value, colour=surr), data=v2_long) + geom_line() + 
-    scale_colour_manual(values=rep("grey",num_surr)) +  theme(legend.position="none") + 
-    geom_line(aes(x=time, y=v1_obs), colour="black",data=v1_data) + ylab("v1_obs")
-  
+  # v1_long <- v1_data %>% gather(.,surr,value, v1_obs:T2)
+  # v1_long <- v1_long %>% filter(surr!="v1_obs")
+  #  
+  # plot_v2_surr <- ggplot(aes(x=time,y=value, colour=surr), data=v1_long) + geom_line() + 
+  #    scale_colour_manual(values=rep("grey",num_surr)) +  theme(legend.position="none") + 
+  #    geom_line(aes(x=time, y=v2_obs), colour="black",data=v2_data) + ylab("v2_obs")
+  #  
+  # v2_long <- v2_data %>% gather(.,surr,value, v2_obs:T2)
+  # v2_long <- v2_long %>% filter(surr!="v2_obs")
+  #  
+  # plot_v1_surr <- ggplot(aes(x=time,y=value, colour=surr), data=v2_long) + geom_line() + 
+  #    scale_colour_manual(values=rep("grey",num_surr)) +  theme(legend.position="none") + 
+  #    geom_line(aes(x=time, y=v1_obs), colour="black",data=v1_data) + ylab("v1_obs")
+  # 
   # number of samples to use in the ccm for the surrogates
   # because we are doing a large number of replicates it is ok here to reduce 
   # the number of samples 
-  R <- 10
+  R <- 1
   
   # Cross mapping
   # setting up parallelism for the foreach loop
-  registerDoParallel(cl <- makeCluster(10))
+  registerDoParallel(cl <- makeCluster(4))
   results_foreach <- 
     foreach (j=1:num_surr, .packages=c("rEDM","tidyverse")) %dopar% {
       
@@ -266,31 +267,25 @@ ccm_func <- function(data){
     
   #--- plotting---#
   # # v1 xmap v2 - mean
-  # p_v1_xmap_v2_mean <- ggplot(aes(x=LibSize, y=`mean_v1_obs:v2_obs`), data=res) + geom_line() +
-  # geom_ribbon(aes(ymin=rho2.5_v1_xmap_v2, ymax=rho97.5_v1_xmap_v2,alpha=0.05))  +
+  # p_v1_xmap_v2_mean <- ggplot(aes(x=LibSize, y=rho), data=res) + geom_line() +
+  # geom_ribbon(aes(ymin=rho_2.5, ymax=rho_97.5,alpha=0.05))  +
   # geom_line(aes(x=LibSizes,y=mean_rho), data=intervals_surr_v1_xmap_v2, colour = "blue") +
-  # geom_ribbon(aes(x=LibSizes,ymin=rho2.5_v1_xmap_v2, ymax=rho97.5_v1_xmap_v2,alpha=0.05), data=intervals_surr_v1_xmap_v2, inherit.aes = FALSE, fill = "lightblue")
+  # geom_ribbon(aes(x=LibSizes,ymin=rho2.5, ymax=rho97.5,alpha=0.05), data=intervals_surr_v1_xmap_v2, inherit.aes = FALSE, fill = "lightblue")
   # 
   # # v2 xmap v1 - mean
-  # p_v2_xmap_v1_mean <- ggplot(aes(x=LibSize, y=`mean_v2_obs:v1_obs`), data=res) + geom_line() +
-  # geom_ribbon(aes(ymin=rho2.5_v2_xmap_v1, ymax=rho97.5_v2_xmap_v1,alpha=0.05))  +
+  # p_v2_xmap_v1_mean <- ggplot(aes(x=LibSize, y=rho), data=res) + geom_line() +
+  # geom_ribbon(aes(ymin=rho_2.5, ymax=rho_97.5,alpha=0.05))  +
   # geom_line(aes(x=LibSizes,y=mean_rho), data=intervals_surr_v2_xmap_v1, colour = "blue") +
-  # geom_ribbon(aes(x=LibSizes,ymin=rho2.5_v2_xmap_v1, ymax=rho97.5_v2_xmap_v1,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
+  # geom_ribbon(aes(x=LibSizes,ymin=rho2.5, ymax=rho97.5,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
   # 
-  
-  # estimating p-value using empirical cumulative distribution 
-  p_surr_v1_xmap_v2 <- 1 - ecdf(as.numeric(rho_surr_v1_xmap_v2[nrow(res),-1]))(res %>% filter(LibSize==dim(res)[1] & direction=="v2 -> v1"))
-  p_surr_v2_xmap_v1 <- 1 - ecdf(as.numeric(rho_surr_v2_xmap_v1[nrow(res),-1]))(res[dim(res)[1],"mean_v2_obs:v1_obs"])
-  res[dim(res)[1],"mean_v1_obs:v2_obs"]
-  
   # Checking convergence using Mann Kendall - significant p-value implies converegence acheived
-  MannK_v1_xmap_v2_data <- MannKendall(res$`mean_v1_obs:v2_obs`)$sl[1] # pulling out p-value only
+  rho_v2_x_v1 <- res %>% filter(direction=="v2 -> v1") %>% select(rho)
+  MannK_v1_xmap_v2_data <- MannKendall(rho_v2_x_v1$rho)$sl[1] # pulling out p-value only
   MannK_v1_xmap_v2_null <- MannKendall(intervals_surr_v1_xmap_v2$mean_rho)$sl[1]
   
-  MannK_v2_xmap_v1_data <- MannKendall(res$`mean_v2_obs:v1_obs`)$sl[1] 
+  rho_v1_x_v2 <- res %>% filter(direction=="v1 -> v2") %>% select(rho)
+  MannK_v2_xmap_v1_data <- MannKendall(rho_v1_x_v2$rho)$sl[1] 
   MannK_v2_xmap_v1_null <- MannKendall(intervals_surr_v2_xmap_v1$mean_rho)$sl[1]
-  
-  #---- write out results ---# 
   
   # pull out point estimates for the max library size that can be achieved by all possible simulations (i.e. some 
   # simulations will have results for larger library sizes but for the results to be comparable across my simulation 
@@ -298,6 +293,20 @@ ccm_func <- function(data){
   theoretic_min_lib <- dim(data)[1]-12-1-10 # data size - max abs tp - tau - max abs E
   # need to make the theoretical minimum library size even as I only go up in library sizes by 2
   theoretic_min_lib <- 2*round(theoretic_min_lib/2) 
+  
+  # estimating p-value using empirical cumulative distribution 
+  # surrogate estimates for theoretic min libsize across all parameter combos
+  v1_xmap_v2_surr <- as.numeric(rho_surr_v1_xmap_v2[rho_surr_v1_xmap_v2$LibSize==theoretic_min_lib,-1])
+  v2_xmap_v1_surr <- as.numeric(rho_surr_v2_xmap_v1[rho_surr_v2_xmap_v1$LibSize==theoretic_min_lib,-1])
+
+  rho_v1_x_v2 <- res %>% filter(LibSize==theoretic_min_lib & direction=="v2 -> v1") %>% select(rho)
+  rho_v2_x_v1 <- res %>% filter(LibSize==theoretic_min_lib & direction=="v1 -> v2") %>% select(rho)
+  
+  p_surr_v1_xmap_v2 <- 1 - ecdf(v1_xmap_v2_surr)(rho_v1_x_v2)
+  p_surr_v2_xmap_v1 <- 1 - ecdf(v2_xmap_v1_surr)(rho_v2_x_v1)
+  
+  #---- write out results ---# 
+  # pick out just results for theoretic min lib size
   temp_res <- res %>% filter(LibSize==theoretic_min_lib)
   # add seasonal surrogate test p-values and mann kendall p-values
   temp_res <- cbind(temp_res,ecdf_p_v1_x_v2 = p_surr_v1_xmap_v2, ecdf_p_v2_x_v1 = p_surr_v2_xmap_v1,
@@ -305,11 +314,12 @@ ccm_func <- function(data){
                     MannK_v2_xmap_v1_data = MannK_v2_xmap_v1_data, MannK_v2_xmap_v1_null = MannK_v2_xmap_v1_null,
                     E_v1 = E_v1, E_v2 = E_v2, optimal_tp_v1xv2= optimal_tp_v1xv2, optimal_tp_v2xv1=optimal_tp_v2xv1)
   # create list 
-  res_list <- list(summary = temp_res, 
-                   fig_v1_xmap_v2_mean = p_v1_xmap_v2_mean,
-                   fig_v2_xmap_v1_mean = p_v2_xmap_v1_mean,
-                   plot_v1_surr = plot_v1_surr,
-                   plot_v2_surr = plot_v2_surr)
+  # res_list <- list(summary = temp_res,
+  #                  fig_v1_xmap_v2_mean = p_v1_xmap_v2_mean,
+  #                  fig_v2_xmap_v1_mean = p_v2_xmap_v1_mean,
+  #                  plot_v1_surr = plot_v1_surr,
+  #                  plot_v2_surr = plot_v2_surr)
+  res_list <- temp_res
   return(res_list)
 }
 
