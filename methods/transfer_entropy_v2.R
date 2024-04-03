@@ -38,12 +38,15 @@ te_func <- function(data){
   # Transfer entropy estimates are biased by small sample sizes. For large sample sizes TE and ETE 
   # will be approximately the same. For a single season the sample size is quite small so we want to 
   # go with ETE... see Behrendt et al. 2019 for more details
-  shannon_te <- transfer_entropy(v1_obs, v2_obs, lx = min(lag_v1, lag_v2), ly=min(lag_v1, lag_v2))
+  shannon_te <- transfer_entropy(v1_obs, v2_obs, lx = min(lag_v1, lag_v2), ly=min(lag_v1, lag_v2), bins=10)
   temp_res <- data.frame(coef(shannon_te))
   temp_res <- rownames_to_column(temp_res, "direction")
+  # adding lag to output
+  temp_res$lag <- min(lag_v1, lag_v2)
   # providing better naming for direction
   temp_res$direction <- gsub("X->Y","v1 -> v2", temp_res$direction)
   temp_res$direction <- gsub("Y->X","v2 -> v1", temp_res$direction)
+  
   
   return(temp_res)
 }

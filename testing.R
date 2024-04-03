@@ -37,7 +37,7 @@ beta_sd1 <- 0
 beta_sd2 <- 0
 
 # total number of simulated datasets to create for each parameter input 
-nsim <- 100
+nsim <- 1000
 
 # total number of seasons
 tot_weeks <- 625
@@ -216,6 +216,11 @@ for(j in 1:dim(all_param_comb)[1]){
   print(j)
 }
 
+#------- Transfer entropy jidt --------# 
+
+
+
+
 #---- Granger causality analysis  ----# 
 source("./methods/granger_analysis.R")
 
@@ -279,15 +284,15 @@ gam_res <- data.frame(gam_res, row.names = NULL)
 # create interaction outcome variables
 if(symmetric==TRUE){
   # Y/N interaction variable 
-  gam_res$int <- NA 
-  gam_res[gam_res$theta_lambda1 != 1,]$int <- "Y"
-  gam_res[gam_res$theta_lambda1 == 1,]$int <- "N"
+  gam_res$true_int <- NA 
+  gam_res[gam_res$theta_lambda1 != 1,]$true_int <- "Y"
+  gam_res[gam_res$theta_lambda1 == 1,]$true_int <- "N"
   
   # +ve, no and -ve interaction variable 
-  gam_res$int_sign <- NA 
-  gam_res[gam_res$theta_lambda1 < 1,]$int_sign <- "-ve"
-  gam_res[gam_res$theta_lambda1 > 1,]$int_sign <- "+ve"
-  gam_res[gam_res$theta_lambda1 == 1,]$int_sign <- "N"
+  gam_res$true_int_sign <- NA 
+  gam_res[gam_res$theta_lambda1 < 1,]$true_int_sign <- "-ve"
+  gam_res[gam_res$theta_lambda1 > 1,]$true_int_sign <- "+ve"
+  gam_res[gam_res$theta_lambda1 == 1,]$true_int_sign <- "N"
 } else{
   # Y/N interaction variable 
   gam_res$int <- NA 
@@ -310,31 +315,31 @@ trans_res[trans_res$direction=="v2 -> v1" & trans_res$theta_lambda2 == 1,]$int <
 
 #---- extract granger ----# 
 granger_res <- bind_rows(get_elements(results, "granger"))
-granger_res <- cbind(true_params_undirect,direction=granger_res$direction, logRSS=granger_res$logRSS)
+names(granger_res)[1:3] <- c("id", "direction", "logRSS")
 
 # create interaction Y/N outcome variable 
-granger_res$int <- NA
-granger_res[granger_res$direction=="v1 -> v2" & granger_res$theta_lambda1 != 1,]$int <- "Y"
-granger_res[granger_res$direction=="v2 -> v1" & granger_res$theta_lambda2 != 1,]$int <- "Y"
-granger_res[granger_res$direction=="v1 -> v2" & granger_res$theta_lambda1 == 1,]$int <- "N"
-granger_res[granger_res$direction=="v2 -> v1" & granger_res$theta_lambda2 == 1,]$int <- "N"
-granger_res$int <- as.factor(granger_res$int)
+granger_res$true_int <- NA
+granger_res[granger_res$direction=="v1 -> v2" & granger_res$theta_lambda1 != 1,]$true_int <- "Y"
+granger_res[granger_res$direction=="v2 -> v1" & granger_res$theta_lambda2 != 1,]$true_int <- "Y"
+granger_res[granger_res$direction=="v1 -> v2" & granger_res$theta_lambda1 == 1,]$true_int <- "N"
+granger_res[granger_res$direction=="v2 -> v1" & granger_res$theta_lambda2 == 1,]$true_int <- "N"
+granger_res$true_int <- as.factor(granger_res$true_int)
 
 # create interaction +/N/- outcome variable 
-granger_res$int_sign <- NA
-granger_res[granger_res$direction=="v1 -> v2" & granger_res$theta_lambda1 < 1,]$int_sign <- "-ve"
-granger_res[granger_res$direction=="v1 -> v2" & granger_res$theta_lambda1 > 1,]$int_sign <- "+ve"
+granger_res$true_int_sign <- NA
+granger_res[granger_res$direction=="v1 -> v2" & granger_res$theta_lambda1 < 1,]$true_int_sign <- "-ve"
+granger_res[granger_res$direction=="v1 -> v2" & granger_res$theta_lambda1 > 1,]$true_int_sign <- "+ve"
 
-granger_res[granger_res$direction=="v2 -> v1" & granger_res$theta_lambda2 < 1,]$int_sign <- "-ve"
-granger_res[granger_res$direction=="v2 -> v1" & granger_res$theta_lambda2 > 1,]$int_sign <- "+ve"
+granger_res[granger_res$direction=="v2 -> v1" & granger_res$theta_lambda2 < 1,]$true_int_sign <- "-ve"
+granger_res[granger_res$direction=="v2 -> v1" & granger_res$theta_lambda2 > 1,]$true_int_sign <- "+ve"
 
-granger_res[granger_res$direction=="v1 -> v2" & granger_res$theta_lambda1 == 1,]$int_sign <- "N"
-granger_res[granger_res$direction=="v2 -> v1" & granger_res$theta_lambda2 == 1,]$int_sign <- "N"
-granger_res$int_sign <- as.factor(granger_res$int_sign)
+granger_res[granger_res$direction=="v1 -> v2" & granger_res$theta_lambda1 == 1,]$true_int_sign <- "N"
+granger_res[granger_res$direction=="v2 -> v1" & granger_res$theta_lambda2 == 1,]$true_int_sign <- "N"
+granger_res$true_int_sign <- as.factor(granger_res$true_int_sign)
 
 # check out number of interactions
-granger_res %>% group_by(int) %>% tally()
-granger_res %>% group_by(int_sign) %>% tally()
+granger_res %>% group_by(true_int) %>% tally()
+granger_res %>% group_by(true_int_sign) %>% tally()
 
 #------- extract convergent cross mapping ----# 
 ccm_res <- bind_rows(get_elements(results, "CCM"))
@@ -364,34 +369,37 @@ View(symmetric_data)
 
 # create interaction outcome variables: For symmetric we are able to say something about the sign of the interaction 
 # Y/N interaction variable 
-symmetric_data$int <- NA 
-symmetric_data[symmetric_data$theta_lambda1 != 1,]$int <- "Y"
-symmetric_data[symmetric_data$theta_lambda1 == 1,]$int <- "N"
-symmetric_data$int <- as.factor(symmetric_data$int)  
+symmetric_data$true_int <- NA 
+symmetric_data[symmetric_data$theta_lambda1 != 1,]$true_int <- "Y"
+symmetric_data[symmetric_data$theta_lambda1 == 1,]$true_int <- "N"
+symmetric_data$true_int <- as.factor(symmetric_data$true_int)  
 
 # +ve, no and -ve interaction variable 
-symmetric_data$int_sign <- NA 
-symmetric_data[symmetric_data$theta_lambda1 < 1,]$int_sign <- "-ve"
-symmetric_data[symmetric_data$theta_lambda1 > 1,]$int_sign <- "+ve"
-symmetric_data[symmetric_data$theta_lambda1 == 1,]$int_sign <- "N"
-symmetric_data$int_sign <- as.factor(symmetric_data$int_sign)
+symmetric_data$true_int_sign <- NA 
+symmetric_data[symmetric_data$theta_lambda1 < 1,]$true_int_sign <- "-ve"
+symmetric_data[symmetric_data$theta_lambda1 > 1,]$true_int_sign <- "+ve"
+symmetric_data[symmetric_data$theta_lambda1 == 1,]$true_int_sign <- "N"
+symmetric_data$true_int_sign <- as.factor(symmetric_data$true_int_sign)
 
 # splitting the data into training and test set 
 library(caTools)
 set.seed(2908)
-split = sample.split(symmetric_data$int, SplitRatio = 0.75)
+split = sample.split(symmetric_data$true_int_sign, SplitRatio = 0.75)
 training_set = subset(symmetric_data, split == TRUE)
 test_set = subset(symmetric_data, split == FALSE)
 
 # keep just the nesscary parts of the training and testing sets
-training_set_s <- training_set %>% dplyr::select(cor,int)
+training_set_s <- training_set %>% dplyr::select(cor,true_int, true_int_sign)
 training_set_s$.id <- NULL
-test_set_s <- test_set %>% dplyr::select(cor,int)
+test_set_s <- test_set %>% dplyr::select(cor,true_int, true_int_sign)
 test_set_s$.id <- NULL
 
 # splits
-training_set_s %>% group_by(int) %>% tally() # Y = 900, N = 225
-test_set_s %>% group_by(int) %>% tally() # Y = 300, N = 75
+training_set_s %>% group_by(true_int) %>% tally() # Y = 900, N = 225
+test_set_s %>% group_by(true_int) %>% tally() # Y = 300, N = 75
+
+training_set_s %>% group_by(true_int_sign) %>% tally() # Y = 900, N = 225
+test_set_s %>% group_by(true_int_sign) %>% tally() # Y = 300, N = 75
 
 # setting up k-fold cross validation 
 # i.e. dividing the training set up into k groups and train the model on each of these groups
@@ -1192,5 +1200,143 @@ t2 <- table(all_cor$true_int, all_cor$int_est, all_cor$direction)
 # v2 -> v1
 (t2[1,1,2] + t2[2,2,2])/sum(t2[,,2])*100 # 73% 
 
+###------------------------------------------------------------------------------------###
+
+#######################
+# logsitic regression #
+#######################
 
 
+## pearson correlation ## 
+library(caTools)
+set.seed(2908)
+split = sample.split(symmetric_data$true_int_sign, SplitRatio = 0.75)
+training_set = subset(symmetric_data, split == TRUE)
+test_set = subset(symmetric_data, split == FALSE)
+
+# keep just the nesscary parts of the training and testing sets
+training_set_s <- training_set %>% dplyr::select(cor,true_int, true_int_sign, p_value)
+training_set_s$.id <- NULL
+test_set_s <- test_set %>% dplyr::select(cor,true_int, true_int_sign, p_value)
+test_set_s$.id <- NULL
+
+# splits
+training_set_s %>% group_by(true_int) %>% tally() # Y = 900, N = 225
+test_set_s %>% group_by(true_int) %>% tally() # Y = 300, N = 75
+
+training_set_s %>% group_by(true_int_sign) %>% tally() # +ve = 750, -ve = 750, N = 750
+test_set_s %>% group_by(true_int_sign) %>% tally() # +ve = 250, -ve = 250, N = 250
+
+# logistic regression model training set
+library(VGAM) 
+train_logit <- vglm(true_int_sign ~ cor, data=training_set_s, family="multinomial")
+summary(train_logit)
+
+
+pred <-  predict(train_logit, newdata = test_set_s, type = "response") 
+predictions <- apply(pred, 1, which.max)
+predictions[which(predictions=="1")] <- "-ve"
+predictions[which(predictions=="2")] <- "+ve"
+predictions[which(predictions=="3")] <- "N"
+
+table(test_set_s$true_int_sign, predictions)
+
+test_set_s$significance <- NA
+test_set_s[test_set_s$p_value <=0.05 & test_set_s$cor > 0,]$significance <-  "+ve" 
+test_set_s[test_set_s$p_value <=0.05 & test_set_s$cor < 0,]$significance <-  "-ve" 
+test_set_s[test_set_s$p_value > 0.05 ,]$significance <-  "N" 
+
+table(test_set_s$true_int_sign,test_set_s$significance)
+
+ggplot(aes(y=cor,x=true_int_sign, colour=pred), data=test_set_s) + geom_point()
+
+
+## GAM correlation ## 
+symmetric_data <- gam_res %>% filter(theta_lambda1 == theta_lambda2 & delta1 == delta2)
+dim(symmetric_data)  # 3000
+
+set.seed(2908)
+split = sample.split(symmetric_data$true_int_sign, SplitRatio = 0.75)
+training_set = subset(symmetric_data, split == TRUE)
+test_set = subset(symmetric_data, split == FALSE)
+
+# keep just the nesscary parts of the training and testing sets
+training_set_s <- training_set %>% dplyr::select(cor,true_int, true_int_sign, CI_lower95, CI_upper95)
+training_set_s$.id <- NULL
+test_set_s <- test_set %>% dplyr::select(cor,true_int, true_int_sign, CI_lower95, CI_upper95)
+test_set_s$.id <- NULL
+
+# logistic regression model training set
+train_logit <- vglm(true_int_sign ~ cor, data=training_set_s, family="multinomial")
+summary(train_logit)
+
+
+pred <-  predict(train_logit, newdata = test_set_s, type = "response") 
+predictions <- apply(pred, 1, which.max)
+predictions[which(predictions=="1")] <- "-ve"
+predictions[which(predictions=="2")] <- "+ve"
+predictions[which(predictions=="3")] <- "N"
+
+table(test_set_s$true_int_sign, predictions)
+
+ggplot(aes(y=cor,x=true_int_sign, colour=pred), data=test_set_s) + geom_point()
+
+# significant testing accuracy 
+test_set_s$temp <- test_set_s$CI_lower95*test_set_s$CI_upper95
+test_set_s$significance <- NA
+test_set_s[test_set_s$temp >0 & test_set_s$cor > 0,]$significance <- "+ve"
+test_set_s[test_set_s$temp >0 & test_set_s$cor < 0,]$significance <- "-ve"
+test_set_s[test_set_s$temp <=0,]$significance <- "N"
+
+table(test_set_s$true_int_sign, test_set_s$significance)
+
+
+### Linear discriminant analysis ###
+library(MASS)
+fit <- lda(true_int_sign~cor, data=training_set_s)
+summary(fit)
+predictions <- predict(fit, test_set_s)$class
+
+table(test_set_s$true_int_sign,predictions)
+
+
+#---- Granger analysis ------#
+symmetric_data <- granger_res
+library(caTools)
+set.seed(2908)
+split = sample.split(symmetric_data$true_int_sign, SplitRatio = 0.75)
+training_set = subset(symmetric_data, split == TRUE)
+test_set = subset(symmetric_data, split == FALSE)
+
+# keep just the nesscary parts of the training and testing sets
+training_set_s <- training_set %>% dplyr::select(logRSS, direction, true_int, true_int_sign, granger_p)
+training_set_s$.id <- NULL
+test_set_s <- test_set %>% dplyr::select(logRSS, direction, true_int, true_int_sign, granger_p)
+test_set_s$.id <- NULL
+
+# multinomial regression model training set
+train_logit <- vglm(true_int_sign ~ logRSS, data=training_set_s, family="multinomial", trace=TRUE)
+summary(train_logit)
+
+pred <-  predict(train_logit, newdata = test_set_s, type = "response") 
+predictions <- apply(pred, 1, which.max)
+predictions[which(predictions=="1")] <- "-ve"
+predictions[which(predictions=="2")] <- "+ve"
+predictions[which(predictions=="3")] <- "N"
+test_set_s$predictions <- predictions
+
+table(test_set_s$true_int_sign, predictions, test_set_s$direction)
+prop.table(table(test_set_s$true_int_sign, predictions))*100
+
+
+# looking at the accuracy of significance testing
+test_set_s$significance <- NA
+test_set_s[test_set_s$granger_p <= 0.05 & test_set_s$logRSS > 0,]$significance <- "+ve"
+test_set_s[test_set_s$granger_p <= 0.05 & test_set_s$logRSS < 0,]$significance <- "-ve"
+test_set_s[test_set_s$granger_p > 0.05,]$significance <- "N"
+
+table(test_set_s$true_int_sign, test_set_s$significance, test_set_s$direction)
+
+# plotting
+ggplot(aes(y=logRSS,x=true_int_sign, colour=predictions), data=test_set_s) + geom_point() + facet_grid(.~direction)
+ggplot(aes(y=logRSS,x=true_int_sign, colour=significance), data=test_set_s) + geom_point() + facet_grid(.~direction)

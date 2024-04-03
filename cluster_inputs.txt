@@ -38,7 +38,7 @@ sbatch --array=12-15, --export=LIKELIHOOD="FALSE",WEEKSSIM="1145",BETASD1="0",BE
 ########################################################################
 sbatch --array=1-225, seitr_x_seitr_sim.sh
 
-
+sbatch --array=1, seitr_x_seitr_sim.sh
 
 
 

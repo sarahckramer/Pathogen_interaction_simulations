@@ -198,7 +198,7 @@ ccm_func <- function(data){
   
   # Cross mapping
   # setting up parallelism for the foreach loop
-  registerDoParallel(cl <- makeCluster(4))
+  registerDoParallel(cl <- makeCluster(10))
   results_foreach <- 
     foreach (j=1:num_surr, .packages=c("rEDM","tidyverse")) %dopar% {
       
@@ -248,23 +248,30 @@ ccm_func <- function(data){
   intervals_surr_v1_xmap_v2 <- apply(rho_surr_v1_xmap_v2[,2:(num_surr+1)], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
   intervals_surr_v1_xmap_v2 <- t(intervals_surr_v1_xmap_v2) # transpose to get intervals as columns
   intervals_surr_v1_xmap_v2 <- cbind(intervals_surr_v1_xmap_v2,mean_rho=apply(rho_surr_v1_xmap_v2[,2:(num_surr+1)], 1, mean, na.rm = TRUE))
-  intervals_surr_v1_xmap_v2 <- cbind(intervals_surr_v1_xmap_v2,sd_rho=apply(rho_surr_v1_xmap_v2[,2:(num_surr+1)], 1, sd, na.rm = TRUE))
-  intervals_surr_v1_xmap_v2 <- cbind(intervals_surr_v1_xmap_v2,mean_rho=apply(rho_surr_v1_xmap_v2[,2:(num_surr+1)], 1, min, na.rm = TRUE))
-  intervals_surr_v1_xmap_v2 <- cbind(intervals_surr_v1_xmap_v2,mean_rho=apply(rho_surr_v1_xmap_v2[,2:(num_surr+1)], 1, max, na.rm = TRUE))
   intervals_surr_v1_xmap_v2 <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v1_xmap_v2) # add libSizes to df
   intervals_surr_v1_xmap_v2 <- data.frame(intervals_surr_v1_xmap_v2)
-  names(intervals_surr_v1_xmap_v2) <- c("LibSizes", "rho2.5", "rho50","rho97.5", "mean_rho", "sd_rho", "min_rho", "max_rho")
+  names(intervals_surr_v1_xmap_v2) <- c("LibSizes", "rho_2.5", "rho_50","rho_97.5", "rho")
 
   # v2
   intervals_surr_v2_xmap_v1 <- apply(rho_surr_v2_xmap_v1[,2:(num_surr+1)], 1, quantile, probs = c(0.025,0.5, 0.975),  na.rm = TRUE)
   intervals_surr_v2_xmap_v1 <- t(intervals_surr_v2_xmap_v1) # transpose to get intervals as columns
   intervals_surr_v2_xmap_v1 <- cbind(intervals_surr_v2_xmap_v1,mean_rho=apply(rho_surr_v2_xmap_v1[,2:(num_surr+1)], 1, mean, na.rm = TRUE))
-  intervals_surr_v2_xmap_v1 <- cbind(intervals_surr_v2_xmap_v1,mean_rho=apply(rho_surr_v2_xmap_v1[,2:(num_surr+1)], 1, min, na.rm = TRUE))
-  intervals_surr_v2_xmap_v1 <- cbind(intervals_surr_v2_xmap_v1,mean_rho=apply(rho_surr_v2_xmap_v1[,2:(num_surr+1)], 1, max, na.rm = TRUE))
   intervals_surr_v2_xmap_v1 <- cbind(LibSizes = seq(50, lib_max_null, 2), intervals_surr_v2_xmap_v1) # add libSizes to df
   intervals_surr_v2_xmap_v1 <- data.frame(intervals_surr_v2_xmap_v1)
-  names(intervals_surr_v2_xmap_v1) <- c("LibSizes", "rho2.5", "rho50","rho97.5", "mean_rho", "min_rho", "max_rho")
-    
+  names(intervals_surr_v2_xmap_v1) <- c("LibSizes", "rho_2.5", "rho_50","rho_97.5", "rho")
+  
+  # pull out point estimates for the max library size that can be achieved by all possible simulations (i.e. some 
+  # simulations will have results for larger library sizes but for the results to be comparable across my simulation 
+  # runs we need to be looking at the results for the same library size)
+  theoretic_min_lib <- dim(data)[1]-12-1-10 # data size - max abs tp - tau - max abs E
+  # need to make the theoretical minimum library size even as I only go up in library sizes by 2
+  theoretic_min_lib <- 2*round(theoretic_min_lib/2) 
+  
+  surr_v1_xmap_v2 <- intervals_surr_v1_xmap_v2 %>% filter(LibSizes == theoretic_min_lib) %>% mutate(direction = "v2 -> v1")
+  surr_v2_xmap_v1 <- intervals_surr_v2_xmap_v1 %>% filter(LibSizes == theoretic_min_lib) %>% mutate(direction = "v1 -> v2")
+  surr_summary <- rbind(surr_v1_xmap_v2, surr_v2_xmap_v1)
+  names(surr_summary) <- c("LibSize", "surr_rho_2.5", "surr_rho_50", "surr_rho_97.5", "surr_rho", "direction")
+  
   #--- plotting---#
   # # v1 xmap v2 - mean
   # p_v1_xmap_v2_mean <- ggplot(aes(x=LibSize, y=rho), data=res) + geom_line() +
@@ -281,19 +288,12 @@ ccm_func <- function(data){
   # Checking convergence using Mann Kendall - significant p-value implies converegence acheived
   rho_v2_x_v1 <- res %>% filter(direction=="v2 -> v1") %>% select(rho)
   MannK_v1_xmap_v2_data <- MannKendall(rho_v2_x_v1$rho)$sl[1] # pulling out p-value only
-  MannK_v1_xmap_v2_null <- MannKendall(intervals_surr_v1_xmap_v2$mean_rho)$sl[1]
+  MannK_v1_xmap_v2_null <- MannKendall(intervals_surr_v1_xmap_v2$rho)$sl[1]
   
   rho_v1_x_v2 <- res %>% filter(direction=="v1 -> v2") %>% select(rho)
   MannK_v2_xmap_v1_data <- MannKendall(rho_v1_x_v2$rho)$sl[1] 
-  MannK_v2_xmap_v1_null <- MannKendall(intervals_surr_v2_xmap_v1$mean_rho)$sl[1]
-  
-  # pull out point estimates for the max library size that can be achieved by all possible simulations (i.e. some 
-  # simulations will have results for larger library sizes but for the results to be comparable across my simulation 
-  # runs we need to be looking at the results for the same library size)
-  theoretic_min_lib <- dim(data)[1]-12-1-10 # data size - max abs tp - tau - max abs E
-  # need to make the theoretical minimum library size even as I only go up in library sizes by 2
-  theoretic_min_lib <- 2*round(theoretic_min_lib/2) 
-  
+  MannK_v2_xmap_v1_null <- MannKendall(intervals_surr_v2_xmap_v1$rho)$sl[1]
+
   # estimating p-value using empirical cumulative distribution 
   # surrogate estimates for theoretic min libsize across all parameter combos
   v1_xmap_v2_surr <- as.numeric(rho_surr_v1_xmap_v2[rho_surr_v1_xmap_v2$LibSize==theoretic_min_lib,-1])
@@ -308,6 +308,9 @@ ccm_func <- function(data){
   #---- write out results ---# 
   # pick out just results for theoretic min lib size
   temp_res <- res %>% filter(LibSize==theoretic_min_lib)
+  # join surrogate data with results
+  temp_res <- left_join(temp_res, surr_summary, by=c("direction", "LibSize"))
+  
   # add seasonal surrogate test p-values and mann kendall p-values
   temp_res <- cbind(temp_res,ecdf_p_v1_x_v2 = p_surr_v1_xmap_v2, ecdf_p_v2_x_v1 = p_surr_v2_xmap_v1,
                     MannK_v1_xmap_v2_data = MannK_v1_xmap_v2_data, MannK_v1_xmap_v2_null = MannK_v1_xmap_v2_null,

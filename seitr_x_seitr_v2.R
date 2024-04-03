@@ -180,45 +180,50 @@ results$data <- temp %>% filter(sum_v1 !=0 & sum_v2 != 0)
 # inputs: v1_obs = time series for v1_obs
 #         v2_obs = time series for v2_obs
 corr_func <- function(v1_obs, v2_obs){
-  # calculated correlation coefficent 
+  # calculated correlation coefficent
   cor_raw <- cor.test(v1_obs, v2_obs)
-  # pull together results in data frame 
+  # pull together results in data frame
   temp_res <- data.frame(cbind(as.numeric(cor_raw$estimate), cor_raw$conf.int[1], cor_raw$conf.int[2]), cor_raw$p.value)
   names(temp_res) <- c("cor", "CI_lower_95", "CI_upper_95", "p_value")
   return(temp_res)
 }
 
-# apply correlation function to all simulated datasets and save results 
+# apply correlation function to all simulated datasets and save results
 results$cor <- results$data %>% group_by(.id) %>% do((corr_func(.$v1_obs,.$v2_obs)))
 
 
 #--- GAM approach ---# 
-source("./methods/gam_cor.R")
+# source("./methods/gam_cor.R")
 
 # setting up parallelism for the foreach loop
 registerDoParallel(cl <- makeCluster(10))
 # apply the GAM correlation approach to each simulated data set and save the results
 res_gam_cor <- foreach(i=1:nsim, .packages=c("tidyverse","mgcv","vars","boot")) %dopar%{
-  # if the dataset was removed because the outbreak died out then skip it 
+  # if the dataset was removed because the outbreak died out then skip it
   if(dim(results$data %>% filter(.id==i))[1]!=0){
     results$data %>% filter(.id==i) %>% gam_cor(.)
-  } 
+  }
 }
 results$gam_cor <- do.call(rbind, res_gam_cor)
 
 #----- Transfer entropy analysis ------# 
-source("./methods/transfer_entropy_v2.R")
 
-# setting up parallelism for the foreach loop
-registerDoParallel(cl <- makeCluster(10))
-# apply transfer entropy to each simulated data set and save the results
-res_te <- foreach(i=1:nsim, .packages=c("tidyverse","RTransferEntropy","vars")) %dopar%{
-  # if the dataset was removed because the outbreak died out then skip it 
-  if(dim(results$data %>% filter(.id==i))[1]!=0){
-      results$data %>% filter(.id==i) %>% te_func(.)
-  }
-}
-results$transfer_entropy <- do.call(rbind, res_te)
+# ## RtransferEntropy approach ##
+# source("./methods/transfer_entropy_v2.R")
+# 
+# # setting up parallelism for the foreach loop
+# registerDoParallel(cl <- makeCluster(10))
+# # apply transfer entropy to each simulated data set and save the results
+# res_te <- foreach(i=1:nsim, .packages=c("tidyverse","RTransferEntropy","vars")) %dopar%{
+#   # if the dataset was removed because the outbreak died out then skip it
+#   if(dim(results$data %>% filter(.id==i))[1]!=0){
+#       results$data %>% filter(.id==i) %>% te_func(.)
+#   }
+# }
+# results$transfer_entropy <- do.call(rbind, res_te)
+
+## JIDT ## 
+results$transfer_entropy <- results$data %>% group_by(.id) %>% do(te_jidt(.))
 
 #---- Granger causality analysis  ----# 
 source("./methods/granger_analysis.R")
@@ -226,20 +231,10 @@ source("./methods/granger_analysis.R")
 # apply granger analysis to each simulated data set and save the results
 results$granger <- results$data %>% group_by(.id) %>% do(granger_func(.))
 
-save(results, file=sprintf('results_%s_%s_%s_%s_%s.RData',jobid, theta_lambda1,theta_lambda2,delta_1,delta_2))  
-
 #------- Convergent Cross mapping analysis -------# 
 source("./methods/CCM.R")
 
-# setting up parallelism for the foreach loop
-#registerDoParallel(cl <- makeCluster(10))
-# apply CCM to each simulated data set and save the results
-# res_ccm <- foreach(i=1:nsim,.packages=c("tidyverse","rEDM","Kendall")) %dopar% {
-#   results$data %>% filter(.id==i) %>% ccm_func(.)
-# } 
-# results$CCM <- do.call(rbind, res_ccm)
-
-test <- results$data %>% group_by(.id) %>% do(ccm_func(.))
+results$CCM <- results$data %>% group_by(.id) %>% do(ccm_func(.))
 
 # save out results
-#saveRDS(results, file=sprintf('results_%s_%s_%s_%s_%s.rds',jobid, theta_lambda1,theta_lambda2,delta_1,delta_2))  
+save(results, file=sprintf('results_%s_%s_%s_%s_%s.RData',jobid, theta_lambda1,theta_lambda2,delta_1,delta_2))  
