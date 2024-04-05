@@ -13,21 +13,20 @@
 library("rJava")
 .jinit()
 
-# Change location of jar to match yours:
-#  IMPORTANT -- If using the default below, make sure you have set the working directory
-#   in R (e.g. with setwd()) to the location of this file (i.e. demos/r) !!
+# pointing to where the package folder is sitting 
 .jaddClassPath("/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/infodynamics/infodynamics.jar")
 
-te_jidt <- function(data){
+te_jidt <- function(data, lag){
   
   sourceArray <- data$v1_obs
   destArray <- data$v2_obs
   id <- unique(data$.id)
+  k_tau <- lag
   
   # Create a TE calculator for V1 -> V2
   teCalc<-.jnew("infodynamics/measures/continuous/kraskov/TransferEntropyCalculatorKraskov")
   .jcall(teCalc,"V","setProperty", "k", "4") # Use Kraskov parameter K=4 for 4 nearest points
-  .jcall(teCalc,"V","setProperty", "k_tau", "1") # lag for destination of 4 
+  .jcall(teCalc,"V","setProperty", "k_tau", k_tau) # lag for destination 
   
   # Perform calculation with correlated source:
   .jcall(teCalc,"V","initialise", 1L) # Use history length 1 (Schreiber k=1)
@@ -61,7 +60,8 @@ te_jidt <- function(data){
                           sd_null = c(sd_null_v1_x_v2,sd_null_v2_x_v1), 
                           p_value = c(p_value_v1_x_v2,p_value_v2_x_v1),
                           CI_2.5 = c(CI_2.5_v1_x_v2,CI_2.5_v2_x_v1),
-                          CI_97.5 = c(CI_97.5_v1_x_v2,CI_97.5_v2_x_v1)))
+                          CI_97.5 = c(CI_97.5_v1_x_v2,CI_97.5_v2_x_v1), 
+                          lag=rep(lag2)))
   res$te <- as.numeric(res$te)
   res$sd_null <- as.numeric(res$sd_null)
   res$p_value <- as.numeric(res$p_value)

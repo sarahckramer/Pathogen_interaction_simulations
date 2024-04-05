@@ -223,7 +223,7 @@ results$gam_cor <- do.call(rbind, res_gam_cor)
 # results$transfer_entropy <- do.call(rbind, res_te)
 
 ## JIDT ## 
-results$transfer_entropy <- results$data %>% group_by(.id) %>% do(te_jidt(.))
+results$transfer_entropy <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="1"))
 
 #---- Granger causality analysis  ----# 
 source("./methods/granger_analysis.R")

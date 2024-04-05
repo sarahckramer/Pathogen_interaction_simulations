@@ -217,8 +217,23 @@ for(j in 1:dim(all_param_comb)[1]){
 }
 
 #------- Transfer entropy jidt --------# 
+source("./methods/transfer_entropy_jidt.R")
 
-
+for(j in 1:dim(all_param_comb)[1]){
+  # apply transfer entropy to each simulated data set and save the results
+  # lag = 1
+  results[[j]]$transfer_entropy <- results[[j]]$data %>% group_by(.id) %>% do(te_jidt(., lag="1"))
+  # lag = 2
+  temp <- results[[j]]$data %>% group_by(.id) %>% do(te_jidt(., lag="2"))
+  results[[j]]$transfer_entropy <- rbind(results[[j]]$transfer_entropy, temp)
+  # lag = 4
+  temp <- results[[j]]$data %>% group_by(.id) %>% do(te_jidt(., lag="4"))
+  results[[j]]$transfer_entropy <- rbind(results[[j]]$transfer_entropy, temp)
+  # lag = 6
+  temp <- results[[j]]$data %>% group_by(.id) %>% do(te_jidt(., lag="6"))
+  results[[j]]$transfer_entropy <- rbind(results[[j]]$transfer_entropy, temp)
+  print(j)
+}
 
 
 #---- Granger causality analysis  ----# 
