@@ -208,22 +208,17 @@ results$gam_cor <- do.call(rbind, res_gam_cor)
 
 #----- Transfer entropy analysis ------# 
 
-# ## RtransferEntropy approach ##
-# source("./methods/transfer_entropy_v2.R")
-# 
-# # setting up parallelism for the foreach loop
-# registerDoParallel(cl <- makeCluster(10))
-# # apply transfer entropy to each simulated data set and save the results
-# res_te <- foreach(i=1:nsim, .packages=c("tidyverse","RTransferEntropy","vars")) %dopar%{
-#   # if the dataset was removed because the outbreak died out then skip it
-#   if(dim(results$data %>% filter(.id==i))[1]!=0){
-#       results$data %>% filter(.id==i) %>% te_func(.)
-#   }
-# }
-# results$transfer_entropy <- do.call(rbind, res_te)
-
-## JIDT ## 
+# lag = 1
 results$transfer_entropy <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="1"))
+# lag = 2
+temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="2"))
+results$transfer_entropy <- rbind(results$transfer_entropy, temp)
+# lag = 4
+temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="4"))
+results$transfer_entropy <- rbind(results$transfer_entropy, temp)
+# lag = 6
+temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="6"))
+results$transfer_entropy <- rbind(results$transfer_entropy, temp)
 
 #---- Granger causality analysis  ----# 
 source("./methods/granger_analysis.R")

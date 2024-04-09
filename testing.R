@@ -219,7 +219,8 @@ for(j in 1:dim(all_param_comb)[1]){
 #------- Transfer entropy jidt --------# 
 source("./methods/transfer_entropy_jidt.R")
 
-for(j in 1:dim(all_param_comb)[1]){
+#for(j in 1:dim(all_param_comb)[1]){
+for(j in 1:225){
   # apply transfer entropy to each simulated data set and save the results
   # lag = 1
   results[[j]]$transfer_entropy <- results[[j]]$data %>% group_by(.id) %>% do(te_jidt(., lag="1"))
