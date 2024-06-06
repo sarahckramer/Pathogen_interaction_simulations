@@ -14,7 +14,8 @@ library("rJava")
 .jinit()
 
 # pointing to where the package folder is sitting 
-.jaddClassPath("/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/infodynamics/infodynamics.jar")
+#.jaddClassPath("/Volumes/Abt.Domenech/Sarah P/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/infodynamics/infodynamics.jar")
+.jaddClassPath("/Users/spirikahu/Desktop/Max_Planck_fileserver_drive_25April2024/Project 1 - Simulation interaction between influenza and RSV/Analysis/Simulation/infodynamics/infodynamics.jar")
 
 te_jidt <- function(data, lag){
   

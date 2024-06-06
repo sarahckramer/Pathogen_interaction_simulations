@@ -198,7 +198,7 @@ for(i in 1:dim(all_param_comb)[1]){
   delta_2 <- all_param_comb[i,]$delta_2
   temp[[i]] <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2,
                           delta_1=delta_1, delta_2=delta_2, beta_sd1=beta_sd1, beta_sd2=beta_sd2,
-                          n_surge=n_surge, components_l=components_l)
+                          n_surge=n_surge, components_l=components_l,nsim=1)
   data <- temp[[i]]$data
   
   data <- data %>% dplyr::select(time_date,v1_obs,v2_obs,v1_T,v2_T)
@@ -214,7 +214,7 @@ for(i in 1:dim(all_param_comb)[1]){
     scale_colour_manual(values=legend_colors) + labs(colour="")
 
 
- # also estimate attack rates by year for each plot...... NOT WORKING
+ # also estimate attack rates by year for each plot
   data$season <- c(rep(1:tot_seasons, each=52),tot_seasons+1)
   #data$season <- c(rep(1:tot_seasons, each=52)) # for 100 years
   
@@ -242,8 +242,8 @@ for(i in 1:dim(all_param_comb)[1]){
                   "AND delta_1 =", temp[[i]]$true_param["delta1"],
                    "AND delta_2 =", temp[[i]]$true_param["delta1"]))
 
-  range_tot_v1_att <- range(tot_v1_attack[-length(tot_v1_attack)]) # 71 - 95
-  range_tot_v2_att <- range(tot_v2_attack[-length(tot_v2_attack)]) # 90 - 97
+  range_tot_v1_att <- range(tot_v1_attack[-length(tot_v1_attack)]) # 53 - 65
+  range_tot_v2_att <- range(tot_v2_attack[-length(tot_v2_attack)]) # 45 - 50
 
   res <- cbind(all_param_comb[i,],
                range_obs_v1_att[1],range_obs_v1_att[2],

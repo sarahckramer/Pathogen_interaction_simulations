@@ -61,6 +61,18 @@ granger_func <- function(data){
   # H0: b1 = b2 = ... = bk = 0 the lags of x provide no additional information about y beyond the lags of y 
   # H1: there exists 1 <= i <= k so that bi \neq 0 at least one x lag provides additional information 
   
+  # estimate seasonal component
+  df <- data %>% dplyr::select(time,v1_obs, v2_obs)
+  df$.id <- NULL
+  omega <- (2 * pi)/52
+  A1 <- 0.2
+  phi1 <- 26
+  df$seasonal_component <- 1 + A1 * cos(omega * (df$time - phi1))
+  
+  m1 <- lm(v1_obs ~ lag(v1_obs, 1) + lag(v1_obs, 2) + lag(v1_obs, 3) + v2_obs , data=data)
+  m2 <- lm(v1_obs ~ lag(v1_obs, 1) + lag(v1_obs, 2) + lag(v1_obs, 3) , data=data)
+  anova(m1,m2)
+  
   # specifying the lag to be the minimum of the two series
   p <- min(lag_v1,lag_v2)
   # results the same regardless of performance on the raw or normalised data

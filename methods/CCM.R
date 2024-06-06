@@ -20,7 +20,7 @@ library(tidyverse)
 ccm_func <- function(data){
   data <- data %>% select(time,v1_obs,v2_obs)
   data$.id <- NULL
-  
+
   # Determining Embedding dimension (i.e. the number of lags used to build up the shadow manifold)
   # Based on the prediction skill of the model. See rEDM vingette https://ha0ye.github.io/rEDM/articles/rEDM.html 
   
@@ -36,13 +36,13 @@ ccm_func <- function(data){
   # Get E (Embedding dimension - the number nearest neighbours to use for prediction) for v1 
   # EmbedDimension is a wrapper around the simplex function to get out E only  
   E_v1 <- EmbedDimension(dataFrame = data, columns = "v1_obs", target = "v1_obs",
-                         lib = lib, pred = pred, showPlot = TRUE)
+                         lib = lib, pred = pred, showPlot = FALSE)
   E_v1 <- E_v1 %>% slice_max(rho) 
   E_v1 <- E_v1[,1] 
   
   # Get E for v2
   E_v2 <- EmbedDimension(dataFrame = data, columns = "v2_obs", target = "v2_obs",
-                          lib = lib, pred = pred, showPlot = TRUE)
+                          lib = lib, pred = pred, showPlot = FALSE)
   E_v2 <- E_v2 %>% slice_max(rho) # keep the row with max prediction skill
   E_v2 <- E_v2[,1] # keep just the value of E
   
@@ -50,7 +50,7 @@ ccm_func <- function(data){
   data <- data %>% dplyr::select(-time)
   vars <- names(data)
   # generate all combinations of lib_column, target_column, tp
-  params <- expand.grid(lib_column = vars, target_column = vars, tp = -12:12) # ~3 months either side
+  params <- expand.grid(lib_column = vars, target_column = vars, tp = -8:8) # ~3 months either side
   # remove cases where lib == target
   params <- params[params$lib_column != params$target_column, ]
   
@@ -62,7 +62,7 @@ ccm_func <- function(data){
   
   # explore prediction skill over range of tp values 
   # for a single library size set it to max
-  lib_size_tp <- dim(data)[1] - 12 - 1 - max(params$E) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
+  lib_size_tp <- dim(data)[1] - 8 - 1 - max(params$E) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
   
   output <- do.call(rbind, lapply(seq_len(NROW(params)), function(i) {
     ccm(data, E = params$E[i], lib_sizes = lib_size_tp, 
@@ -80,18 +80,17 @@ ccm_func <- function(data){
   optimal_tp_v2xv1 <- v2xv1[which.max(v2xv1$`v2_obs:v1_obs`),]$tp
 
   #----- run CCM ------#
-  
-  # number of samples to do with the ccm 
-  R <- 100
+
   # determine max library size
   lib_max <- dim(data)[1] - max(abs(optimal_tp_v1xv2),abs(optimal_tp_v2xv1)) -1 - max(abs(E_v1), abs(E_v2))
   # run the ccm
+  # if wish to get CIs change random_libs = TRUE and add num_samples = xx
   v1_xmap_v2 <- ccm(data, E = E_v1, lib_column = "v1_obs", target_column = "v2_obs", 
-                    lib_sizes = seq(50, lib_max, 2), num_samples = R, tp=optimal_tp_v1xv2, random_libs=TRUE,
+                    lib_sizes = seq(50, lib_max, 2), tp=optimal_tp_v1xv2, random_libs=FALSE,
                     replace = TRUE, stats_only=FALSE)
   
   v2_xmap_v1 <- ccm(data, E = E_v2, lib_column = "v2_obs", target_column = "v1_obs", 
-                    lib_sizes = seq(50, lib_max, 2), num_samples = R, tp=optimal_tp_v2xv1, random_libs = TRUE,
+                    lib_sizes = seq(50, lib_max, 2), tp=optimal_tp_v2xv1, random_libs = FALSE,
                      replace = TRUE, stats_only=FALSE)
   
   # pull out the mean rho for each library size
@@ -112,6 +111,7 @@ ccm_func <- function(data){
   all_predictions_v2 <- v2_xmap_v1$CCM1_PredictStat
   
   # calculate median aswell as lower and upper bounds (2.5, 97.5%) on rho for each lib size
+  # because I have now changed this to doing no subsampling rho2.5 -> rho97.5 will all be the same
   intervals_perc_v1 <- all_predictions_v1 %>% group_by(LibSize) %>%
     summarize(rho2.5_v1_xmap_v2 = quantile(rho, probs = 0.025), 
               rho50_v1_xmap_v2 = quantile(rho, probs = 0.5),
@@ -177,24 +177,20 @@ ccm_func <- function(data){
   # plotting out surrogates
   # v1 xmap v2 (therefore looking at v2 surrogates)
   
-  # v1_long <- v1_data %>% gather(.,surr,value, v1_obs:T2)
+  # v1_long <- v1_data %>% gather(.,surr,value, v1_obs:T100)
   # v1_long <- v1_long %>% filter(surr!="v1_obs")
   #  
   # plot_v2_surr <- ggplot(aes(x=time,y=value, colour=surr), data=v1_long) + geom_line() + 
-  #    scale_colour_manual(values=rep("grey",num_surr)) +  theme(legend.position="none") + 
-  #    geom_line(aes(x=time, y=v2_obs), colour="black",data=v2_data) + ylab("v2_obs")
-  #  
+  #     scale_colour_manual(values=rep("grey",num_surr)) +  theme(legend.position="none") + 
+  #     geom_line(aes(x=time, y=v2_obs), colour="black",data=v2_data) + ylab("v2_obs")
+  #   
   # v2_long <- v2_data %>% gather(.,surr,value, v2_obs:T2)
   # v2_long <- v2_long %>% filter(surr!="v2_obs")
   #  
-  # plot_v1_surr <- ggplot(aes(x=time,y=value, colour=surr), data=v2_long) + geom_line() + 
-  #    scale_colour_manual(values=rep("grey",num_surr)) +  theme(legend.position="none") + 
+  # plot_v1_surr <- ggplot(aes(x=time,y=value, colour=surr), data=v2_long) + geom_line() +
+  #    scale_colour_manual(values=rep("grey",num_surr)) +  theme(legend.position="none") +
   #    geom_line(aes(x=time, y=v1_obs), colour="black",data=v1_data) + ylab("v1_obs")
-  # 
-  # number of samples to use in the ccm for the surrogates
-  # because we are doing a large number of replicates it is ok here to reduce 
-  # the number of samples 
-  R <- 1
+
   
   # Cross mapping
   # setting up parallelism for the foreach loop
@@ -205,12 +201,12 @@ ccm_func <- function(data){
     # run ccm  
     targetCol <- paste('T', j, sep = '' ) # as in v1T_data
     ccm_out_v1 <- ccm(v1_data, E = E_v1, lib_column = "v1_obs", target_column = targetCol,
-                  lib_sizes = seq(50, lib_max_null, 2), num_samples = R, tp=optimal_tp_v1xv2,
-                  random_libs = TRUE, replace = TRUE)
+                  lib_sizes = seq(50, lib_max_null, 2), tp=optimal_tp_v1xv2,
+                  random_libs = FALSE, replace = TRUE)
 
     ccm_out_v2 <- ccm(v2_data, E = E_v2, lib_column = "v2_obs", target_column = targetCol,
-                     lib_sizes = seq(50, lib_max_null, 2), num_samples = R, tp=optimal_tp_v2xv1,
-                     random_libs = TRUE, replace = TRUE)
+                     lib_sizes = seq(50, lib_max_null, 2), tp=optimal_tp_v2xv1,
+                     random_libs = FALSE, replace = TRUE)
 
     col_v1 <- paste('v1_obs', ':', targetCol, sep = '')
     col_v2 <- paste('v2_obs', ':', targetCol, sep = '')
@@ -229,7 +225,8 @@ ccm_func <- function(data){
    lapply(inner_list, function(dataframe){
    dataframe[,2]})
   }))
-  
+  stopCluster(cl)
+   
    # collapsing list down to a dataframe of the output for each surrogate
    # v1 -> v2 
    rho_surr_v1_xmap_v2 <-  do.call(cbind, temp_output[1,])
@@ -263,7 +260,7 @@ ccm_func <- function(data){
   # pull out point estimates for the max library size that can be achieved by all possible simulations (i.e. some 
   # simulations will have results for larger library sizes but for the results to be comparable across my simulation 
   # runs we need to be looking at the results for the same library size)
-  theoretic_min_lib <- dim(data)[1]-12-1-10 # data size - max abs tp - tau - max abs E
+  theoretic_min_lib <- dim(data)[1]-8-1-10 # data size - max abs tp - tau - max abs E
   # need to make the theoretical minimum library size even as I only go up in library sizes by 2
   theoretic_min_lib <- 2*round(theoretic_min_lib/2) 
   
@@ -273,18 +270,12 @@ ccm_func <- function(data){
   names(surr_summary) <- c("LibSize", "surr_rho_2.5", "surr_rho_50", "surr_rho_97.5", "surr_rho", "direction")
   
   #--- plotting---#
-  # # v1 xmap v2 - mean
   # p_v1_xmap_v2_mean <- ggplot(aes(x=LibSize, y=rho), data=res) + geom_line() +
   # geom_ribbon(aes(ymin=rho_2.5, ymax=rho_97.5,alpha=0.05))  +
-  # geom_line(aes(x=LibSizes,y=mean_rho), data=intervals_surr_v1_xmap_v2, colour = "blue") +
-  # geom_ribbon(aes(x=LibSizes,ymin=rho2.5, ymax=rho97.5,alpha=0.05), data=intervals_surr_v1_xmap_v2, inherit.aes = FALSE, fill = "lightblue")
-  # 
-  # # v2 xmap v1 - mean
-  # p_v2_xmap_v1_mean <- ggplot(aes(x=LibSize, y=rho), data=res) + geom_line() +
-  # geom_ribbon(aes(ymin=rho_2.5, ymax=rho_97.5,alpha=0.05))  +
-  # geom_line(aes(x=LibSizes,y=mean_rho), data=intervals_surr_v2_xmap_v1, colour = "blue") +
-  # geom_ribbon(aes(x=LibSizes,ymin=rho2.5, ymax=rho97.5,alpha=0.05), data=intervals_surr_v2_xmap_v1, inherit.aes = FALSE, fill = "lightblue")
-  # 
+  # geom_line(aes(x=LibSizes,y=rho), data=intervals_surr_v1_xmap_v2, colour = "blue") +
+  # geom_ribbon(aes(x=LibSizes,ymin=rho_2.5, ymax=rho_97.5,alpha=0.05), data=intervals_surr_v1_xmap_v2, inherit.aes = FALSE, fill = "lightblue") +
+  #   facet_grid(.~direction)
+
   # Checking convergence using Mann Kendall - significant p-value implies converegence acheived
   rho_v2_x_v1 <- res %>% filter(direction=="v2 -> v1") %>% select(rho)
   MannK_v1_xmap_v2_data <- MannKendall(rho_v2_x_v1$rho)$sl[1] # pulling out p-value only

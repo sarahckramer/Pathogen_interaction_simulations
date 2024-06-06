@@ -86,8 +86,8 @@ delta_i <- runif(n=length(t_si), min = 0.01*7, max=0.1*7)
 # parameter inputs 
 theta_lambda1 <- c(0,0.5,1,2,4)
 theta_lambda2 <- c(0,0.5,1,2,4)
-delta_1 <- c(1,1/4,1/24)
-delta_2 <- c(1,1/4,1/24)
+delta_1 <- c(1,1/4,1/12)
+delta_2 <- c(1,1/4,1/12)
 
 # Get all combinations of the interaction parameters
 all_param_comb <- expand.grid(theta_lambda1, theta_lambda2, delta_1, delta_2)
@@ -95,6 +95,9 @@ names(all_param_comb) <- c("theta_lambda1", "theta_lambda2", "delta_1", "delta_2
 
 # remove parameter vectors 
 rm(theta_lambda1, theta_lambda2, delta_1, delta_2)
+
+# look at just symmetric interactions 
+all_param_comb <- all_param_comb %>% filter(theta_lambda1 == theta_lambda2)
 
 # function to create list of true parameter inputs and simulated data 
 # function takes a vector of the interaction parameters 
@@ -108,12 +111,12 @@ sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,beta_
                    sigma1=7, sigma2=7/5,
                    gamma1=7/5, gamma2=7/10,
                    delta1=delta_1, delta2=delta_2,
-                   w1=1/78, w2=1/52,
+                   w1=1/52, w2=1/52,
                    mu = 0.0002, nu = 0.0002,
                    rho1 = 0.002, rho2 = 0.002,
                    theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
-                   A1=0.01, phi1=26,
-                   A2=0.2, phi2=20,
+                   A1=0.2, phi1=26,
+                   A2=0.2, phi2=26,
                    beta_sd1=beta_sd1, beta_sd2=beta_sd2, 
                    N=3700000,
                    E01=0.001, E02=0.001,
@@ -179,52 +182,53 @@ results$data <- temp %>% filter(sum_v1 !=0 & sum_v2 != 0)
 # function to estimate correlation 
 # inputs: v1_obs = time series for v1_obs
 #         v2_obs = time series for v2_obs
-corr_func <- function(v1_obs, v2_obs){
-  # calculated correlation coefficent
-  cor_raw <- cor.test(v1_obs, v2_obs)
-  # pull together results in data frame
-  temp_res <- data.frame(cbind(as.numeric(cor_raw$estimate), cor_raw$conf.int[1], cor_raw$conf.int[2]), cor_raw$p.value)
-  names(temp_res) <- c("cor", "CI_lower_95", "CI_upper_95", "p_value")
-  return(temp_res)
-}
-
-# apply correlation function to all simulated datasets and save results
-results$cor <- results$data %>% group_by(.id) %>% do((corr_func(.$v1_obs,.$v2_obs)))
+# corr_func <- function(v1_obs, v2_obs){
+#   # calculated correlation coefficent
+#   cor_raw <- cor.test(v1_obs, v2_obs)
+#   # pull together results in data frame
+#   temp_res <- data.frame(cbind(as.numeric(cor_raw$estimate), cor_raw$conf.int[1], cor_raw$conf.int[2]), cor_raw$p.value)
+#   names(temp_res) <- c("cor", "CI_lower_95", "CI_upper_95", "p_value")
+#   return(temp_res)
+# }
+# 
+# # apply correlation function to all simulated datasets and save results
+# results$cor <- results$data %>% group_by(.id) %>% do((corr_func(.$v1_obs,.$v2_obs)))
 
 
 #--- GAM approach ---# 
 # source("./methods/gam_cor.R")
 
 # setting up parallelism for the foreach loop
-registerDoParallel(cl <- makeCluster(10))
-# apply the GAM correlation approach to each simulated data set and save the results
-res_gam_cor <- foreach(i=1:nsim, .packages=c("tidyverse","mgcv","vars","boot")) %dopar%{
-  # if the dataset was removed because the outbreak died out then skip it
-  if(dim(results$data %>% filter(.id==i))[1]!=0){
-    results$data %>% filter(.id==i) %>% gam_cor(.)
-  }
-}
-results$gam_cor <- do.call(rbind, res_gam_cor)
+# registerDoParallel(cl <- makeCluster(10))
+# # apply the GAM correlation approach to each simulated data set and save the results
+# res_gam_cor <- foreach(i=1:nsim, .packages=c("tidyverse","mgcv","vars","boot")) %dopar%{
+#   # if the dataset was removed because the outbreak died out then skip it
+#   if(dim(results$data %>% filter(.id==i))[1]!=0){
+#     results$data %>% filter(.id==i) %>% gam_cor(.)
+#   }
+# }
+# results$gam_cor <- do.call(rbind, res_gam_cor)
 
 #----- Transfer entropy analysis ------# 
-
-# lag = 1
-results$transfer_entropy <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="1"))
-# lag = 2
-temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="2"))
-results$transfer_entropy <- rbind(results$transfer_entropy, temp)
-# lag = 4
-temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="4"))
-results$transfer_entropy <- rbind(results$transfer_entropy, temp)
-# lag = 6
-temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="6"))
-results$transfer_entropy <- rbind(results$transfer_entropy, temp)
+# source("./methods/transfer_entropy_jidt.R")
+# 
+# # lag = 1
+# results$transfer_entropy <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="1"))
+# # lag = 2
+# temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="2"))
+# results$transfer_entropy <- rbind(results$transfer_entropy, temp)
+# # lag = 4
+# temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="4"))
+# results$transfer_entropy <- rbind(results$transfer_entropy, temp)
+# # lag = 6
+# temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="6"))
+# results$transfer_entropy <- rbind(results$transfer_entropy, temp)
 
 #---- Granger causality analysis  ----# 
-source("./methods/granger_analysis.R")
-
-# apply granger analysis to each simulated data set and save the results
-results$granger <- results$data %>% group_by(.id) %>% do(granger_func(.))
+# source("./methods/granger_analysis.R")
+# 
+# # apply granger analysis to each simulated data set and save the results
+# results$granger <- results$data %>% group_by(.id) %>% do(granger_func(.))
 
 #------- Convergent Cross mapping analysis -------# 
 source("./methods/CCM.R")

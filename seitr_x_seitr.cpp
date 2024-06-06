@@ -365,16 +365,22 @@ double R0_2 = Ri2 / (1.0 - (R02 + R12)); // virus 2
 double beta1, beta2;
 // incorporate extra demographic stochasticity with the gamma distributed white noise process
 // dt is the time step hence it is not defined but is a variable created within pomp
-if (p1 > 0.0 && beta_sd1 > 0.0) { 
-  beta1 = rgammawn(sqrt(R0_1 / (p1 * N * beta_sd1 * dt)), R0_1 * gamma1);
-} else {
-  beta1 = R0_1 * gamma1;
-}
-if (p2 > 0.0 && beta_sd2 > 0.0) {
-  beta2 = rgammawn(sqrt(R0_2 / (p2 * N * beta_sd2 * dt)), R0_2 * gamma2);
-} else {
-  beta2 = R0_2 * gamma2;
-}
+
+double dW1 = rgammawn(beta_sd1, dt);
+double dW2 = rgammawn(beta_sd2, dt);
+beta1 = R0_1 * gamma1 * dW1 / dt;
+beta2 = R0_2 * gamma2 * dW2 / dt;
+
+// if (p1 > 0.0 && beta_sd1 > 0.0) { 
+//   beta1 = rgammawn(sqrt(R0_1 / (p1 * N * beta_sd1 * dt)), R0_1 * gamma1);
+// } else {
+//   beta1 = R0_1 * gamma1;
+// }
+// if (p2 > 0.0 && beta_sd2 > 0.0) {
+//   beta2 = rgammawn(sqrt(R0_2 / (p2 * N * beta_sd2 * dt)), R0_2 * gamma2);
+// } else {
+//   beta2 = R0_2 * gamma2;
+// }
 
 // incorporate seasonality parameter for each virus 
 // where A = amplitude, omega = annual angular frequency, t = time and phi = phase
