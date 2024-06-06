@@ -10,13 +10,9 @@
 #  - Transfer entropy
 #  - Granger causality analysis 
 #  - convergent cross mapping
-#  - likelihood estimation (this method is going to be done separately due to the increased computational power required)
-#
-# GAM, Grangers, CCM and likelihood methods have been coded up seprately and sourced in due to their increased 
-# complexity
 # 
 # Created by: Sarah Pirikahu 
-# Creation date: 22 May 2023
+# Creation date: 28 Feb 2024
 ##################################################################################################################
 
 # load libraries
@@ -25,30 +21,13 @@ library(testthat)
 library(pomp)
 library(janitor)
 library(ggfortify)
-library(vars)
-library(RTransferEntropy) 
 library(future) # allows for parallel processing
-
+library(foreach)
+library(doParallel)
 
 #---- set up cluster inputs ---# 
 # Get cluster environmental variables:
 jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size 
-likelihood <- as.logical(Sys.getenv("LIKELIHOOD")); print(likelihood) # will be TRUE or FALSE
-# how many different starting params are we going to run for numerical optimizer for each job -- likelihood approach
-sobol_size <- as.integer(Sys.getenv("SOBOLSIZE")); print(sobol_size)  
-# number of weeks of data to simulate - note: first 2yrs of data discarded to allow mechanistic model to achieve equilibrium
-tot_weeks <- as.integer(Sys.getenv("WEEKSSIM")); print(tot_weeks)  
-# the amount of demographic stochasticity 
-beta_sd1 <- as.integer(Sys.getenv("BETASD1")); print(beta_sd1)  
-beta_sd2 <- as.integer(Sys.getenv("BETASD1")); print(beta_sd2)  
-# the period for the surrogate generation in CCM 
-Tperiod_v1 <- as.integer(Sys.getenv("TPERIODV1")); print(Tperiod_v1)  
-Tperiod_v2 <- as.integer(Sys.getenv("TPERIODV2")); print(Tperiod_v2)  
-# the amount of noise to allow into the CCM surrogates 
-alpha_v1 <- as.integer(Sys.getenv("ALPHAV1")); print(alpha_v1)  
-alpha_v2 <- as.integer(Sys.getenv("ALPHAV2")); print(alpha_v2)  
-# weather to perform the symmetric or asymmetric simulation
-symmetric <- as.logical(Sys.getenv("SYMMETRIC")); print(symmetric) 
 
 #--- reading in CSnippets ---# 
 # read in the C code for the pomp model 
@@ -69,9 +48,17 @@ for (nm in components_nm) {
 #---- setting parameter input values ----# 
 
 # set seed:
-set.seed(2908)
+set.seed(1234)
+
+# set noise parameters
+beta_sd1 <- 0 
+beta_sd2 <- 0
+
+# total number of simulated datasets to create for each parameter input 
+nsim <- 100
 
 # total number of seasons
+tot_weeks <- 625
 tot_seasons <- round((tot_weeks/52) - 2)
 
 # initialize time of surges (based on week) from start of season (1 July)
@@ -96,42 +83,25 @@ n_surge <- length(t_si)
 # surge times 
 delta_i <- runif(n=length(t_si), min = 0.01*7, max=0.1*7)
 
-# parameter inputs for simulation:
-if(symmetric == TRUE){
-  theta_lambda1 <- c(0,0.5,1,2,4)
-  theta_lambda2 <- c(0,0.5,1,2,4)
-  delta_1 <- c(1,1/4,1/24)
-  delta_2 <- c(1,1/4,1/24)
-  
-  # Get all combinations of the interaction parameters
-  all_param_comb <- expand.grid(theta_lambda1, theta_lambda2, delta_1, delta_2)
-  names(all_param_comb) <- c("theta_lambda1", "theta_lambda2", "delta_1", "delta_2")
-  
-  # for symmetric interactions 
-  all_param_comb <- all_param_comb %>% filter(theta_lambda1 == theta_lambda2 & delta_1 == delta_2)
-} else{
-  theta_lambda1 <- c(0,0.5,1,2,4)
-  theta_lambda2 <- c(0,0.5,1,2,4)
-  delta_1 <- c(1,1/4,1/24)
-  delta_2 <- c(1,1/4,1/24)
-  
-  # Get all combinations of the interaction parameters
-  all_param_comb <- expand.grid(theta_lambda1, theta_lambda2, delta_1, delta_2)
-  names(all_param_comb) <- c("theta_lambda1", "theta_lambda2", "delta_1", "delta_2")
-  
-  # for asymmetric interactions
-  # create data frame of all symmetric parameter combos
-  symm_combos <- all_param_comb %>% filter(theta_lambda1 == theta_lambda2 & delta_1 == delta_2) 
-  # remove all those symmertric combos from the full dataset with all parameters
-  all_param_comb <- all_param_comb %>% anti_join(symm_combos)
-}
+# parameter inputs 
+theta_lambda1 <- c(0,0.5,1,2,4)
+theta_lambda2 <- c(0,0.5,1,2,4)
+delta_1 <- c(1,1/4,1/12)
+delta_2 <- c(1,1/4,1/12)
+
+# Get all combinations of the interaction parameters
+all_param_comb <- expand.grid(theta_lambda1, theta_lambda2, delta_1, delta_2)
+names(all_param_comb) <- c("theta_lambda1", "theta_lambda2", "delta_1", "delta_2")
 
 # remove parameter vectors 
 rm(theta_lambda1, theta_lambda2, delta_1, delta_2)
 
+# look at just symmetric interactions 
+all_param_comb <- all_param_comb %>% filter(theta_lambda1 == theta_lambda2)
+
 # function to create list of true parameter inputs and simulated data 
 # function takes a vector of the interaction parameters 
-sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,beta_sd1,beta_sd2,n_surge,components_l=components_l){
+sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,beta_sd1,beta_sd2,n_surge,components_l=components_l,nsim){
   set.seed(2908)
   
   # setting parameters to weekly rates - params listed as daily in 
@@ -141,12 +111,12 @@ sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,beta_
                    sigma1=7, sigma2=7/5,
                    gamma1=7/5, gamma2=7/10,
                    delta1=delta_1, delta2=delta_2,
-                   w1=1/78, w2=1/52,
+                   w1=1/52, w2=1/52,
                    mu = 0.0002, nu = 0.0002,
                    rho1 = 0.002, rho2 = 0.002,
                    theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
-                   A1=0.01, phi1=26,
-                   A2=0.2, phi2=20,
+                   A1=0.2, phi1=26,
+                   A2=0.2, phi2=26,
                    beta_sd1=beta_sd1, beta_sd2=beta_sd2, 
                    N=3700000,
                    E01=0.001, E02=0.001,
@@ -155,9 +125,9 @@ sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,beta_
   
   #---- Create list to save the parameter sets and results of our different methods ---# 
   
-  results <- vector(mode = "list", length = 8)
+  results <- vector(mode = "list", length = 7)
   results[[1]] <- true_params 
-  names(results) <- c("true_param", "data", "cor", "gam_cor", "transfer_entropy", "CCM","granger","likelihood")
+  names(results) <- c("true_param", "data", "cor", "gam_cor", "transfer_entropy", "CCM","granger")
   
   #---- create pomp object ---# 
   po <- pomp(data = data.frame(time = seq(from = 0, to = tot_weeks, by = 1), v1_obs = NA, v2_obs = NA),
@@ -183,23 +153,16 @@ sim_data <- function(tot_weeks,theta_lambda1,theta_lambda2,delta_1,delta_2,beta_
   )
   
   # ----simulating data----#
-  s1 <- simulate(po, nsim=100, times=1:tot_weeks, format="data.frame")
-  # deterministic simulation 
-  # d1 <- trajectory(po, times=1:tot_weeks, format = "data.frame") %>% dplyr::select(-'.id') %>%
-  #   mutate(v1_obs = rbinom(n=length(v1_T),size=round(v1_T), prob=true_params["rho1"]),
-  #          v2_obs = rbinom(n=length(v2_T),size=round(v2_T), prob=true_params["rho2"]))
+  s1 <- simulate(po, nsim=nsim, times=1:tot_weeks, format="data.frame")
   
   # remove first 2 years where simulation isn't yet at equilibrium 
   s1 <- s1 %>% filter(time > 104) 
-  #d1 <- d1 %>% filter(time > 104)
   
   # make time into dates based off week number
   s1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(s1$time)
-  #d1$time_date <- lubridate::ymd( "2012-July-01" ) + lubridate::weeks(d1$time)
   
   # save results
   results$data <- s1  
-  #results$data <- d1  
   return(results)
 }
 
@@ -210,140 +173,67 @@ delta_1 <- all_param_comb[jobid,]$delta_1
 delta_2 <- all_param_comb[jobid,]$delta_2
 results <- sim_data(tot_weeks = tot_weeks, theta_lambda1=theta_lambda1, theta_lambda2=theta_lambda2, 
                     delta_1=delta_1, delta_2=delta_2, beta_sd1=beta_sd1, beta_sd2=beta_sd2,
-                    n_surge = n_surge, components_l = components_l)
+                    n_surge = n_surge, components_l = components_l, nsim = nsim)
+# if outbreak never takes off or dies out then remove it 
+temp <- results$data %>% group_by(.id) %>% mutate(sum_v1 = sum(v1_obs), sum_v2=sum(v2_obs))
+results$data <- temp %>% filter(sum_v1 !=0 & sum_v2 != 0)
 
-##########################################################
-## Start testing each method for estimating interaction ##
-##########################################################
-
-# Since the likelihood approach requires a significantly larger amount of compute power will only 
-# perform this method if it is specifically asked for at the cmd line generally on an ad hoc basis
-
-# If likelihood is true we don't run the non-likelihood methods at all 
-if(likelihood==FALSE){ 
-  
-  #------------ setup ---------------#
-  # Automatically determine the best lag doing several models with lags
-  # 1-12 (approximately 3 month) then choose the best lag number based on BIC
-  
-  # initialising lists to put results in 
-  lags <- list()
-  lag_v1 <- list()
-  lag_v2 <- list()
-  
-  # determine the number of lags for each simulated dataset
-  df <- results$data %>% dplyr::select(v1_obs, v2_obs)
-  
-  lags <- lapply(df, VARselect, lag.max=12) # lag of approx 3 month
-  rm(df)
-  # pull out the lag with best BIC. Lower BIC = better (not BIC is labeled SV)
-  # regardless of whether raw of normalised data used the lag chosen is the same
-  lag_v1 <- as.numeric(lags$v1_obs$selection[3])
-  lag_v2 <- as.numeric(lags$v2_obs$selection[3])
-  
-  rm(lags)
-  
-  #---- Correlation coefficents --------# 
-  # function to estimate correlation 
-  # inputs: v1_obs = time series for v1_obs
-  #         v2_obs = time series for v2_obs
-  corr_func <- function(v1_obs, v2_obs){
-    # calculated correlation coefficent 
-    cor_raw <- cor.test(v1_obs, v2_obs)
-    # pull together results in data frame 
-    temp_res <- data.frame(cbind(as.numeric(cor_raw$estimate), cor_raw$conf.int[1], cor_raw$conf.int[2]), cor_raw$p.value)
-    names(temp_res) <- c("cor", "CI_lower_95", "CI_upper_95", "p_value")
-    return(temp_res)
-  }
-  
-  # apply correlation function to all simulated datasets and save results 
-  results$cor <- corr_func(v1_obs = results$data$v1_obs, v2_obs = results$data$v2_obs)
-  
-  
-  #--- GAM approach ---# 
-  source("./methods/gam_cor.R")
-  
-  # apply the GAM correlation approach to each simulated data set and save the results
-  data <- results$data %>% dplyr::select(time,v1_obs, v2_obs)
-  results$gam_cor <- gam_cor(data=data)
-  
-  #----- Transfer entropy analysis ------# 
-  # create function to give transfer entropy results
-  # inputs: v1_obs = time series for v1_obs
-  #         v2_obs = time series for v2_obs
-  #         lag_v1 = total number lag to use with v1_obs time series
-  #         lag_v2 = total number lag to use with v2_obs time series
-  te_func <- function(v1_obs, v2_obs, lag_v1, lag_v2){
-    # Interpreting transfer entropy (note: TE \in [0,1]):
-    # If test significant suggests T_{X->Y} > 0 and the uncertainty about 
-    # Y is reduced by the addition of X, that is X causes Y.
-    
-    # Output: provides not the transfer entropy and bias corrected effective transfer entropy  
-    # Transfer entropy estimates are biased by small sample sizes. For large sample sizes TE and ETE 
-    # will be approximately the same. For a single season the sample size is quite small so we want to 
-    # go with ETE... see Behrendt et al. 2019 for more details
-    shannon_te <- transfer_entropy(v1_obs, v2_obs, lx = min(lag_v1, lag_v2), ly=min(lag_v1, lag_v2))
-    temp_res <- data.frame(coef(shannon_te))
-    
-    # creating the 95% CIs about ETE - note that in the code for transfer_entropy to calculate the 
-    # se they simply look at the sd of the bootstrap samples NOT SE=sd/sqrt(n)
-    temp_res$lower95 <- temp_res$ete - 1.96*temp_res$se
-    temp_res$upper95 <- temp_res$ete + 1.96*temp_res$se
-    return(temp_res)
-  }
-  
-  # apply transfer entropy function to all simulated datasets and save results
-  results$transfer_entropy <- te_func(v1_obs = results$data$v1_obs, v2_obs = results$data$v2_obs, 
-                                      lag_v1 = lag_v1, lag_v2 = lag_v2) 
-  
-  #---- Granger causality analysis  ----# 
-  source("./methods/granger_analysis.R")
-  # apply the granger analysis to each simulated data set and save the results
-  data <- results$data %>% dplyr::select(v1_obs, v2_obs)
-  results$granger <- granger_func(data = data, lag_v1 = lag_v1, lag_v2 = lag_v2)
-  
-  #------- Convergent Cross mapping analysis -------# 
-  source("./methods/CCM.R")
-  
-  # apply the CCM approach to each simulated data set 
-  data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
-  # run CCM 
-  results$CCM <- ccm_func(data = data, Tperiod_v1=Tperiod_v1, Tperiod_v2=Tperiod_v2,
-                          alpha_v1 = alpha_v1, alpha_v2 = alpha_v2, tot_weeks=tot_weeks)
-  
-  #------Finish up by saving out results -------#
-  # save out the results: results_jobid_totweeks_noise
-  save(results, file=sprintf('results_%s_%s_%s.RData',jobid, tot_weeks, beta_sd1*100))  
-  
-  # run results extraction to get a spreadsheet with just summary stats for each method
-  #source("results_extraction.R")
-  
-} else {
-  
-  #----- Likelihood approach -----# 
-  # Note this is very computationally intensive and may not always achieve convergence to the MLE
-  # so was only run ad hoc - not for the entire simulation study
-  
-  # max time that we want to allow the optmizer to run for
-  maxtime <- 12*60*60  # 12 hrs - want this to run for as long as possible so that I don't have to re-run to get the MLE
-  
-  # dataset to apply method to 
-  data <- results$data %>% dplyr::select(time, v1_obs, v2_obs)
-  # true parameters used to create the simulated data set
-  true_params <- results$true_param
-  
-  # run likelihood estimation - these results will not be saved to the overall results
-  # list here but instead to individual RDS files
-  source("./methods/Likelihood_estimation.R")
-  results$likelihood <- lik(data=data, true_params, components_l = components_l, sobol_size, jobid, no_jobs = no_jobs, maxtime)
-  
-  # save out the results
-  # if I do it this way then I will have a list which has input params the simulated data and the 
-  # output of the different input parameters for the likelihood estimation in their own results file
-  # total output: number of jobs x sobol size results files  
-  save(results, file=sprintf('results_%s.RData',jobid)) 
-}
+#---- Correlation coefficents --------# 
+# function to estimate correlation 
+# inputs: v1_obs = time series for v1_obs
+#         v2_obs = time series for v2_obs
+# corr_func <- function(v1_obs, v2_obs){
+#   # calculated correlation coefficent
+#   cor_raw <- cor.test(v1_obs, v2_obs)
+#   # pull together results in data frame
+#   temp_res <- data.frame(cbind(as.numeric(cor_raw$estimate), cor_raw$conf.int[1], cor_raw$conf.int[2]), cor_raw$p.value)
+#   names(temp_res) <- c("cor", "CI_lower_95", "CI_upper_95", "p_value")
+#   return(temp_res)
+# }
+# 
+# # apply correlation function to all simulated datasets and save results
+# results$cor <- results$data %>% group_by(.id) %>% do((corr_func(.$v1_obs,.$v2_obs)))
 
 
+#--- GAM approach ---# 
+# source("./methods/gam_cor.R")
 
+# setting up parallelism for the foreach loop
+# registerDoParallel(cl <- makeCluster(10))
+# # apply the GAM correlation approach to each simulated data set and save the results
+# res_gam_cor <- foreach(i=1:nsim, .packages=c("tidyverse","mgcv","vars","boot")) %dopar%{
+#   # if the dataset was removed because the outbreak died out then skip it
+#   if(dim(results$data %>% filter(.id==i))[1]!=0){
+#     results$data %>% filter(.id==i) %>% gam_cor(.)
+#   }
+# }
+# results$gam_cor <- do.call(rbind, res_gam_cor)
 
+#----- Transfer entropy analysis ------# 
+# source("./methods/transfer_entropy_jidt.R")
+# 
+# # lag = 1
+# results$transfer_entropy <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="1"))
+# # lag = 2
+# temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="2"))
+# results$transfer_entropy <- rbind(results$transfer_entropy, temp)
+# # lag = 4
+# temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="4"))
+# results$transfer_entropy <- rbind(results$transfer_entropy, temp)
+# # lag = 6
+# temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="6"))
+# results$transfer_entropy <- rbind(results$transfer_entropy, temp)
+
+#---- Granger causality analysis  ----# 
+# source("./methods/granger_analysis.R")
+# 
+# # apply granger analysis to each simulated data set and save the results
+# results$granger <- results$data %>% group_by(.id) %>% do(granger_func(.))
+
+#------- Convergent Cross mapping analysis -------# 
+source("./methods/CCM.R")
+
+results$CCM <- results$data %>% group_by(.id) %>% do(ccm_func(.))
+
+# save out results
+save(results, file=sprintf('results_%s_%s_%s_%s_%s.RData',jobid, theta_lambda1,theta_lambda2,delta_1,delta_2))  
