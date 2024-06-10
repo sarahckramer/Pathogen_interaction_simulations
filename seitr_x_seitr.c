@@ -241,8 +241,8 @@ double ll_1, ll_2, ll;
 // similarly for V2
 
 // calculating components for the likelihood 
-ll_1 = dbinom(v1_obs, nearbyint(v1_T), rho1, 1);
-ll_2 = dbinom(v2_obs, nearbyint(v2_T), rho2, 1);
+ll_1 = dbinom(V1_obs, nearbyint(V1), rho1, 1);
+ll_2 = dbinom(V2_obs, nearbyint(V2), rho2, 1);
 
 //Rprintf("V1_obs=%.4f, V2_obs=%.4f, V1_T=%.4f, V2_T=%.4f, ll_1=%.4f, ll_2=%.4f\n",V1_obs, V2_obs, V1_T, V2_T, ll_1, ll_2);
 
