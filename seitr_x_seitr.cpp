@@ -1,6 +1,3 @@
-#include <Rcpp.h>
-using namespace Rcpp;
-
 // -----------------------------------------------------------------------------------------------------//
 // Implementation of the SEITR x SEITR model for circulation of two respiratory 
 // viruses
@@ -45,8 +42,8 @@ static double expitCons(double x, double a, double b) {
   if(ISNAN(out) | isinf(out)) out = (b + a * exp(-x)) / (1.0 + exp(-x)); // If x=+Inf, must return b
   return out;
 }
-//end_globs
 
+//end_globs
 
 //----- TRANSFORMATIONS ---//
 // here we specify the transformations applied to each parameter to
@@ -57,10 +54,10 @@ static double expitCons(double x, double a, double b) {
 T_Ri1 = logitCons(Ri1, 1.0, 10); 
 T_Ri2 = logitCons(Ri2, 1.0, 10); 
 
-T_sigma1 = sigma1;
-T_sigma2 = sigma2;
-T_gamma1 = gamma1;
-T_gamma2 = gamma2;
+T_sigma1 = log(sigma1);
+T_sigma2 = log(sigma2);
+T_gamma1 = log(gamma1);
+T_gamma2 = log(gamma2);
 
 T_delta1 = log(delta1);
 T_delta2 = log(delta2);
@@ -73,13 +70,14 @@ T_w2 = log(w2);
 
 T_rho1 = logit(rho1);
 T_rho2 = logit(rho2);
-T_theta_lambda1 = logitCons(theta_lambda1,0,10);
-T_theta_lambda2 = logitCons(theta_lambda2,0,10);
+
+T_theta_lambda1 = logitCons(theta_lambda1, 0, 10);
+T_theta_lambda2 = logitCons(theta_lambda2, 0, 10);
 
 T_A1 = logit(A1);
-T_phi1 = logitCons(phi1,20,42); // 4 month period around Oct
+T_phi1 = logitCons(phi1, 20, 42); // 4 month period around Oct
 T_A2 = logit(A2);
-T_phi2 = logitCons(phi2,20,42);
+T_phi2 = logitCons(phi2, 20, 42);
 
 T_beta_sd1 = beta_sd1;
 T_beta_sd2 = beta_sd2;
@@ -93,32 +91,33 @@ for (int i = 0; i < (int) nsurges; i++) {
   T_t_vec[i] = t_vec[i];
 }
 
-// surge in loss immunity  
-double *delta_vec = (double *) &delta_i_1; 
-double *T_delta_vec = (double *) &delta_i_1;
+// surge in loss immunity
+double *w_delta_vec = (double *) &w_delta_i_1; 
+double *T_w_delta_vec = (double *) &T_w_delta_i_1;
 for (int i = 0; i < (int) nsurges; i++) {
-  T_delta_vec[i] = log(delta_vec[i]);
+  T_w_delta_vec[i] = log(w_delta_vec[i]);
 }
 
 // we need to specify a transform on the sum of E and R
 // such that the compartments are not allowed to turn
 // negative
 double sum_init = 0.0; // initialise
-sum_init = E01 + E02 + R01 + R02 + R12;
+sum_init = E01 + E02 + R01 + R02 + R012;
 T_E01 = log(E01 / (1.0 - sum_init));
 T_E02 = log(E02 / (1.0 - sum_init));
 T_R01 = log(R01 / (1.0 - sum_init));
 T_R02 = log(R02 / (1.0 - sum_init));
-T_R12 = log(R12 / (1.0 - sum_init));
+T_R012 = log(R012 / (1.0 - sum_init));
 //end_toest
 
 //start_fromest
 Ri1 = expitCons(T_Ri1, 1.0, 10);
 Ri2 = expitCons(T_Ri2, 1.0, 10);
-sigma1 = T_sigma1;
-sigma2 = T_sigma2;
-gamma1 = T_gamma1;
-gamma2 = T_gamma2;
+
+sigma1 = exp(T_sigma1);
+sigma2 = exp(T_sigma2);
+gamma1 = exp(T_gamma1);
+gamma2 = exp(T_gamma2);
 
 delta1 = exp(T_delta1);
 delta2 = exp(T_delta2);
@@ -131,14 +130,15 @@ w2 = exp(T_w2);
 
 rho1 = expit(T_rho1);
 rho2 = expit(T_rho2);
-theta_lambda1 = expitCons(T_theta_lambda1,0,10);
-theta_lambda2 = expitCons(T_theta_lambda2,0,10);
+
+theta_lambda1 = expitCons(T_theta_lambda1, 0, 10);
+theta_lambda2 = expitCons(T_theta_lambda2, 0, 10);
 
 A1 = expit(T_A1);
-phi1 = expitCons(T_phi1,20,42);
+phi1 = expitCons(T_phi1, 20, 42);
 A2 = expit(T_A2);
-phi2 = expitCons(T_phi2,20,42);
- 
+phi2 = expitCons(T_phi2, 20, 42);
+
 beta_sd1 = T_beta_sd1;
 beta_sd2 = T_beta_sd2;
 N = T_N;
@@ -152,19 +152,21 @@ for (int i = 0; i < (int) nsurges; i++) {
 }
 
 // surges in loss of immunity
-double *delta_vec = (double *) &delta_i_1;
-double *T_delta_vec = (double *) &delta_i_1;  
+double *w_delta_vec = (double *) &w_delta_i_1;
+double *T_w_delta_vec = (double *) &T_w_delta_i_1;  
 for (int i = 0; i < (int) nsurges; i++) {
-  delta_vec[i] = exp(T_delta_vec[i]);
+  w_delta_vec[i] = exp(T_w_delta_vec[i]);
 }
- 
+
 double sum_init = 0.0;
-sum_init = exp(E01) + exp(E02) + exp(R01) + exp(R02) + exp(R12);
+
+sum_init = exp(T_E01) + exp(T_E02) + exp(T_R01) + exp(T_R02) + exp(T_R012);
+//sum_init = exp(E01) + exp(E02) + exp(R01) + exp(R02) + exp(R012);
 E01 = exp(T_E01) / (1.0 + sum_init);
 E02 = exp(T_E02) / (1.0 + sum_init);
 R01 = exp(T_R01) / (1.0 + sum_init);
 R02 = exp(T_R02) / (1.0 + sum_init);
-R12 = exp(T_R12) / (1.0 + sum_init);
+R012 = exp(T_R012) / (1.0 + sum_init);
 //end_fromest
 
 // -----INITIALISATION-----//
@@ -174,12 +176,12 @@ R12 = exp(T_R12) / (1.0 + sum_init);
 // E02 = inital proportion of the population infected with virus 2
 // R01 = inital proportion of the population immune to virus 1
 // R02 = initial proportion of the population immune to virus 2
-// R12 = initial proportion of the population immune to both virus 1 and 2 
+// R012 = initial proportion of the population immune to both virus 1 and 2 
 // N = overall population size
-// note: E01 +  E02 + R01 + R02 +  R12 must be <=1
+// note: E01 +  E02 + R01 + R02 + R012 must be <=1
 
 // Each compartment
-X_SS = nearbyint((1.0 - E01 - E02 - R01 - R02 - R12) * N);
+X_SS = nearbyint((1.0 - E01 - E02 - R01 - R02 - R012) * N);
 X_ES = nearbyint(E01 * N);
 X_IS = 0;
 X_TS = 0;
@@ -203,57 +205,60 @@ X_SR = nearbyint(R02 * N);
 X_ER = 0;
 X_IR = 0;
 X_TR = 0;
-X_RR = nearbyint(R12 * N);
+X_RR = nearbyint(R012 * N);
+
+V1 = 0;
+V2 = 0;
 
 // if the compartments that are assigned some initial value don't sum to
 // N (likely due to rounding in the nearbyint function) print the values
 // then re calculate the initial value of X_SS by doing N - all other
 // inital values for the other compartments
 if ((X_SS + X_ES + X_RS + X_SE + X_SR + X_RR) != N) {
-  Rprintf("SS=%f, ES=%f, RS=%f, SE=%f, SR=%f, RR=%f, sum=%f, N=%f, E01=%f, E02=%f, R01=%f, R02=%f, R12=%f\n", X_SS, X_ES, X_RS, X_SE, X_SR, X_RR, X_SS + X_ES + X_RS + X_SE + X_SR + X_RR, N, E01, E02,R01,R02,R12);
+  Rprintf("SS=%f, ES=%f, RS=%f, SE=%f, SR=%f, RR=%f, sum=%f, N=%f, E01=%f, E02=%f, R01=%f, R02=%f, R012=%f\n", X_SS, X_ES, X_RS, X_SE, X_SR, X_RR, X_SS + X_ES + X_RS + X_SE + X_SR + X_RR, N, E01, E02,R01,R02,R012);
   X_SS = nearbyint(N - X_ES - X_RS - X_SE - X_SR - X_RR);
 }
 
-
 //end_rinit
-
 
 //------ MEASUREMENNT MODEL ------//
 
 // SIMULATION 
 //start_rmeas
 // generate the total number of tests positive to each virus 
-v1_obs = rbinom(v1_T, rho1); // virus 1
-v2_obs = rbinom(v2_T, rho2); // virus 2
+V1_obs = rbinom(V1, rho1); // virus 1
+V2_obs = rbinom(V2, rho2); // virus 2
 //end_rmeas
 
 // EVALUATION
 //start_dmeas
 double ll_1, ll_2, ll;
 
-// observation model: v1_obs ~ binomial(size=v1_T, probability=rho1)
-// where: v1_obs is the observed number of v1 cases 
-//        v1_T the total number of v1 cases in the population  
-//        rho1 the probability of testing positive to v1 
-// similarly for v2
+// observation model: V1_obs ~ binomial(size=V1, probability=rho1)
+// where: V1_obs is the observed number of V1 cases 
+//        V1 the total number of V1 cases in the population  
+//        rho1 the probability of testing positive to V1 
+// similarly for V2
 
 // calculating components for the likelihood 
 ll_1 = dbinom(v1_obs, nearbyint(v1_T), rho1, 1); 
 ll_2 = dbinom(v2_obs, nearbyint(v2_T), rho2, 1); 
 
-//Rprintf("v1_obs=%.4f, v2_obs=%.4f, v1_T=%.4f, v2_T=%.4f, ll_1=%.4f, ll_2=%.4f\n",v1_obs, v2_obs, v1_T, v2_T, ll_1, ll_2);
+//Rprintf("V1_obs=%.4f, V2_obs=%.4f, V1_T=%.4f, V2_T=%.4f, ll_1=%.4f, ll_2=%.4f\n",V1_obs, V2_obs, V1_T, V2_T, ll_1, ll_2);
 
 // If rho_w == 1, the resulting observation probability might be 0 (-Inf on log-scale)
 // Replace by a big, but finite penalty if that's the case 
 ll = fmax2(ll_1 + ll_2, -1e3);
 
+if(debug) {
+  Rprintf("t=%.1f, V1_obs=%.2f, V2_obs=%.2f, V1=%.2f, V2=%.2f, rho1=%.4f, rho2=%.4f, ll_1=%.1f, ll_2=%.1f, sum=%.1f, ll=%.f\n", t, V1_obs, V2_obs, V1, V2, rho1, rho2, ll_1, ll_2, ll_1 + ll_2, ll);
+}
+
 // calculate likelihood by back transforming the log likelihood 
 lik = (give_log) ? ll : exp(ll);
 //end_dmeas
 
-
 //---------- PROCESS MODEL ----------//
-
 
 // DETERMINISTIC SKELETON
 // note: you don't technically need a skeleton when you are doing only a stochastic model
@@ -268,12 +273,12 @@ double p2 = (X_SI + X_EI + X_II + X_TI + X_RI); // virus 2
 // where beta_i = Reff*gamma and Reff is the effective reproductive number at time i in a partially susceptible 
 // population.   
 
-double beta1 = Ri1 / (1.0 - (R01 + R12)) * gamma1; // virus 1 
-double beta2 = Ri2 / (1.0 - (R02 + R12)) * gamma2; // virus 2 
+double beta1 = Ri1 / (1.0 - (R01 + R012)) * gamma1; // virus 1 
+double beta2 = Ri2 / (1.0 - (R02 + R012)) * gamma2; // virus 2 
 
 // incorporate seasonality parameter for each virus 
 // where A = amplitude, omega = annual angular frequency, t = time and phi = phase
-double omega = (2 * M_PI)/52;
+double omega = (2 * M_PI) / 52;
 double s1 = 1 + A1 * cos(omega * (t - phi1));
 double s2 = 1 + A2 * cos(omega * (t - phi2));
 
@@ -281,12 +286,12 @@ double s2 = 1 + A2 * cos(omega * (t - phi2));
 double lambda1 = beta1 * (p1/N) * s1; // virus 1
 double lambda2 = beta2 * (p2/N) * s2; // virus 2
 
-// addition of surges for v1
+// addition of surges for V1
 // note: we are using these surges for virus 1 only as it represents influenza 
 // which has a number of different strains and new mutations each season      
 
-// the new rate of immunity w1_loss = w1 + delta(t)
-// where delta(t) = delta_i for i in [1,n] when t=t_si days since start of season i;
+// the new rate of immunity w1_loss = w1 + w_delta(t)
+// where w_delta(t) = w_delta_i for i in [1,n] when t=t_si days since start of season i;
 //                  0 otherwise
 
 // note: to see large noticeable changes in the simulated data the
@@ -295,17 +300,22 @@ double lambda2 = beta2 * (p2/N) * s2; // virus 2
 
 // initialising vectors for t_si and delta_i
 double *t_vec = (double *) &t_si_1;
-double *delta_vec = (double *) &delta_i_1;
+double *w_delta_vec = (double *) &w_delta_i_1;
 double w1_s;
 
 // assigning the loss in immunity depending on the number of surges we have
 for(int i = 0; i < nsurges + 1; i++){
   if(floor(t) == t_vec[i]) { // if t is a surge time point the add the surge in loss of immunity
-    w1_s = w1 + delta_vec[i];
+    w1_s = w1 + w_delta_vec[i];
     break; // exit if we find a surge point
   } else{
     w1_s = w1; // if we don't find a surge point then just set the constant immunity loss
   }
+}
+
+double N_sum = X_SS + X_SE + X_SI + X_ST + X_SR + X_ES + X_EE + X_EI + X_ET + X_ER + X_IS + X_IE + X_II + X_IT + X_IR + X_TS + X_TE + X_TI + X_TT + X_TR + X_RS + X_RE + X_RI + X_RT + X_RR;
+if (debug) {
+  Rprintf("N_sum=%.4f\n", N_sum);
 }
 
 // ODEs
@@ -328,7 +338,7 @@ DX_IS = sigma1 * X_ES - (gamma1 + lambda2 * theta_lambda1) * X_IS + w2 * X_IR - 
 DX_IE = lambda2 * theta_lambda1 * X_IS + sigma1 * X_EE - (gamma1 + sigma2) * X_IE - nu * X_IE;
 DX_II = sigma1 * X_EI + sigma2 * X_IE - (gamma1 + gamma2) * X_II - nu * X_II;
 DX_IT = sigma1 * X_ET + gamma2 * X_II - (gamma1 + delta2) * X_IT - nu * X_IT;
-DX_IR = delta2 * X_IT + sigma1 * X_ER - gamma1 * X_IR -w2 * X_IR - nu * X_IR;
+DX_IR = delta2 * X_IT + sigma1 * X_ER - gamma1 * X_IR - w2 * X_IR - nu * X_IR;
 
 //column 4  of schematic
 DX_TS = gamma1 * X_IS - (delta1 + lambda2 * theta_lambda1) * X_TS + w2 * X_TR - nu * X_TS;
@@ -356,10 +366,10 @@ double p1 = (X_IS + X_IE +  X_II + X_IT + X_IR); // virus 1
 double p2 = (X_SI + X_EI +  X_II + X_TI + X_RI); // virus 2
 
 // calculate basic reproductive number R0 for each virus 
-double R0_1 = Ri1 / (1.0 - (R01 + R12)); // virus 1
-double R0_2 = Ri2 / (1.0 - (R02 + R12)); // virus 2
+double R0_1 = Ri1 / (1.0 - (R01 + R012)); // virus 1
+double R0_2 = Ri2 / (1.0 - (R02 + R012)); // virus 2
 
-//Rprintf("R0_1=%.4f, Ri1=%.4f, R01=%.4f, R12_1=%.4f\n", R0_1, Ri1, R01, R12);
+//Rprintf("R0_1=%.4f, Ri1=%.4f, R01=%.4f, R012_1=%.4f\n", R0_1, Ri1, R01, R012);
 
 // initialisation of the transmission terms 
 double beta1, beta2;
@@ -368,6 +378,11 @@ double beta1, beta2;
 
 double dW1 = rgammawn(beta_sd1, dt);
 double dW2 = rgammawn(beta_sd2, dt);
+
+if (debug) {
+  Rprintf("dW1=%.1f, dW2=%.1f\n", dW1, dW2);
+}
+
 beta1 = R0_1 * gamma1 * dW1 / dt;
 beta2 = R0_2 * gamma2 * dW2 / dt;
 
@@ -395,17 +410,20 @@ double lambda2 = beta2 * (p2/N) * s2; // virus 2
 // addition of surges for vir1
 // initialising vectors for t_si and delta_i
 double *t_vec = (double *) &t_si_1;
-double *delta_vec = (double *) &delta_i_1;
+double *w_delta_vec = (double *) &w_delta_i_1;
 double w1_s;
 
 // assigning the loss in immunity depending on the number of surges we have
+//Rprintf("t=%.2f\n", t);
 for(int i = 0; i < nsurges + 1; i++){
-    if(t == t_vec[i]) { // if t is a surge time point the add the surge in loss of immunity
-      w1_s = w1 + delta_vec[i];
-      break; // exit if we find a surge point
-   } else{
-      w1_s = w1; // if we don't find a surge point then just set the constant immunity loss
-   }
+  if(t == t_vec[i]) { // if t is a surge time point the add the surge in loss of immunity
+    w1_s = w1 + w_delta_vec[i];
+    //Rprintf("Surge point found: %.3f\n", w1_s);
+    break; // exit if we find a surge point
+  } else{
+    w1_s = w1; // if we don't find a surge point then just set the constant immunity loss
+    //Rprintf("No surge found: %.3f\n", w1_s);
+  }
 }
 // specifying the transitions 
 double rates[75];// vector of length 75
@@ -544,8 +562,14 @@ reulermultinom(3, X_RR, &rates[72], dt, &fromRR[0]);
 
 // Drawing number of births from a poisson distribution 
 double births;
-births = rpois(mu*N*dt);
+//births = rpois(mu * N * dt);
 //Rprintf("births=%.1f, mu=%.1f, dt=%.1f\n", births, mu, dt);
+
+births = fromSS[2] + fromES[2] + fromIS[2] + fromTS[2] + fromRS[2] +
+  fromSE[2] + fromEE[2] + fromIE[2] + fromTE[2] + fromRE[2] +
+  fromSI[2] + fromEI[2] + fromII[2] + fromTI[2] + fromRI[2] +
+  fromST[2] + fromET[2] + fromIT[2] + fromTT[2] + fromRT[2] +
+  fromSR[2] + fromER[2] + fromIR[2] + fromTR[2] + fromRR[2];
 
 // balance equations
 
@@ -584,9 +608,8 @@ X_IR += fromIT[1] + fromER[0] - fromIR[0] - fromIR[1] - fromIR[2];
 X_TR += fromTT[1] + fromIR[0] - fromTR[0] - fromTR[1] - fromTR[2];
 X_RR += fromRT[1] + fromTR[0] - fromRR[0] - fromRR[1] - fromRR[2];
 
-
 // Total incidence of each virus in the population
-v1_T += fromIS[0] + fromIE[0] + fromII[0] + fromIT[0] + fromIR[0];
-v2_T += fromSI[1] + fromEI[1] + fromII[1] + fromTI[1] + fromRI[1];
+V1 += fromIS[0] + fromIE[0] + fromII[0] + fromIT[0] + fromIR[0];
+V2 += fromSI[1] + fromEI[1] + fromII[1] + fromTI[1] + fromRI[1];
 
 //end_rsim
