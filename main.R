@@ -31,7 +31,10 @@ source('seitr_x_seitr.R')
 #---- set up cluster inputs ---# 
 # Get cluster environmental variables:
 jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size
-jobid <- 1
+if (is.na(jobid)) {
+  print('No jobid value found!')
+  jobid <- 1
+}
 
 #---- set global parameters ----#
 n_sim <- 100 # total number of simulated datasets
@@ -105,7 +108,6 @@ true_params <- c(Ri1 = 1.1, Ri2 = 1.7,
 # Create model and synthetic data
 
 #---- create pomp model object ----#
-source('seitr_x_seitr.R')
 resp_mod <- create_SEITRxSEITR_mod(tot_weeks, true_params, debug_bool = debug_bool)
 
 #---- test pomp model ----#
@@ -143,7 +145,6 @@ dat_red <- dat %>% # remove if outbreak never takes off
 expect_true(all.equal(dim(dat), dim(dat_red)))
 rm(dat_red)
 
-if (debug_bool) { # check seasonal attack rates
   season_breaks <- dat %>% filter(str_detect(date, '07-0[1-7]')) %>% pull(date) %>% unique()
   season_breaks <- c(season_breaks, '2024-07-01')
   
@@ -155,9 +156,8 @@ if (debug_bool) { # check seasonal attack rates
     mutate(V1 = V1 / 3700000 * 100,
            V2 = V2 / 3700000 * 100) %>%
     summary()
-}
 
-if (debug_bool) { # check that surges in immunity happen correctly
+  #---- check that surges in immunity happen correctly ----#
   dat %>%
     mutate(S1 = X_SS + X_SE + X_SI + X_ST + X_SR) %>%
     select(time:.id, S1) %>%
