@@ -138,7 +138,7 @@ A1 = expit(T_A1);
 phi1 = expitCons(T_phi1, 20, 42);
 A2 = expit(T_A2);
 phi2 = expitCons(T_phi2, 20, 42);
-
+ 
 beta_sd1 = T_beta_sd1;
 beta_sd2 = T_beta_sd2;
 N = T_N;
@@ -241,8 +241,8 @@ double ll_1, ll_2, ll;
 // similarly for V2
 
 // calculating components for the likelihood 
-ll_1 = dbinom(v1_obs, nearbyint(v1_T), rho1, 1); 
-ll_2 = dbinom(v2_obs, nearbyint(v2_T), rho2, 1); 
+ll_1 = dbinom(v1_obs, nearbyint(v1_T), rho1, 1);
+ll_2 = dbinom(v2_obs, nearbyint(v2_T), rho2, 1);
 
 //Rprintf("V1_obs=%.4f, V2_obs=%.4f, V1_T=%.4f, V2_T=%.4f, ll_1=%.4f, ll_2=%.4f\n",V1_obs, V2_obs, V1_T, V2_T, ll_1, ll_2);
 
@@ -283,8 +283,8 @@ double s1 = 1 + A1 * cos(omega * (t - phi1));
 double s2 = 1 + A2 * cos(omega * (t - phi2));
 
 // calculate force of infection for each virus - note A = 0 means no seasonality component  
-double lambda1 = beta1 * (p1/N) * s1; // virus 1
-double lambda2 = beta2 * (p2/N) * s2; // virus 2
+double lambda1 = beta1 * (p1 / N) * s1; // virus 1
+double lambda2 = beta2 * (p2 / N) * s2; // virus 2
 
 // addition of surges for V1
 // note: we are using these surges for virus 1 only as it represents influenza 
@@ -315,7 +315,7 @@ for(int i = 0; i < nsurges + 1; i++){
 
 double N_sum = X_SS + X_SE + X_SI + X_ST + X_SR + X_ES + X_EE + X_EI + X_ET + X_ER + X_IS + X_IE + X_II + X_IT + X_IR + X_TS + X_TE + X_TI + X_TT + X_TR + X_RS + X_RE + X_RI + X_RT + X_RR;
 if (debug) {
-  Rprintf("N_sum=%.4f\n", N_sum);
+Rprintf("N_sum=%.4f\n", N_sum);
 }
 
 // ODEs
@@ -354,8 +354,8 @@ DX_RI = sigma2 * X_RE + delta1 * X_TI - gamma2 * X_RI - w1_s * X_RI - nu * X_RI;
 DX_RT = gamma2 * X_RI + delta1 * X_TT - delta2* X_RT - w1_s * X_RT - nu * X_RT;
 DX_RR = delta2 * X_RT + delta1  * X_TR - w1_s * X_RR - w2 * X_RR - nu * X_RR;
 
-Dv1_T = p1 * gamma1;
-Dv2_T = p2 * gamma2;
+DV1 = p1 * gamma1;
+DV2 = p2 * gamma2;
 //end_skel
 
 // Stochastic model SIMULATION
@@ -404,8 +404,8 @@ double s1 = 1 + A1 * cos(omega * (t - phi1));
 double s2 = 1 + A2 * cos(omega * (t - phi2));
 
 // calculate force of infection for each virus 
-double lambda1 = beta1 * (p1/N) * s1; // virus 1
-double lambda2 = beta2 * (p2/N) * s2; // virus 2
+double lambda1 = beta1 * (p1 / N) * s1; // virus 1
+double lambda2 = beta2 * (p2 / N) * s2; // virus 2
 
 // addition of surges for vir1
 // initialising vectors for t_si and delta_i
@@ -416,14 +416,14 @@ double w1_s;
 // assigning the loss in immunity depending on the number of surges we have
 //Rprintf("t=%.2f\n", t);
 for(int i = 0; i < nsurges + 1; i++){
-  if(t == t_vec[i]) { // if t is a surge time point the add the surge in loss of immunity
-    w1_s = w1 + w_delta_vec[i];
-    //Rprintf("Surge point found: %.3f\n", w1_s);
-    break; // exit if we find a surge point
-  } else{
-    w1_s = w1; // if we don't find a surge point then just set the constant immunity loss
-    //Rprintf("No surge found: %.3f\n", w1_s);
-  }
+    if(t == t_vec[i]) { // if t is a surge time point the add the surge in loss of immunity
+      w1_s = w1 + w_delta_vec[i];
+      //Rprintf("Surge point found: %.3f\n", w1_s);
+      break; // exit if we find a surge point
+   } else{
+      w1_s = w1; // if we don't find a surge point then just set the constant immunity loss
+      //Rprintf("No surge found: %.3f\n", w1_s);
+   }
 }
 // specifying the transitions 
 double rates[75];// vector of length 75
