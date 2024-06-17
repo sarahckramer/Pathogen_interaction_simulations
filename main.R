@@ -22,8 +22,8 @@ library(lubridate)
 # library(janitor)
 # library(ggfortify)
 # library(future) # allows for parallel processing
-# library(foreach)
-# library(doParallel)
+library(foreach)
+library(doParallel)
 
 #---- read in relevant functions ----#
 source('seitr_x_seitr.R')
@@ -77,7 +77,7 @@ t_si <- round(t_si) # make whole numbers
 t_si <- t_si[-which(t_si <= 104)] # remove first two years to allow system to reach equilibrium
 n_surge <- length(t_si)
 
-w_delta_i <- runif(n = length(t_si), min = 0.01 * 7, max = 0.1 * 7) # yearly rate of immunity loss
+w_delta_i <- runif(n = length(t_si), min = 0.01 * 7, max = 0.1 * 7) # yearly surge in rate of immunity loss
 
 rm(mu_Imloss, sd_Imloss)
 
@@ -118,7 +118,12 @@ p_indep <- check_independent_dynamics(resp_mod) # check for independent dynamics
 if (debug_bool) print(p_indep)
 
 #---- simulate synthetic data ----#
+tic <- Sys.time()
 dat <- simulate(resp_mod, nsim = n_sim, format = 'data.frame')
+toc <- Sys.time()
+etime <- toc - tic
+units(etime) <- 'secs'
+print(etime)
 
 if (debug_bool) {
   resp_mod@data <- dat %>%
@@ -145,6 +150,18 @@ dat_red <- dat %>% # remove if outbreak never takes off
 expect_true(all.equal(dim(dat), dim(dat_red)))
 rm(dat_red)
 
+if (debug_bool) {
+  
+  #---- visualize outbreaks ----#
+  dat %>%
+    select(time:.id, V1_obs:V2_obs) %>%
+    pivot_longer(V1_obs:V2_obs) %>%
+    ggplot(aes(x = time, y = value, group = paste(name, .id))) +
+    geom_line() +
+    facet_wrap(~ name) +
+    theme_classic()
+  
+  #---- check seasonal attack rates ----#
   season_breaks <- dat %>% filter(str_detect(date, '07-0[1-7]')) %>% pull(date) %>% unique()
   season_breaks <- c(season_breaks, '2024-07-01')
   
@@ -156,11 +173,11 @@ rm(dat_red)
     mutate(V1 = V1 / 3700000 * 100,
            V2 = V2 / 3700000 * 100) %>%
     summary()
-
+  
   #---- check that surges in immunity happen correctly ----#
   dat %>%
     mutate(S1 = X_SS + X_SE + X_SI + X_ST + X_SR) %>%
-    select(time:.id, S1) %>%
+    dplyr::select(time:.id, S1) %>%
     ggplot(aes(x = time, y = S1, group = .id)) + geom_line() + theme_classic()
 }
 
@@ -175,63 +192,118 @@ results$data <- dat
 
 # Run various methods to determine causality
 
+#---- Correlation coefficents ----#
 
+corr_func <- function(data){
+  
+  # Function to calculate correlation
+  # param data: Tibble containing time series of viruses 1 and 2
+  # returns: Tibble of Pearson's r with confidence intervals and p-values
+  
+  cor_raw <- data %>% group_by(.id) %>%
+    dplyr::select(.id, V1_obs:V2_obs) %>%
+    group_map(~ cor.test(.$V1_obs, .$V2_obs))
+  
+  temp_res <- bind_cols(cor = lapply(cor_raw, getElement, 'estimate') %>%
+                          unlist()) %>%
+    bind_cols(CI_lower_95 = lapply(lapply(cor_raw, getElement, 'conf.int'), '[[', 1) %>%
+                unlist()) %>%
+    bind_cols(CI_upper_95 = lapply(lapply(cor_raw, getElement, 'conf.int'), '[[', 2) %>%
+                unlist()) %>%
+    bind_cols(p_value = lapply(cor_raw, getElement, 'p.value') %>%
+                unlist()) %>%
+    mutate(.id = 1:length(cor_raw), .before = cor)
 
-#---- Correlation coefficents --------# 
-# function to estimate correlation 
-# inputs: v1_obs = time series for v1_obs
-#         v2_obs = time series for v2_obs
-# corr_func <- function(v1_obs, v2_obs){
-#   # calculated correlation coefficent
-#   cor_raw <- cor.test(v1_obs, v2_obs)
-#   # pull together results in data frame
-#   temp_res <- data.frame(cbind(as.numeric(cor_raw$estimate), cor_raw$conf.int[1], cor_raw$conf.int[2]), cor_raw$p.value)
-#   names(temp_res) <- c("cor", "CI_lower_95", "CI_upper_95", "p_value")
-#   return(temp_res)
-# }
-# 
-# # apply correlation function to all simulated datasets and save results
-# results$cor <- results$data %>% group_by(.id) %>% do((corr_func(.$v1_obs,.$v2_obs)))
+  return(temp_res)
+}
 
-#--- GAM approach ---# 
-# source("./methods/gam_cor.R")
+# Apply correlation function to all simulated datasets and save results:
+tic <- Sys.time()
+results$cor <- corr_func(dat)
+toc <- Sys.time()
+etime <- toc - tic
+units(etime) <- 'secs'
+print(etime)
+
+#---- GAM approach ----#
+source('methods/gam_cor.R')
 
 # setting up parallelism for the foreach loop
-# registerDoParallel(cl <- makeCluster(10))
-# # apply the GAM correlation approach to each simulated data set and save the results
-# res_gam_cor <- foreach(i=1:nsim, .packages=c("tidyverse","mgcv","vars","boot")) %dopar%{
-#   # if the dataset was removed because the outbreak died out then skip it
-#   if(dim(results$data %>% filter(.id==i))[1]!=0){
-#     results$data %>% filter(.id==i) %>% gam_cor(.)
-#   }
-# }
-# results$gam_cor <- do.call(rbind, res_gam_cor)
+registerDoParallel(cl <- makeCluster(5))
 
-#----- Transfer entropy analysis ------# 
-# source("./methods/transfer_entropy_jidt.R")
-# 
-# # lag = 1
-# results$transfer_entropy <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="1"))
-# # lag = 2
-# temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="2"))
-# results$transfer_entropy <- rbind(results$transfer_entropy, temp)
-# # lag = 4
-# temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="4"))
-# results$transfer_entropy <- rbind(results$transfer_entropy, temp)
-# # lag = 6
-# temp <- results$data %>% group_by(.id) %>% do(te_jidt(., lag="6"))
-# results$transfer_entropy <- rbind(results$transfer_entropy, temp)
+# apply the GAM correlation approach to each simulated data set and save the results
+tic <- Sys.time()
+res_gam_cor <- foreach(i = 1:n_sim, .packages=c("tidyverse","mgcv","vars","boot")) %dopar% {
+  
+  dat %>% filter(.id == i) %>% gam_cor()
+  
+  # # if the dataset was removed because the outbreak died out then skip it
+  # if(dim(results$data %>% filter(.id==i))[1]!=0){
+  #   results$data %>% filter(.id==i) %>% gam_cor(.)
+  # }
+  
+}
+toc <- Sys.time()
+etime <- toc - tic
+units(etime) <- 'mins'
+print(etime)
 
-#---- Granger causality analysis  ----# 
-# source("./methods/granger_analysis.R")
-# 
-# # apply granger analysis to each simulated data set and save the results
+# compile all results
+results$gam_cor <- do.call(rbind, res_gam_cor) %>%
+  mutate(.id = 1:n_sim, .before = cor)
+
+#---- Transfer entropy analysis ----#
+source('methods/transfer_entropy_jidt.R')
+ 
+tic <- Sys.time()
+
+# lag = 1
+res_te_1 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '1'))
+
+toc_lag1 <- Sys.time()
+etime_lag1 <- toc_lag1 - tic
+units(etime_lag1) <- 'mins'
+print(etime_lag1)
+
+# lag = 2
+res_te_2 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '2'))
+
+# lag = 4
+res_te_4 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '4'))
+
+# lag = 6
+res_te_6 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '6'))
+
+toc <- Sys.time()
+etime <- toc - tic
+units(etime) <- 'mins'
+print(etime)
+
+# combine results and store
+results$transfer_entropy <- bind_rows(res_te_1, res_te_2, res_te_4, res_te_6)
+rm(res_te_1, res_te_2, res_te_4, res_te_6)
+
+#---- Granger causality analysis  ----#
+source('methods/granger_analysis.R')
+
+# apply granger analysis to each simulated data set and save the results
+tic <- Sys.time()
+results$granger <- dat %>% group_by(.id) %>% do(granger_func(.))
 # results$granger <- results$data %>% group_by(.id) %>% do(granger_func(.))
+toc <- Sys.time()
+etime <- toc - tic
+units(etime) <- 'mins'
+print(etime)
 
-#------- Convergent Cross mapping analysis -------# 
-# source("./methods/CCM.R")
-# 
-# results$CCM <- results$data %>% group_by(.id) %>% do(ccm_func(.))
-# 
-# # save out results
-# save(results, file=sprintf('results_%s_%s_%s_%s_%s.RData',jobid, theta_lambda1,theta_lambda2,delta_1,delta_2))  
+#---- Convergent Cross mapping analysis ----#
+source('/methods/CCM.R')
+
+tic <- Sys.time()
+results$CCM <- dat %>% group_by(.id) %>% do(ccm_func(.))
+toc <- Sys.time()
+etime <- toc - tic
+units(etime) <- 'hours'
+print(etime)
+
+# save out results
+save(results, file=sprintf('results_%s_%s_%s_%s_%s.RData',jobid, theta_lambda1, theta_lambda2, delta_1, delta_2))
