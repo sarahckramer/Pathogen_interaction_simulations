@@ -14,11 +14,12 @@
 library(tseries)
 library(lmtest) 
 library(vars)
+library(VARtests)
 library(boot)
 
 granger_func <- function(data){
   
-  # Automatically determine the best lag doing several models with lags
+  # automatically determine the best lag doing several models with lags
   # 1-12 (approximately 3 month) then choose the best lag number based on BIC
   
   # initialise lists to put results in 
@@ -55,6 +56,7 @@ granger_func <- function(data){
   # H0: time series is stationary 
   # H1: non stationary
   kpss_v1 <- kpss.test(data$V1_obs); #kpss_v1
+  kpss_v2 <- kpss.test(data$V2_obs); #kpss_v2
   
   # ---- running Granger test and extracting p-values ----#
   # Test hypotheses
@@ -77,12 +79,24 @@ granger_func <- function(data){
   # run the VAR (vector autoregressive) model (i.e. which has both X and Y)
   # this is essentially what the Granger test does under the hood
   var1 <- VAR(y = data[, c('V1_obs', 'V2_obs')], p = p)
+  var1_confound <- VAR(y = data[, c('V1_obs', 'V2_obs')], p = p, exogen = data[, 'seasonal_component'])
+  
+  # # pull out effect of seasonal component
+  # summary(var1_confound)$varresult$V1_obs$coefficients['exo1', 1]
+  # summary(var1_confound)$varresult$V2_obs$coefficients['exo1', 1]
+  # summary(var1_confound)$varresult$V1_obs$coefficients['exo1', 'Pr(>|t|)']
+  # summary(var1_confound)$varresult$V2_obs$coefficients['exo1', 'Pr(>|t|)']
   
   # run AR for univariate analysis - models of just the single virus against its 
   # own lags (VAR is only for multivariate and if you try to run a univariate analysis
   # like this with VAR it will tell you to use ar or arima)
   ar_v1 = ar(data$V1_obs, order = var1$p, aic = F, method="ols")
   ar_v2 = ar(data$V2_obs, order = var1$p, aic = F, method="ols")
+  # ar_v1_alt <- VARfit(data$V1_obs, p = var1$p)
+  # ar_v2_alt <- VARfit(data$V2_obs, p = var1$p)
+  
+  ar_v1_confound <- VARfit(data$V1_obs, p = var1$p, exogen = data$seasonal_component)
+  ar_v2_confound <- VARfit(data$V2_obs, p = var1$p, exogen = data$seasonal_component)
   
   # Estimating the effect size using log RSS (Barraquand et al. 2021)
   # log RSS = log(RSS_univariate/RSS_multivariate) interpretation: 
@@ -91,6 +105,9 @@ granger_func <- function(data){
   # +ve = strong positive interaction 
   logRSS_v1 <- log(sum(ar_v1$resid ** 2, na.rm = TRUE) / sum(residuals(var1)[, 'V1_obs'] ** 2));# logRSS_v1 
   logRSS_v2 <- log(sum(ar_v2$resid ** 2, na.rm = TRUE) / sum(residuals(var1)[, 'V2_obs'] ** 2));# logRSS_v2
+  
+  logRSS_v1_confound <- log(sum(ar_v1_confound$resid ** 2, na.rm = TRUE) / sum(residuals(var1_confound)[, 'V1_obs'] ** 2))
+  logRSS_v2_confound <- log(sum(ar_v2_confound$resid ** 2, na.rm = TRUE) / sum(residuals(var1_confound)[, 'V2_obs'] ** 2))
   
   # get p-values
   # results the same regardless of performance on the raw or normalised data
@@ -106,24 +123,46 @@ granger_func <- function(data){
   #---- estimating the uncertainty around these statistics ----# 
   # get residuals
   residuals_orig <- data.frame(residuals(var1))
+  residuals_orig_confound <- data.frame(residuals(var1_confound))
   
   ## ---- block bootstrapping ----# 
   
   # creating a function to define the statistics for the tsboot function which will do 
   # the resampling in a block wise fashion
-  boot_func <- function(tseries, orig_data, var_model,p) {
+  boot_func <- function(tseries, orig_data, var_model, p, exogen = NA) {
+    
     bootstrap_residuals <- tseries
     
-    # perform univariate AR models
-    bootstrap_AR_v1 <- ar(bootstrap_data$v1_obs,order=p,aic=F,method="ols")
-    bootstrap_AR_v2 <- ar(bootstrap_data$v2_obs,order=p,aic=F,method="ols")
     # estimate new simulated data by taking original data - residuals + new bootstrapped residual
     bootstrap_data_v1 <- as.vector(orig_data$V1_obs[-c(1:p)] - residuals(var_model)[,'V1_obs'] + bootstrap_residuals$V1_obs)
     bootstrap_data_v2 <- as.vector(orig_data$V2_obs[-c(1:p)] - residuals(var_model)[,'V2_obs'] + bootstrap_residuals$V2_obs)
     bootstrap_data <- data.frame(cbind(V1_obs = bootstrap_data_v1, V2_obs = bootstrap_data_v2))
     
-    # perform multivariate VAR model 
-    bootstrap_VAR <- VAR(y=bootstrap_data, p=p)
+    if (is.na(exogen)) {
+      
+      # perform univariate AR models
+      bootstrap_AR_v1 <- ar(bootstrap_data$V1_obs, order = p, aic = F, method = "ols")
+      bootstrap_AR_v2 <- ar(bootstrap_data$V2_obs, order = p, aic = F, method = "ols")
+      
+      # perform multivariate VAR model 
+      bootstrap_VAR <- VAR(y = bootstrap_data, p = p)
+      
+    } else {
+      
+      # get seasonal component
+      bootstrap_data <- bootstrap_data %>%
+        mutate(time = (min(orig_data$time) + p):max(orig_data$time)) %>%
+        mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52 * (time - 26))) %>%
+        dplyr::select(-time)
+      
+      # perform univariate AR models
+      bootstrap_AR_v1 <- VARfit(bootstrap_data$V1_obs, p = p, exogen = bootstrap_data$seasonal_component)
+      bootstrap_AR_v2 <- VARfit(bootstrap_data$V2_obs, p = p, exogen = bootstrap_data$seasonal_component)
+      
+      # perform multivariate VAR model 
+      bootstrap_VAR <- VAR(y = bootstrap_data[, c('V1_obs', 'V2_obs')], p = p, exogen = bootstrap_data[, 'seasonal_component'])
+      
+    }
     
     # calculate log RS 
     logRSS_v1 <- log(sum(bootstrap_AR_v1$resid ** 2, na.rm=TRUE) / sum(residuals(bootstrap_VAR)[, 1] ** 2)) 
@@ -138,8 +177,15 @@ granger_func <- function(data){
   # generate bootstrapped replicates in blocks of 4 weeks
   boot_out <- tsboot(tseries = residuals_orig, statistic = boot_func, R = 100, sim = 'fixed', l = 4,
                      orig_data = data, var_model = var1, p = p, exogen = NA)
+  boot_out_confound <- tsboot(tseries = residuals_orig, statistic = boot_func, R = 100, sim = 'fixed', l = 4,
+                              orig_data = data, var_model = var1, p = p, exogen = 'seasonal')
+  
   # check out the bootstrap distributions
   bootstrap_samples <- boot_out$t %>%
+    as_tibble() %>%
+    rename('logRSS_v1_x_v2' = 'V1',
+           'logRSS_v2_x_v1' = 'V2')
+  bootstrap_samples_confound <- boot_out_confound$t %>%
     as_tibble() %>%
     rename('logRSS_v1_x_v2' = 'V1',
            'logRSS_v2_x_v1' = 'V2')
@@ -152,7 +198,31 @@ granger_func <- function(data){
   # v2 x v1
   CI_lower95_v2_x_v1 <- logRSS_v2 - 1.96 * sd(bootstrap_samples$logRSS_v2_x_v1)
   CI_upper95_v2_x_v1 <- logRSS_v2 + 1.96 * sd(bootstrap_samples$logRSS_v2_x_v1)
+  
+  # v1 x v2
+  CI_lower95_v1_x_v2_confound <- logRSS_v1_confound - 1.96 * sd(bootstrap_samples_confound$logRSS_v1_x_v2)
+  CI_upper95_v1_x_v2_confound <- logRSS_v1_confound + 1.96 * sd(bootstrap_samples_confound$logRSS_v1_x_v2)
+  # v2 x v1
+  CI_lower95_v2_x_v1_confound <- logRSS_v2_confound - 1.96 * sd(bootstrap_samples_confound$logRSS_v2_x_v1)
+  CI_upper95_v2_x_v1_confound <- logRSS_v2_confound + 1.96 * sd(bootstrap_samples_confound$logRSS_v2_x_v1)
+  
+  # output results
+  res <- data.frame(cbind(logRSS = c(logRSS_v1, logRSS_v2, logRSS_v1_confound, logRSS_v2_confound),
+                          direction = rep(c('v2 -> v1', 'v1 -> v2'), 2),
+                          confounding = rep(c('none', 'none', 'seasonal', 'seasonal')),
+                          CI_lower = c(CI_lower95_v1_x_v2, CI_lower95_v2_x_v1, CI_lower95_v1_x_v2_confound, CI_lower95_v2_x_v1_confound),
+                          CI_upper = c(CI_upper95_v1_x_v2, CI_upper95_v2_x_v1, CI_upper95_v1_x_v2_confound, CI_upper95_v2_x_v1_confound),
+                          granger_p = c(p_gt1_wald, p_gt2_wald, NA, NA),
+                          ftest_p = c(p_gt1_ftest, p_gt2_ftest, p_gt1_ftest_confound, p_gt2_ftest_confound),
+                          adf_p = c(adf_v1$p.value, adf_v2$p.value, NA, NA),
+                          kpss_p = c(kpss_v1$p.value, kpss_v2$p.value, NA, NA))) %>%
+    as_tibble() %>%
+    mutate(logRSS = as.numeric(logRSS),
+           CI_lower = as.numeric(CI_lower),
+           CI_upper = as.numeric(CI_upper),
+           granger_p = as.numeric(granger_p),
+           adf_p = as.numeric(adf_p),
+           kpss_p = as.numeric(kpss_p))
+  return(res)
+  
 }
-
-
-             
