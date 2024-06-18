@@ -11,9 +11,9 @@
 ################################################################################
 
 # load packages
-library(tseries) 
+library(tseries)
 library(lmtest) 
-library(vars) 
+library(vars)
 library(boot)
 
 granger_func <- function(data){
@@ -21,21 +21,22 @@ granger_func <- function(data){
   # Automatically determine the best lag doing several models with lags
   # 1-12 (approximately 3 month) then choose the best lag number based on BIC
   
-  # initialising lists to put results in 
-  lags <- list()
-  lag_v1 <- list()
-  lag_v2 <- list()
+  # initialise lists to put results in 
+  # lags <- list()
+  # lag_v1 <- list()
+  # lag_v2 <- list()
   
   # determine the number of lags for each simulated dataset
-  df <- data %>% dplyr::select(v1_obs, v2_obs)
-  df$.id <- NULL
+  df <- data %>% dplyr::select(V1_obs, V2_obs)
+  # df$.id <- NULL
   
-  lags <- lapply(df, VARselect, lag.max=12) # lag of approx 3 month
+  lags <- lapply(df, VARselect, lag.max = 15) # lag of approx 3 month
   rm(df)
-  # pull out the lag with best BIC. Lower BIC = better (not BIC is labeled SV)
+  
+  # pull out the lag with lowest BIC (not BIC is labeled SV)
   # regardless of whether raw of normalised data used the lag chosen is the same
-  lag_v1 <- as.numeric(lags$v1_obs$selection[3])
-  lag_v2 <- as.numeric(lags$v2_obs$selection[3])
+  lag_v1 <- as.numeric(lags$V1_obs$selection[3])
+  lag_v2 <- as.numeric(lags$V2_obs$selection[3])
   
   rm(lags)
   
@@ -47,129 +48,110 @@ granger_func <- function(data){
   # ADF Test hypotheses
   # H0: there is a unit root - i.e. the time series is not stationary 
   # H1: time series is stationary 
-  adf_v1 <- adf.test(data$v1_obs,k=lag_v1); adf_v1 # k = lag number 
-  adf_v2 <- adf.test(data$v2_obs,k=lag_v2); adf_v2
+  adf_v1 <- adf.test(data$V1_obs, k = lag_v1); #adf_v1 # k = lag number 
+  adf_v2 <- adf.test(data$V2_obs, k = lag_v2); #adf_v2
   
   # KPSS Test hypotheses
   # H0: time series is stationary 
   # H1: non stationary
-  kpss_v1 <- kpss.test(data$v1_obs); kpss_v1
-  kpss_v2 <- kpss.test(data$v2_obs); kpss_v2
+  kpss_v1 <- kpss.test(data$V1_obs); #kpss_v1
   
-  # ------running Granger test and extracting p-values------#
+  # ---- running Granger test and extracting p-values ----#
   # Test hypotheses
   # H0: b1 = b2 = ... = bk = 0 the lags of x provide no additional information about y beyond the lags of y 
   # H1: there exists 1 <= i <= k so that bi \neq 0 at least one x lag provides additional information 
   
   # estimate seasonal component
-  df <- data %>% dplyr::select(time,v1_obs, v2_obs)
-  df$.id <- NULL
-  omega <- (2 * pi)/52
-  A1 <- 0.2
-  phi1 <- 26
-  df$seasonal_component <- 1 + A1 * cos(omega * (df$time - phi1))
+  data <- data %>%
+    dplyr::select(time, V1_obs, V2_obs) %>%
+    mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52 * (time - 26)))
   
-  m1 <- lm(v1_obs ~ lag(v1_obs, 1) + lag(v1_obs, 2) + lag(v1_obs, 3) + v2_obs , data=data)
-  m2 <- lm(v1_obs ~ lag(v1_obs, 1) + lag(v1_obs, 2) + lag(v1_obs, 3) , data=data)
-  anova(m1,m2)
+  # m1 <- lm(V1_obs ~ lag(V1_obs, 1) + lag(V1_obs, 2) + lag(V1_obs, 3) + V2_obs , data = data)
+  # m2 <- lm(V1_obs ~ lag(V1_obs, 1) + lag(V1_obs, 2) + lag(V1_obs, 3) , data = data)
+  # anova(m1, m2)
   
   # specifying the lag to be the minimum of the two series
-  p <- min(lag_v1,lag_v2)
-  # results the same regardless of performance on the raw or normalised data
-  gt1 <- grangertest(v1_obs ~ v2_obs, order = p, data=data); gt1
-  p_gt1 <- gt1$`Pr(>F)`[2] # p-value
+  p <- min(lag_v1, lag_v2)
   
-  gt2 <- grangertest(v2_obs ~ v1_obs, order = p, data=data); gt2
-  p_gt2 <- gt2$`Pr(>F)`[2] # p-value
-  
-  
-  # ----determining the causal effect size ----# 
+  #---- determine causal effect size ----#
   # run the VAR (vector autoregressive) model (i.e. which has both X and Y)
-  # this is essentially what the Grangers test does under the hood
-  var1 <- VAR(y=data[,c("v1_obs","v2_obs")], p=p)
-  summary(var1) 
+  # this is essentially what the Granger test does under the hood
+  var1 <- VAR(y = data[, c('V1_obs', 'V2_obs')], p = p)
   
   # run AR for univariate analysis - models of just the single virus against its 
   # own lags (VAR is only for multivariate and if you try to run a univariate analysis
   # like this with VAR it will tell you to use ar or arima)
-  ar_v1=ar(data$v1_obs,order=var1$p,aic=F,method="ols")
-  ar_v2=ar(data$v2_obs,order=var1$p,aic=F,method="ols")
+  ar_v1 = ar(data$V1_obs, order = var1$p, aic = F, method="ols")
+  ar_v2 = ar(data$V2_obs, order = var1$p, aic = F, method="ols")
   
   # Estimating the effect size using log RSS (Barraquand et al. 2021)
   # log RSS = log(RSS_univariate/RSS_multivariate) interpretation: 
   # 0 = no interaction
   # -ve = strong negative interaction 
   # +ve = strong positive interaction 
-  # v1 (v1 ~ v2)
-  logRSS_v1 <- log(sum(residuals(ar_v1)^2,na.rm=T)/sum(residuals(var1)[,"v1_obs"]^2)); logRSS_v1 
-  # v2 (v2 ~ v1)
-  logRSS_v2 <- log(sum(residuals(ar_v2)^2,na.rm=T)/sum(residuals(var1)[,"v2_obs"]^2)); logRSS_v2 
+  logRSS_v1 <- log(sum(ar_v1$resid ** 2, na.rm = TRUE) / sum(residuals(var1)[, 'V1_obs'] ** 2));# logRSS_v1 
+  logRSS_v2 <- log(sum(ar_v2$resid ** 2, na.rm = TRUE) / sum(residuals(var1)[, 'V2_obs'] ** 2));# logRSS_v2
   
-  #----- Estimating the uncertainty around these statistics ----# 
-  # pulling out original data, residuals and estimates 
-  orig_data <- data[,c("v1_obs","v2_obs")]
+  # get p-values
+  # results the same regardless of performance on the raw or normalised data
+  p_gt1_wald <- grangertest(V1_obs ~ V2_obs, order = p, data = data)$`Pr(>F)`[2]
+  p_gt2_wald <- grangertest(V2_obs ~ V1_obs, order = p, data = data)$`Pr(>F)`[2]
+  
+  p_gt1_ftest <- causality(var1, cause = 'V1_obs')$Granger$p.value
+  p_gt2_ftest <- causality(var1, cause = 'V2_obs')$Granger$p.value
+  
+  p_gt1_ftest_confound <- causality(var1_confound, cause = 'V1_obs')$Granger$p.value
+  p_gt2_ftest_confound <- causality(var1_confound, cause = 'V2_obs')$Granger$p.value
+  
+  #---- estimating the uncertainty around these statistics ----# 
+  # get residuals
   residuals_orig <- data.frame(residuals(var1))
-  # output estimates
-  orig_est <- data.frame(direction=c("v2 -> v1", "v1 -> v2"),logRSS = c(logRSS_v1, logRSS_v2))
   
-  ##---- Block bootstrapping -----# 
+  ## ---- block bootstrapping ----# 
   
   # creating a function to define the statistics for the tsboot function which will do 
   # the resampling in a block wise fashion
   boot_func <- function(tseries, orig_data, var_model,p) {
     bootstrap_residuals <- tseries
-    # estimating new simulated data by taking original data - residuals + new bootstrapped residual
-    bootstrap_data_v1 <- as.vector(orig_data$v1_obs[-c(1:p)] - residuals(var_model)[,"v1_obs"] + bootstrap_residuals$v1_obs)
-    bootstrap_data_v2 <- as.vector(orig_data$v2_obs[-c(1:p)] - residuals(var_model)[,"v2_obs"] + bootstrap_residuals$v2_obs)
-    bootstrap_data <- data.frame(cbind(v1_obs=bootstrap_data_v1, v2_obs=bootstrap_data_v2))
     
     # perform univariate AR models
     bootstrap_AR_v1 <- ar(bootstrap_data$v1_obs,order=p,aic=F,method="ols")
     bootstrap_AR_v2 <- ar(bootstrap_data$v2_obs,order=p,aic=F,method="ols")
+    # estimate new simulated data by taking original data - residuals + new bootstrapped residual
+    bootstrap_data_v1 <- as.vector(orig_data$V1_obs[-c(1:p)] - residuals(var_model)[,'V1_obs'] + bootstrap_residuals$V1_obs)
+    bootstrap_data_v2 <- as.vector(orig_data$V2_obs[-c(1:p)] - residuals(var_model)[,'V2_obs'] + bootstrap_residuals$V2_obs)
+    bootstrap_data <- data.frame(cbind(V1_obs = bootstrap_data_v1, V2_obs = bootstrap_data_v2))
     
     # perform multivariate VAR model 
     bootstrap_VAR <- VAR(y=bootstrap_data, p=p)
     
     # calculate log RS 
-    logRSS_v1 <- log(sum(residuals(bootstrap_AR_v1)^2,na.rm=T)/sum(residuals(bootstrap_VAR)[,1]^2)) 
-    logRSS_v2 <- log(sum(residuals(bootstrap_AR_v2)^2,na.rm=T)/sum(residuals(bootstrap_VAR)[,2]^2)) 
+    logRSS_v1 <- log(sum(bootstrap_AR_v1$resid ** 2, na.rm=TRUE) / sum(residuals(bootstrap_VAR)[, 1] ** 2)) 
+    logRSS_v2 <- log(sum(bootstrap_AR_v2$resid ** 2, na.rm=TRUE) / sum(residuals(bootstrap_VAR)[, 2] ** 2))
     
     # combine results into vector for output
     res <- c(logRSS_v1, logRSS_v2)
     return(res)
+    
   }
- 
-  # generate bootstrapped replicates in blocks of 4 weeks
-  R <- 100 # number of replicates
-  boot_out <- tsboot(tseries=residuals_orig, statistic=boot_func, R = R, sim="fixed", l=4,
-                 orig_data = orig_data, var_model=var1, p=p); boot_out
   
-  # check out the bootstrap distributions 
-  bootstrap_samples <- data.frame(boot_out$t)
-  names(bootstrap_samples) <- c("logRSS_v1_x_v2","logRSS_v2_x_v1")
-  # make data long 
-  #boot_long <- bootstrap_samples %>% tidyr::gather() 
-  #ggplot(aes(x=value),data=boot_long) + geom_histogram() + facet_grid(.~key, scales="free_x") 
+  # generate bootstrapped replicates in blocks of 4 weeks
+  boot_out <- tsboot(tseries = residuals_orig, statistic = boot_func, R = 100, sim = 'fixed', l = 4,
+                     orig_data = data, var_model = var1, p = p, exogen = NA)
+  # check out the bootstrap distributions
+  bootstrap_samples <- boot_out$t %>%
+    as_tibble() %>%
+    rename('logRSS_v1_x_v2' = 'V1',
+           'logRSS_v2_x_v1' = 'V2')
   
   # calculate the 95% CI for each statistic
   # standard approach assuming normality of the sampling dist
   # v1 x v2
-  CI_lower95_v1_x_v2 <- logRSS_v1 - 1.96*sd(bootstrap_samples$logRSS_v1_x_v2)
-  CI_upper95_v1_x_v2 <- logRSS_v1 + 1.96*sd(bootstrap_samples$logRSS_v1_x_v2)
+  CI_lower95_v1_x_v2 <- logRSS_v1 - 1.96 * sd(bootstrap_samples$logRSS_v1_x_v2)
+  CI_upper95_v1_x_v2 <- logRSS_v1 + 1.96 * sd(bootstrap_samples$logRSS_v1_x_v2)
   # v2 x v1
-  CI_lower95_v2_x_v1 <- logRSS_v2 - 1.96*sd(bootstrap_samples$logRSS_v2_x_v1)
-  CI_upper95_v2_x_v1 <- logRSS_v2 + 1.96*sd(bootstrap_samples$logRSS_v2_x_v1)
-
-  # output results 
-  temp_res <- data.frame(cbind(original_estimate = orig_est,  
-               blockboot_CI_lower95_v1_x_v2 = c(CI_lower95_v1_x_v2,CI_lower95_v2_x_v1),
-               blockboot_CI_upper95_v1_x_v2 = c(CI_upper95_v1_x_v2,CI_upper95_v2_x_v1),
-               granger_p = c(p_gt1, p_gt2),
-               adf_p = c(adf_v1$p.value, adf_v2$p.value),
-               kpss_p = c(kpss_v1$p.value, kpss_v2$p.value)))
-  temp_res <- data.frame(temp_res, row.names=NULL)
-  
-  return(temp_res)
+  CI_lower95_v2_x_v1 <- logRSS_v2 - 1.96 * sd(bootstrap_samples$logRSS_v2_x_v1)
+  CI_upper95_v2_x_v1 <- logRSS_v2 + 1.96 * sd(bootstrap_samples$logRSS_v2_x_v1)
 }
 
 
