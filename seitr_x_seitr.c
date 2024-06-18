@@ -226,8 +226,8 @@ if ((X_SS + X_ES + X_RS + X_SE + X_SR + X_RR) != N) {
 // SIMULATION 
 //start_rmeas
 // generate the total number of tests positive to each virus 
-V1_obs = rbinom(V1, rho1); // virus 1
-V2_obs = rbinom(V2, rho2); // virus 2
+V1_obs = rnbinom_mu(1 / k1, rho1 * V1); // virus 1
+V2_obs = rnbinom_mu(1 / k2, rho2 * V2); // virus 2
 //end_rmeas
 
 // EVALUATION
@@ -240,11 +240,11 @@ double ll_1, ll_2, ll;
 //        rho1 the probability of testing positive to V1 
 // similarly for V2
 
-// calculating components for the likelihood 
-ll_1 = dbinom(V1_obs, nearbyint(V1), rho1, 1);
-ll_2 = dbinom(V2_obs, nearbyint(V2), rho2, 1);
+// calculating components for the likelihood
+ll_1 = dnbinom_mu(V1_obs, 1 / k1, rho1 * V1, 1);
+ll_2 = dnbinom_mu(V2_obs, 1 / k2, rho2 * V2, 1);
 
-//Rprintf("V1_obs=%.4f, V2_obs=%.4f, V1_T=%.4f, V2_T=%.4f, ll_1=%.4f, ll_2=%.4f\n",V1_obs, V2_obs, V1_T, V2_T, ll_1, ll_2);
+//Rprintf("V1_obs=%.4f, V2_obs=%.4f, V1_T=%.4f, V2_T=%.4f, ll_1=%.4f, ll_2=%.4f\n",V1_obs, V2_obs, V1, V2, ll_1, ll_2);
 
 // If rho_w == 1, the resulting observation probability might be 0 (-Inf on log-scale)
 // Replace by a big, but finite penalty if that's the case 
