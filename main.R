@@ -161,6 +161,13 @@ if (debug_bool) {
     facet_wrap(~ name) +
     theme_classic()
   
+  dat %>%
+    select(time:.id, V1_obs:V2_obs) %>%
+    pivot_longer(V1_obs:V2_obs) %>%
+    ggplot(aes(x = time, y = value, group = paste(name, .id), color = name)) +
+    geom_line() +
+    theme_classic()
+  
   #---- check seasonal attack rates ----#
   season_breaks <- dat %>% filter(str_detect(date, '07-0[1-7]')) %>% pull(date) %>% unique()
   season_breaks <- c(season_breaks, '2024-07-01')
@@ -177,13 +184,13 @@ if (debug_bool) {
   #---- check that surges in immunity happen correctly ----#
   dat %>%
     mutate(S1 = X_SS + X_SE + X_SI + X_ST + X_SR) %>%
-    dplyr::select(time:.id, S1) %>%
+    select(time:.id, S1) %>%
     ggplot(aes(x = time, y = S1, group = .id)) + geom_line() + theme_classic()
 }
 
 #---- set up list to store all results ----#
 results <- vector(mode = 'list', length = 7)
-names(results) <- c("true_param", "data", "cor", "gam_cor", "transfer_entropy", "CCM","granger")
+names(results) <- c('true_param', 'data', 'cor', 'gam_cor', 'granger', 'transfer_entropy', 'CCM')
 
 results$true_param <- true_params
 results$data <- dat
@@ -252,9 +259,20 @@ print(etime)
 results$gam_cor <- do.call(rbind, res_gam_cor) %>%
   mutate(.id = 1:n_sim, .before = cor)
 
+#---- Granger causality analysis  ----#
+source('methods/granger_analysis.R')
+
+# apply granger analysis to each simulated data set and save the results
+tic <- Sys.time()
+results$granger <- dat %>% group_by(.id) %>% do(granger_func(.))
+toc <- Sys.time()
+etime <- toc - tic
+units(etime) <- 'mins'
+print(etime)
+
 #---- Transfer entropy analysis ----#
 source('methods/transfer_entropy_jidt.R')
- 
+
 tic <- Sys.time()
 
 # lag = 1
@@ -283,20 +301,8 @@ print(etime)
 results$transfer_entropy <- bind_rows(res_te_1, res_te_2, res_te_4, res_te_6)
 rm(res_te_1, res_te_2, res_te_4, res_te_6)
 
-#---- Granger causality analysis  ----#
-source('methods/granger_analysis.R')
-
-# apply granger analysis to each simulated data set and save the results
-tic <- Sys.time()
-results$granger <- dat %>% group_by(.id) %>% do(granger_func(.))
-# results$granger <- results$data %>% group_by(.id) %>% do(granger_func(.))
-toc <- Sys.time()
-etime <- toc - tic
-units(etime) <- 'mins'
-print(etime)
-
 #---- Convergent Cross mapping analysis ----#
-source('/methods/CCM.R')
+source('methods/CCM.R')
 
 tic <- Sys.time()
 results$CCM <- dat %>% group_by(.id) %>% do(ccm_func(.))
