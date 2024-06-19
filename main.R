@@ -66,49 +66,58 @@ n_surge <- round(tot_weeks / 52) # number of surges
 mu_Imloss <- 38 # average surge occurring in mid Oct
 sd_Imloss <- 4 # standard deviation of 4 weeks
 
-t_si <- rnorm(n = n_surge, mean = mu_Imloss, sd = sd_Imloss) # draw from normal dist
+t_si_mat <- matrix(nrow = n_surge - 2, ncol = n_sim)
+w_delta_i_mat <- matrix(nrow = n_surge - 2, ncol = n_sim)
 
-t_si <- t_si - 26 + seq(0, 52 * (n_surge - 1), by = 52)
-# t_si <- round(t_si + seq(0, 52 * (n_surge - 1), by = 52))
-# seq(26, 52 * n_surge, by = 52) + t_si
-
-t_si <- round(t_si) # make whole numbers
-
-t_si <- t_si[-which(t_si <= 104)] # remove first two years to allow system to reach equilibrium
-n_surge <- length(t_si)
-
-w_delta_i <- runif(n = length(t_si), min = 0.01 * 7, max = 0.1 * 7) # yearly surge in rate of immunity loss
+for (i in 1:n_sim) {
+  
+  t_si <- rnorm(n = n_surge, mean = mu_Imloss, sd = sd_Imloss) # draw from normal dist
+  t_si <- t_si - 26 + seq(0, 52 * (n_surge - 1), by = 52)
+  t_si <- round(t_si) # make whole numbers
+  
+  t_si <- t_si[-which(t_si <= 104)] # remove first two years to allow system to reach equilibrium
+  w_delta_i <- runif(n = length(t_si), min = 0.01 * 7, max = 0.1 * 7) # yearly surge in rate of immunity loss
+  
+  t_si_mat[, i] <- t_si
+  w_delta_i_mat[, i] <- w_delta_i
+  
+}
 
 rm(mu_Imloss, sd_Imloss)
 
 #---- set all true parameter values ----# 
 true_int_params <- int_params[jobid, ]
 
-true_params <- c(Ri1 = 1.1, Ri2 = 1.7,
-                 sigma1 = 7, sigma2 = 7/5,
-                 gamma1 = 7/5, gamma2 = 7/10,
-                 w1 = 1/52, w2 = 1/52,
-                 mu = 0.0002, nu = 0.0002,
-                 rho1 = 0.002, rho2 = 0.002,
-                 theta_lambda1 = true_int_params$theta_lambda1,
-                 theta_lambda2 = true_int_params$theta_lambda2,
-                 delta1 = true_int_params$delta1,
-                 delta2 = true_int_params$delta2,
-                 A1=0.2, phi1=26,
-                 A2=0.2, phi2=26,
-                 beta_sd1 = 0, beta_sd2 = 0, 
-                 N = 3700000,
-                 E01 = 0.001, E02 = 0.001,
-                 R01 = 0.4, R02 = 0.25, R012 = 0.001,
-                 nsurges = n_surge,
-                 t_si_ = t(t_si), w_delta_i_ = t(w_delta_i))
+true_params_init <- c(Ri1 = 1.1, Ri2 = 1.7,
+                      sigma1 = 7, sigma2 = 7/5,
+                      gamma1 = 7/5, gamma2 = 7/10,
+                      w1 = 1/52, w2 = 1/52,
+                      mu = 0.0002, nu = 0.0002,
+                      rho1 = 0.002, rho2 = 0.002,
+                      theta_lambda1 = true_int_params$theta_lambda1,
+                      theta_lambda2 = true_int_params$theta_lambda2,
+                      delta1 = true_int_params$delta1,
+                      delta2 = true_int_params$delta2,
+                      A1=0.2, phi1=26,
+                      A2=0.2, phi2=26,
+                      beta_sd1 = 0, beta_sd2 = 0, 
+                      N = 3700000,
+                      E01 = 0.001, E02 = 0.001,
+                      R01 = 0.40, R02 = 0.25, R012 = 0.001,
+                      nsurges = n_surge - 2,
+                      t_si_ = t_si_mat[, 1], w_delta_i_ = w_delta_i_mat[, 1])
+
+true_params <- parmat(true_params_init, nrep = n_sim)
+
+true_params[str_detect(rownames(true_params), 't_si_'), ] <- t_si_mat
+true_params[str_detect(rownames(true_params), 'w_delta_i_'), ] <- w_delta_i_mat
 
 ##################################################################################################################
 
 # Create model and synthetic data
 
 #---- create pomp model object ----#
-resp_mod <- create_SEITRxSEITR_mod(tot_weeks, true_params, debug_bool = debug_bool)
+resp_mod <- create_SEITRxSEITR_mod(tot_weeks, true_params_init, debug_bool = debug_bool)
 
 #---- test pomp model ----#
 check_transformations(resp_mod) # check parameter transformations
@@ -119,7 +128,7 @@ if (debug_bool) print(p_indep)
 
 #---- simulate synthetic data ----#
 tic <- Sys.time()
-dat <- simulate(resp_mod, nsim = n_sim, format = 'data.frame')
+dat <- simulate(resp_mod, params = true_params, nsim = 1, format = 'data.frame')
 toc <- Sys.time()
 etime <- toc - tic
 units(etime) <- 'secs'
