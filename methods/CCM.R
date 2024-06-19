@@ -13,14 +13,14 @@
 # load packages
 library(rEDM)
 library(Kendall)
-library(tidyverse)
+library(gridExtra)
 
 ccm_func <- function(data){
   
   data <- data %>% dplyr::select(time, V1_obs, V2_obs)
   
-  # Determining Embedding dimension (i.e. the number of lags used to build up the shadow manifold)
-  # Based on the prediction skill of the model. See rEDM vingette https://ha0ye.github.io/rEDM/articles/rEDM.html 
+  #---- determine Embedding dimension (i.e. the number of lags used to build up the shadow manifold) ----#
+  # based on the prediction skill of the model. See rEDM vingette https://ha0ye.github.io/rEDM/articles/rEDM.html 
   
   # specify library set = how much data to fit to
   # choosing to fit to half the data here
@@ -31,27 +31,26 @@ ccm_func <- function(data){
   # Using the other half of the data to predict on
   pred <- paste0(lib_max + 1, ' ', nrow(data))
   
-  # Get E (Embedding dimension - the number nearest neighbours to use for prediction) for v1 
+  # get E (embedding dimension - the number nearest neighbours to use for prediction) for v1 
   # EmbedDimension is a wrapper around the simplex function to get out E only  
   E_v1 <- EmbedDimension(dataFrame = data, columns = 'V1_obs', target = 'V1_obs',
-                         lib = lib, pred = pred, maxE = 20, showPlot = TRUE)
+                         lib = lib, pred = pred, maxE = 20, showPlot = FALSE)
   E_v1 <- E_v1 %>% slice_max(rho) %>% pull(E) # keep the row with max prediction skill
   
-  # Get E for v2
+  # get E for v2
   E_v2 <- EmbedDimension(dataFrame = data, columns = "V2_obs", target = "V2_obs",
                          lib = lib, pred = pred, maxE = 20, showPlot = FALSE)
   E_v2 <- E_v2 %>% slice_max(rho) %>% pull(E)
   
-  # determining if any time delay needs considering: i.e. tp parameter
-  # data <- data %>% dplyr::select(-time)
-  vars <- c('V1_obs', 'V2_obs')
+  #---- determine if any time delay needs considering: i.e. tp parameter ----#
+  
   # generate all combinations of lib_column, target_column, tp
   params <- expand.grid(lib_column = vars, target_column = vars, tp = -8:8) # ~3 months either side
   # remove cases where lib == target
   params <- params[params$lib_column != params$target_column, ]
   
-  # want E to be that corresponding to the lib column variable (i.e. the 
-  # names of the input data used to create the library)
+  # want E to be that corresponding to the lib column variable (i.e. the names
+  # of the input data used to create the library)
   params <- params %>%
     mutate(E = if_else(lib_column == 'V1_obs', E_v1, E_v2))
   
@@ -68,16 +67,11 @@ ccm_func <- function(data){
   
   # pull out optimal Tp
   # note: lib_column xmap target column and E is based on lib_column
-  v1xv2 <- output %>% filter(E == E_v1)
-  optimal_tp_v1xv2 <- v1xv2[which.max(v1xv2$`V1_obs:V2_obs`),]$tp
-  
-  v2xv1 <- output %>% filter(E == E_v2)
-  optimal_tp_v2xv1 <- v2xv1[which.max(v2xv1$`V2_obs:V1_obs`),]$tp
+  optimal_tp_v1xv2 <- output %>% filter(target_column == 'V2_obs') %>% filter(`V1_obs:V2_obs` == max(`V1_obs:V2_obs`)) %>% pull(tp)
+  optimal_tp_v2xv1 <- output %>% filter(target_column == 'V1_obs') %>% filter(`V2_obs:V1_obs` == max(`V2_obs:V1_obs`)) %>% pull(tp)
   
   p1x2 <- ggplot(output %>% filter(target_column == 'V2_obs'), aes(x = tp, y = `V1_obs:V2_obs`)) + geom_line() + theme_classic()
   p2x1 <- ggplot(output %>% filter(target_column == 'V1_obs'), aes(x = tp, y = `V2_obs:V1_obs`)) + geom_line() + theme_classic()
-  
-  library(gridExtra)
   grid.arrange(p1x2, p2x1, ncol = 1)
   
   #----- run CCM ------#
@@ -150,7 +144,7 @@ ccm_func <- function(data){
     getElement('sl') %>%
     purrr::map(~ .[1])
   
-  # ------Creating the null hypothesis for comparison with our CCM output-----#
+  #---- create the null hypothesis for comparison with our CCM output ----#
   
   num_surr <- 100 # number of surrogate datasets
   
@@ -197,15 +191,14 @@ ccm_func <- function(data){
   # run ccm for surrogate data
   registerDoParallel(cl <- makeCluster(5))
   
-    ccm_out_v1 <- ccm(v1_data, E = E_v1, lib_column = "v1_obs", target_column = targetCol,
-                  lib_sizes = seq(50, lib_max_null, 2), tp=optimal_tp_v1xv2,
-                  random_libs = FALSE, replace = TRUE)
-
-    ccm_out_v2 <- ccm(v2_data, E = E_v2, lib_column = "v2_obs", target_column = targetCol,
-                     lib_sizes = seq(50, lib_max_null, 2), tp=optimal_tp_v2xv1,
-                     random_libs = FALSE, replace = TRUE)
   surr_res <- foreach(i = 1:num_surr, .packages = c('rEDM', 'tidyverse')) %dopar% {
     
+    ccm_v1xv2 <- CCM(dataFrame = surr_dat_list_v1xv2[[i]], E = E_v1, columns = 'V1_obs', target = 'V2_obs', 
+                     libSizes = lib_max_use,#libSizes = c(seq(20, 100, by = 10), seq(125, lib_max, 25)),
+                     Tp = optimal_tp_v1xv2, random = TRUE, sample = 100, includeData = TRUE)
+    ccm_v2xv1 <- CCM(dataFrame = surr_dat_list_v2xv1[[i]], E = E_v2, columns = 'V2_obs', target = 'V1_obs', 
+                     libSizes = lib_max_use,#c(seq(20, 100, by = 10), seq(125, lib_max, 25)),
+                     Tp = optimal_tp_v2xv1, random = TRUE, sample = 100, includeData = TRUE)
     
     temp_means <- ccm_v1xv2$LibMeans %>%
       dplyr::select(1:2) %>%
@@ -239,23 +232,30 @@ ccm_func <- function(data){
   # combine all results
   surr_res <- bind_rows(surr_res)
   
+  # ggplot() +
+  #   geom_violin(data = surr_res, aes(x = direction, y = rho, group = direction), fill = 'gray90') +
+  #   geom_point(data = res %>% filter(LibSize == max(LibSize)), aes(x = direction, y = rho), col = 'red', size = 3) +
+  #   theme_classic()
+  
   # estimate p-value using empirical cumulative distribution
-  rho_v1_x_v2_surr <- surr_res %>% filter(direction == 'v2 -> v1') %>% pull(rho)
-  rho_v2_x_v1_surr <- surr_res %>% filter(direction == 'v1 -> v2') %>% pull(rho)
+  rho_v1xv2_surr <- surr_res %>% filter(direction == 'v2 -> v1') %>% pull(rho)
+  rho_v2xv1_surr <- surr_res %>% filter(direction == 'v1 -> v2') %>% pull(rho)
   
-  rho_v1_x_v2 <- res %>% filter(direction == 'v2 -> v1', LibSize == lib_max_use) %>% pull(rho)
-  rho_v2_x_v1 <- res %>% filter(direction == 'v1 -> v2', LibSize == lib_max_use) %>% pull(rho)
+  rho_v1xv2 <- res %>% filter(direction == 'v2 -> v1', LibSize == lib_max_use) %>% pull(rho)
+  rho_v2xv1 <- res %>% filter(direction == 'v1 -> v2', LibSize == lib_max_use) %>% pull(rho)
   
-  p_surr_v1_x_v2 <- 1 - ecdf(rho_v1_x_v2_surr)(rho_v1_x_v2)
-  p_surr_v2_x_v1 <- 1 - ecdf(rho_v2_x_v1_surr)(rho_v2_x_v1)
+  # original:
+  p_surr_v1xv2 <- 1 - ecdf(rho_v1xv2_surr)(rho_v1xv2)
+  p_surr_v2xv1 <- 1 - ecdf(rho_v2xv1_surr)(rho_v2xv1)
   
-  p_surr_v1_x_v2_alt <- (sum(rho_v1_x_v2 < rho_v1_x_v2_surr) + 1) / (length(rho_v1_x_v2_surr) + 1)
-  p_surr_v2_x_v1_alt <- (sum(rho_v2_x_v1 < rho_v2_x_v1_surr) + 1) / (length(rho_v2_x_v1_surr) + 1)
+  # as in ha0ye tutorial:
+  p_surr_v1xv2_alt <- (sum(rho_v1xv2 < rho_v1xv2_surr) + 1) / (length(rho_v1xv2_surr) + 1)
+  p_surr_v2xv1_alt <- (sum(rho_v2xv1 < rho_v2xv1_surr) + 1) / (length(rho_v2xv1_surr) + 1)
   
   # write out results
   res_list <- list(res,
                    surr_res,
-                   c(p_surr_v1_x_v2, p_surr_v2_x_v1, p_surr_v1_x_v2_alt, p_surr_v2_x_v1_alt),
+                   c(p_surr_v1xv2, p_surr_v2xv1, p_surr_v1xv2_alt, p_surr_v2xv1_alt),
                    c(unlist(MannK_v1_xmap_v2), unlist(MannK_v2_xmap_v1)),
                    c(E_v1, E_v2, optimal_tp_v1xv2, optimal_tp_v2xv1))
   return(res_list)
