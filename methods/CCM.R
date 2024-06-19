@@ -101,13 +101,13 @@ ccm_func <- function(data){
   
   # run the ccm
   # if wish to get CIs change random_libs = TRUE and add num_samples = xx
-  v1_xmap_v2 <- ccm(data, E = E_v1, lib_column = "v1_obs", target_column = "v2_obs", 
-                    lib_sizes = seq(50, lib_max, 2), tp=optimal_tp_v1xv2, random_libs=FALSE,
-                    replace = TRUE, stats_only=FALSE)
+  v1_xmap_v2 <- CCM(dataFrame = data, E = E_v1, columns = 'V1_obs', target = 'V2_obs', 
+                    libSizes = c(seq(20, 100, by = 10), seq(125, lib_max, 25), lib_max), Tp = optimal_tp_v1xv2, random = TRUE,
+                    sample = 100, includeData = TRUE, showPlot = TRUE)
   
-  v2_xmap_v1 <- ccm(data, E = E_v2, lib_column = "v2_obs", target_column = "v1_obs", 
-                    lib_sizes = seq(50, lib_max, 2), tp=optimal_tp_v2xv1, random_libs = FALSE,
-                     replace = TRUE, stats_only=FALSE)
+  v2_xmap_v1 <- CCM(dataFrame = data, E = E_v2, columns = 'V2_obs', target = 'V1_obs', 
+                    libSizes = c(seq(20, 100, by = 10), seq(125, lib_max, 25), lib_max), Tp = optimal_tp_v2xv1, random = TRUE,
+                    sample = 100, includeData = TRUE, showPlot = TRUE)
   
   # pull out the mean rho for each library size
   mean_rho_v1_xmap_v2 <- v1_xmap_v2$LibMeans
