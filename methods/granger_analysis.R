@@ -114,11 +114,11 @@ granger_func <- function(data){
   p_gt1_wald <- grangertest(V1_obs ~ V2_obs, order = p, data = data)$`Pr(>F)`[2]
   p_gt2_wald <- grangertest(V2_obs ~ V1_obs, order = p, data = data)$`Pr(>F)`[2]
   
-  p_gt1_ftest <- causality(var1, cause = 'V1_obs')$Granger$p.value
-  p_gt2_ftest <- causality(var1, cause = 'V2_obs')$Granger$p.value
+  p_gt1_ftest <- causality(var1, cause = 'V2_obs')$Granger$p.value
+  p_gt2_ftest <- causality(var1, cause = 'V1_obs')$Granger$p.value
   
-  p_gt1_ftest_confound <- causality(var1_confound, cause = 'V1_obs')$Granger$p.value
-  p_gt2_ftest_confound <- causality(var1_confound, cause = 'V2_obs')$Granger$p.value
+  p_gt1_ftest_confound <- causality(var1_confound, cause = 'V2_obs')$Granger$p.value
+  p_gt2_ftest_confound <- causality(var1_confound, cause = 'V1_obs')$Granger$p.value
   
   #---- estimating the uncertainty around these statistics ----# 
   # get residuals
@@ -177,8 +177,8 @@ granger_func <- function(data){
   # generate bootstrapped replicates in blocks of 4 weeks
   boot_out <- tsboot(tseries = residuals_orig, statistic = boot_func, R = 100, sim = 'fixed', l = 4,
                      orig_data = data, var_model = var1, p = p, exogen = NA)
-  boot_out_confound <- tsboot(tseries = residuals_orig, statistic = boot_func, R = 100, sim = 'fixed', l = 4,
-                              orig_data = data, var_model = var1, p = p, exogen = 'seasonal')
+  boot_out_confound <- tsboot(tseries = residuals_orig_confound, statistic = boot_func, R = 100, sim = 'fixed', l = 4,
+                              orig_data = data, var_model = var1_confound, p = p, exogen = 'seasonal')
   
   # check out the bootstrap distributions
   bootstrap_samples <- boot_out$t %>%
@@ -221,6 +221,7 @@ granger_func <- function(data){
            CI_lower = as.numeric(CI_lower),
            CI_upper = as.numeric(CI_upper),
            granger_p = as.numeric(granger_p),
+           ftest_p = as.numeric(ftest_p),
            adf_p = as.numeric(adf_p),
            kpss_p = as.numeric(kpss_p))
   return(res)
