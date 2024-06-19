@@ -23,13 +23,11 @@ ccm_func <- function(data){
   # based on the prediction skill of the model. See rEDM vingette https://ha0ye.github.io/rEDM/articles/rEDM.html 
   
   # specify library set = how much data to fit to
-  # choosing to fit to half the data here
-  lib_max <- round(nrow(data) / 2)
-  lib <- paste0("1 ", lib_max)
+  # use first two seasons
+  lib <- '1 104'
   
   # specify pred = which data to predict on 
-  # Using the other half of the data to predict on
-  pred <- paste0(lib_max + 1, ' ', nrow(data))
+  pred <- paste('105', nrow(data), sep = ' ')
   
   # get E (embedding dimension - the number nearest neighbours to use for prediction) for v1 
   # EmbedDimension is a wrapper around the simplex function to get out E only  
