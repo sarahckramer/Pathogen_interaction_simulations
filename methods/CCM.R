@@ -43,9 +43,9 @@ ccm_func <- function(data){
   #---- determine if any time delay needs considering: i.e. tp parameter ----#
   
   # generate all combinations of lib_column, target_column, tp
-  params <- expand.grid(lib_column = vars, target_column = vars, tp = -8:8) # ~3 months either side
-  # remove cases where lib == target
-  params <- params[params$lib_column != params$target_column, ]
+  vars <- c('V1_obs', 'V2_obs')
+  params <- expand.grid(lib_column = vars, target_column = vars, tp = -52:52) %>% # alternatively, -20:5
+    filter(lib_column != target_column) # remove cases where lib == target
   
   # want E to be that corresponding to the lib column variable (i.e. the names
   # of the input data used to create the library)
@@ -54,7 +54,7 @@ ccm_func <- function(data){
   
   # explore prediction skill over range of tp values 
   # for a single library size set it to max
-  lib_size_tp <- nrow(data) - (15 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
+  lib_size_tp <- nrow(data) - (52 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
   
   output <- do.call(rbind, lapply(seq_len(nrow(params)), function(i) {
     CCM(dataFrame = data, E = params$E[i], libSizes = lib_size_tp, random = FALSE,
