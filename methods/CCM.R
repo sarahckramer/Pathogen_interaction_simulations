@@ -72,6 +72,28 @@ ccm_func <- function(data){
   p2x1 <- ggplot(output %>% filter(target_column == 'V1_obs'), aes(x = tp, y = `V2_obs:V1_obs`)) + geom_line() + theme_classic()
   grid.arrange(p1x2, p2x1, ncol = 1)
   
+  # #---- check whether highest cross-map correlation is positive and for a negative lag ----#
+  # 
+  # params <- expand.grid(lib_column = vars, target_column = vars, tp = -52:52) %>%
+  #   filter(lib_column != target_column) %>%
+  #   mutate(E = if_else(lib_column == 'V1_obs', E_v1, E_v2))
+  # 
+  # lib_size_tp <- nrow(data) - (52 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
+  # 
+  # output <- do.call(rbind, lapply(seq_len(nrow(params)), function(i) {
+  #   CCM(dataFrame = data, E = params$E[i], libSizes = lib_size_tp, random = FALSE,
+  #       columns = as.character(params$lib_column[i]), target = as.character(params$target_column[i]), 
+  #       Tp = params$tp[i], verbose = FALSE) %>%
+  #     bind_cols(params[i, ])
+  # }))
+  # 
+  # optimal_tp_v1xv2_wide <- output %>% filter(target_column == 'V2_obs') %>% filter(`V1_obs:V2_obs` == max(`V1_obs:V2_obs`)) %>% pull(tp)
+  # optimal_tp_v2xv1_wide <- output %>% filter(target_column == 'V1_obs') %>% filter(`V2_obs:V1_obs` == max(`V2_obs:V1_obs`)) %>% pull(tp)
+  # 
+  # p1x2 <- ggplot(output %>% filter(target_column == 'V2_obs'), aes(x = tp, y = `V1_obs:V2_obs`)) + geom_line() + theme_classic()
+  # p2x1 <- ggplot(output %>% filter(target_column == 'V1_obs'), aes(x = tp, y = `V2_obs:V1_obs`)) + geom_line() + theme_classic()
+  # grid.arrange(p1x2, p2x1, ncol = 1)
+  
   #----- run CCM ------#
   
   # determine max library size
@@ -255,6 +277,7 @@ ccm_func <- function(data){
                    surr_res,
                    c(p_surr_v1xv2, p_surr_v2xv1, p_surr_v1xv2_alt, p_surr_v2xv1_alt),
                    c(unlist(MannK_v1_xmap_v2), unlist(MannK_v2_xmap_v1)),
+                   # c(optimal_tp_v1xv2_wide, optimal_tp_v2xv1_wide),
                    c(E_v1, E_v2, optimal_tp_v1xv2, optimal_tp_v2xv1))
   return(res_list)
   
