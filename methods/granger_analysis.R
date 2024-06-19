@@ -95,8 +95,10 @@ granger_func <- function(data){
   # ar_v1_alt <- VARfit(data$V1_obs, p = var1$p)
   # ar_v2_alt <- VARfit(data$V2_obs, p = var1$p)
   
+  sink(file = nullfile())
   ar_v1_confound <- VARfit(data$V1_obs, p = var1$p, exogen = data$seasonal_component)
   ar_v2_confound <- VARfit(data$V2_obs, p = var1$p, exogen = data$seasonal_component)
+  sink()
   
   # Estimating the effect size using log RSS (Barraquand et al. 2021)
   # log RSS = log(RSS_univariate/RSS_multivariate) interpretation: 
@@ -156,8 +158,10 @@ granger_func <- function(data){
         dplyr::select(-time)
       
       # perform univariate AR models
+      sink(file = nullfile())
       bootstrap_AR_v1 <- VARfit(bootstrap_data$V1_obs, p = p, exogen = bootstrap_data$seasonal_component)
       bootstrap_AR_v2 <- VARfit(bootstrap_data$V2_obs, p = p, exogen = bootstrap_data$seasonal_component)
+      sink()
       
       # perform multivariate VAR model 
       bootstrap_VAR <- VAR(y = bootstrap_data[, c('V1_obs', 'V2_obs')], p = p, exogen = bootstrap_data[, 'seasonal_component'])
