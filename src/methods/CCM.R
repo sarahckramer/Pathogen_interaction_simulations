@@ -68,9 +68,9 @@ ccm_func <- function(data){
   optimal_tp_v1xv2 <- output %>% filter(target_column == 'V2_obs') %>% filter(`V1_obs:V2_obs` == max(`V1_obs:V2_obs`)) %>% pull(tp)
   optimal_tp_v2xv1 <- output %>% filter(target_column == 'V1_obs') %>% filter(`V2_obs:V1_obs` == max(`V2_obs:V1_obs`)) %>% pull(tp)
   
-  p1x2 <- ggplot(output %>% filter(target_column == 'V2_obs'), aes(x = tp, y = `V1_obs:V2_obs`)) + geom_line() + theme_classic()
-  p2x1 <- ggplot(output %>% filter(target_column == 'V1_obs'), aes(x = tp, y = `V2_obs:V1_obs`)) + geom_line() + theme_classic()
-  grid.arrange(p1x2, p2x1, ncol = 1)
+  # p1x2 <- ggplot(output %>% filter(target_column == 'V2_obs'), aes(x = tp, y = `V1_obs:V2_obs`)) + geom_line() + theme_classic()
+  # p2x1 <- ggplot(output %>% filter(target_column == 'V1_obs'), aes(x = tp, y = `V2_obs:V1_obs`)) + geom_line() + theme_classic()
+  # grid.arrange(p1x2, p2x1, ncol = 1)
   
   # #---- check whether highest cross-map correlation is positive and for a negative lag ----#
   # 
@@ -103,11 +103,11 @@ ccm_func <- function(data){
   # if wish to get CIs change random_libs = TRUE and add num_samples = xx
   v1_xmap_v2 <- CCM(dataFrame = data, E = E_v1, columns = 'V1_obs', target = 'V2_obs', 
                     libSizes = c(seq(20, 100, by = 10), seq(125, lib_max, 25), lib_max), Tp = optimal_tp_v1xv2, random = TRUE,
-                    sample = 100, includeData = TRUE, showPlot = TRUE)
+                    sample = 100, includeData = TRUE, showPlot = FALSE)
   
   v2_xmap_v1 <- CCM(dataFrame = data, E = E_v2, columns = 'V2_obs', target = 'V1_obs', 
                     libSizes = c(seq(20, 100, by = 10), seq(125, lib_max, 25), lib_max), Tp = optimal_tp_v2xv1, random = TRUE,
-                    sample = 100, includeData = TRUE, showPlot = TRUE)
+                    sample = 100, includeData = TRUE, showPlot = FALSE)
   
   # pull out the mean rho for each library size
   mean_rho_v1_xmap_v2 <- v1_xmap_v2$LibMeans
