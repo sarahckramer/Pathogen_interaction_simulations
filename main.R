@@ -13,6 +13,7 @@
 ##################################################################################################################
 
 # Setup
+tic_all <- Sys.time()
 
 #---- load libraries ----#
 library(tidyverse)
@@ -31,9 +32,12 @@ source('seitr_x_seitr.R')
 #---- set up cluster inputs ---# 
 # Get cluster environmental variables:
 jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size
-if (is.na(jobid)) {
-  print('No jobid value found!')
-  jobid <- 1
+run_local <- as.logical(Sys.getenv("RUNLOCAL")); print(run_local)
+
+#---- run local or on cluster? ----#
+if (is.na(run_local)) {
+  run_local <- TRUE
+  jobid <- 6
 }
 
 #---- set global parameters ----#
@@ -230,96 +234,106 @@ corr_func <- function(data){
     bind_cols(p_value = lapply(cor_raw, getElement, 'p.value') %>%
                 unlist()) %>%
     mutate(.id = 1:length(cor_raw), .before = cor)
-
+  
   return(temp_res)
 }
 
 # Apply correlation function to all simulated datasets and save results:
-tic <- Sys.time()
-results$cor <- corr_func(dat)
-toc <- Sys.time()
-etime <- toc - tic
-units(etime) <- 'secs'
-print(etime)
+if (run_local) {
+  tic <- Sys.time()
+  results$cor <- corr_func(dat)
+  toc <- Sys.time()
+  etime <- toc - tic
+  units(etime) <- 'secs'
+  print(etime)
+}
 
 #---- GAM approach ----#
 source('methods/gam_cor.R')
 
-# setting up parallelism for the foreach loop
 registerDoParallel(cl <- makeCluster(5))
-
-# apply the GAM correlation approach to each simulated data set and save the results
-tic <- Sys.time()
-res_gam_cor <- foreach(i = 1:n_sim, .packages=c("tidyverse","mgcv","vars","boot")) %dopar% {
+if (!run_local) {
+  # setting up parallelism for the foreach loop
   
-  dat %>% filter(.id == i) %>% gam_cor()
+  # apply the GAM correlation approach to each simulated data set and save the results
+  tic <- Sys.time()
+  res_gam_cor <- foreach(i = 1:n_sim, .packages=c('tidyverse', 'mgcv', 'vars', 'boot')) %dopar% {
+    
+    dat %>% filter(.id == i) %>% gam_cor()
+    
+    # # if the dataset was removed because the outbreak died out then skip it
+    # if(dim(results$data %>% filter(.id==i))[1]!=0){
+    #   results$data %>% filter(.id==i) %>% gam_cor(.)
+    # }
+    
+  }
+  toc <- Sys.time()
+  etime <- toc - tic
+  units(etime) <- 'mins'
+  print(etime)
   
-  # # if the dataset was removed because the outbreak died out then skip it
-  # if(dim(results$data %>% filter(.id==i))[1]!=0){
-  #   results$data %>% filter(.id==i) %>% gam_cor(.)
-  # }
-  
+  # compile all results
+  results$gam_cor <- do.call(rbind, res_gam_cor) %>%
+    mutate(.id = 1:n_sim, .before = cor)
 }
-toc <- Sys.time()
-etime <- toc - tic
-units(etime) <- 'mins'
-print(etime)
-
-# compile all results
-results$gam_cor <- do.call(rbind, res_gam_cor) %>%
-  mutate(.id = 1:n_sim, .before = cor)
 
 #---- Granger causality analysis  ----#
-source('methods/granger_analysis.R')
-
 # apply granger analysis to each simulated data set and save the results
-tic <- Sys.time()
-results$granger <- dat %>% group_by(.id) %>% do(granger_func(.))
-toc <- Sys.time()
-etime <- toc - tic
-units(etime) <- 'mins'
-print(etime)
+if (run_local) {
+  source('methods/granger_analysis.R')
+  
+  tic <- Sys.time()
+  results$granger <- dat %>% group_by(.id) %>% do(granger_func(.))
+  toc <- Sys.time()
+  etime <- toc - tic
+  units(etime) <- 'mins'
+  print(etime)
+}
 
 #---- Transfer entropy analysis ----#
-source('methods/transfer_entropy_jidt.R')
-
-tic <- Sys.time()
-
-# lag = 1
-res_te_1 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '1'))
-
-toc_lag1 <- Sys.time()
-etime_lag1 <- toc_lag1 - tic
-units(etime_lag1) <- 'mins'
-print(etime_lag1)
-
-# lag = 2
-res_te_2 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '2'))
-
-# lag = 4
-res_te_4 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '4'))
-
-# lag = 6
-res_te_6 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '6'))
-
-toc <- Sys.time()
-etime <- toc - tic
-units(etime) <- 'mins'
-print(etime)
-
-# combine results and store
-results$transfer_entropy <- bind_rows(res_te_1, res_te_2, res_te_4, res_te_6)
-rm(res_te_1, res_te_2, res_te_4, res_te_6)
+if (run_local) {
+  source('methods/transfer_entropy_jidt.R')
+  
+  tic <- Sys.time()
+  
+  # lag = 1
+  res_te_1 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '1'))
+  # lag = 2
+  res_te_2 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '2'))
+  # lag = 4
+  res_te_4 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '4'))
+  # lag = 6
+  res_te_6 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '6'))
+  
+  toc <- Sys.time()
+  etime <- toc - tic
+  units(etime) <- 'mins'
+  print(etime)
+  
+  # combine results and store
+  results$transfer_entropy <- bind_rows(res_te_1, res_te_2, res_te_4, res_te_6)
+  rm(res_te_1, res_te_2, res_te_4, res_te_6)
+}
 
 #---- Convergent Cross mapping analysis ----#
 source('methods/CCM.R')
 
-tic <- Sys.time()
-results$CCM <- dat %>% group_by(.id) %>% do(ccm_func(.))
-toc <- Sys.time()
-etime <- toc - tic
-units(etime) <- 'hours'
-print(etime)
+if (!run_local) {
+  tic <- Sys.time()
+  results$CCM <- dat %>% group_by(.id) %>% do(ccm_func(.))
+  toc <- Sys.time()
+  etime <- toc - tic
+  units(etime) <- 'hours'
+  print(etime)
+}
 
 # save out results
-save(results, file=sprintf('results_%s_%s_%s_%s_%s.RData',jobid, theta_lambda1, theta_lambda2, delta_1, delta_2))
+save(results, file=sprintf('results/results_%s_%s_%s_%s_%s.RData', jobid, true_int_params$theta_lambda1, true_int_params$theta_lambda2, true_int_params$delta1, true_int_params$delta2))
+
+#---- Clean up ----#
+toc_all <- Sys.time()
+etime <- toc_all - tic_all
+units(etime) <- 'mins'
+print(etime)
+
+rm(list = ls())
