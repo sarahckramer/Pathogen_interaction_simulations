@@ -251,9 +251,9 @@ if (run_local) {
 #---- GAM approach ----#
 source('methods/gam_cor.R')
 
-registerDoParallel(cl <- makeCluster(5))
 if (!run_local) {
   # setting up parallelism for the foreach loop
+  registerDoParallel(cl <- makeCluster(50))
   
   # apply the GAM correlation approach to each simulated data set and save the results
   tic <- Sys.time()

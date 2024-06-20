@@ -209,7 +209,7 @@ ccm_func <- function(data){
   lib_max_use <- max(res_long$LibSize)
   
   # run ccm for surrogate data
-  registerDoParallel(cl <- makeCluster(5))
+  registerDoParallel(cl <- makeCluster(50))
   
   surr_res <- foreach(i = 1:num_surr, .packages = c('rEDM', 'tidyverse')) %dopar% {
     
