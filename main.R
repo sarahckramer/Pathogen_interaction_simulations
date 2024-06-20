@@ -90,10 +90,16 @@ for (i in 1:n_sim) {
 
 rm(mu_Imloss, sd_Imloss)
 
-#---- set all true parameter values ----# 
+#---- generate range of values for Ri1/Ri2/w2/R02 ----#
+# r_eff_vals <- sobol_design(lower = setNames(c(1.0, 1.6, 1/52, 0.20), c('Ri1', 'Ri2', 'w2', 'R02')),
+#                            upper = setNames(c(1.4, 2.0, 1/26, 0.59), c('Ri1', 'Ri2', 'w2', 'R02')),
+#                            nseq = n_sim)
+
+#---- set all true parameter values ----#
 true_int_params <- int_params[jobid, ]
 
 true_params_init <- c(Ri1 = 1.1, Ri2 = 1.7,
+                      # Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       sigma1 = 7, sigma2 = 7/5,
                       gamma1 = 7/5, gamma2 = 7/10,
                       w1 = 1/52, w2 = 1/52,
@@ -114,6 +120,11 @@ true_params_init <- c(Ri1 = 1.1, Ri2 = 1.7,
                       t_si_ = t_si_mat[, 1], w_delta_i_ = w_delta_i_mat[, 1])
 
 true_params <- parmat(true_params_init, nrep = n_sim)
+
+# true_params['Ri1', ] <- r_eff_vals[, 1]
+# true_params['Ri2', ] <- r_eff_vals[, 2]
+# true_params['w2', ] <- r_eff_vals[, 3]
+# true_params['R02', ] <- r_eff_vals[, 4]
 
 true_params[str_detect(rownames(true_params), 't_si_'), ] <- t_si_mat
 true_params[str_detect(rownames(true_params), 'w_delta_i_'), ] <- w_delta_i_mat
@@ -201,6 +212,37 @@ if (debug_bool) {
     mutate(S1 = X_SS + X_SE + X_SI + X_ST + X_SR) %>%
     select(time:.id, S1) %>%
     ggplot(aes(x = time, y = S1, group = .id)) + geom_line() + theme_classic()
+  
+  #---- check relative peak timing of flu vs. rsv ----#
+  rsv_first <- dat %>%
+    mutate(season = cut(date, breaks = season_breaks, labels = 1:10, include.lowest = TRUE)) %>%
+    select(time:.id, season, V1_obs:V2_obs) %>%
+    group_by(.id, season) %>%
+    summarise(pt1 = which.max(V1_obs), pt2 = which.max(V2_obs)) %>%
+    mutate(pt_diff = pt2 - pt1 < 0) %>%
+    group_by(.id) %>%
+    summarise(count = sum(pt_diff)) %>%
+    filter(count >= 8) %>%
+    pull(.id) %>%
+    unique() %>%
+    as.numeric()
+  
+  params_df <- true_params %>%
+    t() %>%
+    as_tibble() %>%
+    select('Ri1', 'Ri2', 'w2', 'R02') %>%
+    mutate(.id = 1:n_sim)
+  
+  params_df <- params_df %>%
+    mutate(rsv_first = .id %in% rsv_first)
+  
+  ggplot(data = params_df %>%
+           pivot_longer(Ri1:R02),
+         aes(x = rsv_first, y = value)) +
+    geom_violin(fill = 'gray90') +
+    facet_wrap(~ name, scales = 'free_y') +
+    theme_classic()
+  
 }
 
 #---- set up list to store all results ----#
