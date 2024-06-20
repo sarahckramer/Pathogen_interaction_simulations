@@ -26,8 +26,10 @@ library(lubridate)
 library(foreach)
 library(doParallel)
 
+print(detectCores())
+
 #---- read in relevant functions ----#
-source('seitr_x_seitr.R')
+source('src/seitr_x_seitr.R')
 
 #---- set up cluster inputs ---# 
 # Get cluster environmental variables:
@@ -37,7 +39,7 @@ run_local <- as.logical(Sys.getenv("RUNLOCAL")); print(run_local)
 #---- run local or on cluster? ----#
 if (is.na(run_local)) {
   run_local <- TRUE
-  jobid <- 6
+  jobid <- 9
 }
 
 #---- set global parameters ----#
@@ -292,7 +294,7 @@ if (run_local) {
 }
 
 #---- GAM approach ----#
-source('methods/gam_cor.R')
+source('src/methods/gam_cor.R')
 
 if (!run_local) {
   # setting up parallelism for the foreach loop
@@ -323,7 +325,7 @@ if (!run_local) {
 #---- Granger causality analysis  ----#
 # apply granger analysis to each simulated data set and save the results
 if (run_local) {
-  source('methods/granger_analysis.R')
+  source('src/methods/granger_analysis.R')
   
   tic <- Sys.time()
   results$granger <- dat %>% group_by(.id) %>% do(granger_func(.))
@@ -335,7 +337,7 @@ if (run_local) {
 
 #---- Transfer entropy analysis ----#
 if (run_local) {
-  source('methods/transfer_entropy_jidt.R')
+  source('src/methods/transfer_entropy_jidt.R')
   
   tic <- Sys.time()
   
@@ -359,7 +361,7 @@ if (run_local) {
 }
 
 #---- Convergent Cross mapping analysis ----#
-source('methods/CCM.R')
+source('src/methods/CCM.R')
 
 if (!run_local) {
   tic <- Sys.time()
