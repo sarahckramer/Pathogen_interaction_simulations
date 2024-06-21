@@ -25,6 +25,8 @@ library(lubridate)
 # library(future) # allows for parallel processing
 library(foreach)
 library(doParallel)
+library(doSNOW)
+library(doMC)
 
 print(detectCores())
 
@@ -39,7 +41,7 @@ run_local <- as.logical(Sys.getenv("RUNLOCAL")); print(run_local)
 #---- run local or on cluster? ----#
 if (is.na(run_local)) {
   run_local <- TRUE
-  jobid <- 9
+  jobid <- 1
 }
 
 #---- set global parameters ----#
@@ -297,8 +299,10 @@ if (run_local) {
 source('src/methods/gam_cor.R')
 
 if (!run_local) {
+  
   # setting up parallelism for the foreach loop
-  registerDoParallel(cl <- makeCluster(50))
+  # registerDoParallel(cl <- makeCluster(50))
+  registerDoMC(50)
   
   # apply the GAM correlation approach to each simulated data set and save the results
   tic <- Sys.time()
@@ -320,6 +324,7 @@ if (!run_local) {
   # compile all results
   results$gam_cor <- do.call(rbind, res_gam_cor) %>%
     mutate(.id = 1:n_sim, .before = cor)
+  
 }
 
 #---- Granger causality analysis  ----#
@@ -337,6 +342,7 @@ if (run_local) {
 
 #---- Transfer entropy analysis ----#
 if (run_local) {
+  
   source('src/methods/transfer_entropy_jidt.R')
   
   tic <- Sys.time()
@@ -358,6 +364,7 @@ if (run_local) {
   # combine results and store
   results$transfer_entropy <- bind_rows(res_te_1, res_te_2, res_te_4, res_te_6)
   rm(res_te_1, res_te_2, res_te_4, res_te_6)
+  
 }
 
 #---- Convergent Cross mapping analysis ----#
@@ -373,7 +380,7 @@ if (!run_local) {
 }
 
 # save out results
-save(results, file=sprintf('results/results_%s_%s_%s_%s_%s.RData', jobid, true_int_params$theta_lambda1, true_int_params$theta_lambda2, true_int_params$delta1, true_int_params$delta2))
+save(results, file=sprintf('results/results_%s_%s.RData', jobid, run_local))
 
 #---- Clean up ----#
 toc_all <- Sys.time()
