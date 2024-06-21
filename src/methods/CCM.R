@@ -248,7 +248,7 @@ ccm_func <- function(data){
     
   }
   
-  stopCluster(cl)
+  # stopCluster(cl)
   
   # combine all results
   surr_res <- bind_rows(surr_res)
