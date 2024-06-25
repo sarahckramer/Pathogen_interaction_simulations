@@ -40,21 +40,40 @@ ccm_func <- function(data){
                          lib = lib, pred = pred, maxE = 20, showPlot = FALSE)
   E_v2 <- E_v2 %>% slice_max(rho) %>% pull(E)
   
-  #---- determine if any time delay needs considering: i.e. tp parameter ----#
   
-  # generate all combinations of lib_column, target_column, tp
+  #---- check whether highest cross-map correlation is positive and for a negative lag ----#
   vars <- c('V1_obs', 'V2_obs')
-  params <- expand.grid(lib_column = vars, target_column = vars, tp = -52:52) %>% # alternatively, -20:5
+  params <- expand.grid(lib_column = vars, target_column = vars, tp = -52:52) %>%
+    filter(lib_column != target_column) %>%
+    mutate(E = if_else(lib_column == 'V1_obs', E_v1, E_v2))
+  
+  # explore prediction skill over range of tp values 
+  # for a single library size set it to max
+  lib_size_tp <- nrow(data) - (52 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
+
+  output <- do.call(rbind, lapply(seq_len(nrow(params)), function(i) {
+    CCM(dataFrame = data, E = params$E[i], libSizes = lib_size_tp, random = FALSE,
+        columns = as.character(params$lib_column[i]), target = as.character(params$target_column[i]),
+        Tp = params$tp[i], verbose = FALSE) %>%
+      bind_cols(params[i, ])
+  }))
+
+  optimal_tp_v1xv2_wide <- output %>% filter(target_column == 'V2_obs') %>% filter(`V1_obs:V2_obs` == max(`V1_obs:V2_obs`)) %>% pull(tp)
+  optimal_tp_v2xv1_wide <- output %>% filter(target_column == 'V1_obs') %>% filter(`V2_obs:V1_obs` == max(`V2_obs:V1_obs`)) %>% pull(tp)
+
+  # p1x2 <- ggplot(output %>% filter(target_column == 'V2_obs'), aes(x = tp, y = `V1_obs:V2_obs`)) + geom_line() + theme_classic()
+  # p2x1 <- ggplot(output %>% filter(target_column == 'V1_obs'), aes(x = tp, y = `V2_obs:V1_obs`)) + geom_line() + theme_classic()
+  # grid.arrange(p1x2, p2x1, ncol = 1)
+  
+  #---- determine if any time delay needs considering: i.e. tp parameter ----#
+  # generate all combinations of lib_column, target_column, tp
+  params <- expand.grid(lib_column = vars, target_column = vars, tp = -52:0) %>% # alternatively, -20:5
     filter(lib_column != target_column) # remove cases where lib == target
   
   # want E to be that corresponding to the lib column variable (i.e. the names
   # of the input data used to create the library)
   params <- params %>%
     mutate(E = if_else(lib_column == 'V1_obs', E_v1, E_v2))
-  
-  # explore prediction skill over range of tp values 
-  # for a single library size set it to max
-  lib_size_tp <- nrow(data) - (52 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
   
   output <- do.call(rbind, lapply(seq_len(nrow(params)), function(i) {
     CCM(dataFrame = data, E = params$E[i], libSizes = lib_size_tp, random = FALSE,
@@ -68,28 +87,7 @@ ccm_func <- function(data){
   optimal_tp_v1xv2 <- output %>% filter(target_column == 'V2_obs') %>% filter(`V1_obs:V2_obs` == max(`V1_obs:V2_obs`)) %>% pull(tp)
   optimal_tp_v2xv1 <- output %>% filter(target_column == 'V1_obs') %>% filter(`V2_obs:V1_obs` == max(`V2_obs:V1_obs`)) %>% pull(tp)
   
-  # p1x2 <- ggplot(output %>% filter(target_column == 'V2_obs'), aes(x = tp, y = `V1_obs:V2_obs`)) + geom_line() + theme_classic()
-  # p2x1 <- ggplot(output %>% filter(target_column == 'V1_obs'), aes(x = tp, y = `V2_obs:V1_obs`)) + geom_line() + theme_classic()
-  # grid.arrange(p1x2, p2x1, ncol = 1)
   
-  # #---- check whether highest cross-map correlation is positive and for a negative lag ----#
-  # 
-  # params <- expand.grid(lib_column = vars, target_column = vars, tp = -52:52) %>%
-  #   filter(lib_column != target_column) %>%
-  #   mutate(E = if_else(lib_column == 'V1_obs', E_v1, E_v2))
-  # 
-  # lib_size_tp <- nrow(data) - (52 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
-  # 
-  # output <- do.call(rbind, lapply(seq_len(nrow(params)), function(i) {
-  #   CCM(dataFrame = data, E = params$E[i], libSizes = lib_size_tp, random = FALSE,
-  #       columns = as.character(params$lib_column[i]), target = as.character(params$target_column[i]), 
-  #       Tp = params$tp[i], verbose = FALSE) %>%
-  #     bind_cols(params[i, ])
-  # }))
-  # 
-  # optimal_tp_v1xv2_wide <- output %>% filter(target_column == 'V2_obs') %>% filter(`V1_obs:V2_obs` == max(`V1_obs:V2_obs`)) %>% pull(tp)
-  # optimal_tp_v2xv1_wide <- output %>% filter(target_column == 'V1_obs') %>% filter(`V2_obs:V1_obs` == max(`V2_obs:V1_obs`)) %>% pull(tp)
-  # 
   # p1x2 <- ggplot(output %>% filter(target_column == 'V2_obs'), aes(x = tp, y = `V1_obs:V2_obs`)) + geom_line() + theme_classic()
   # p2x1 <- ggplot(output %>% filter(target_column == 'V1_obs'), aes(x = tp, y = `V2_obs:V1_obs`)) + geom_line() + theme_classic()
   # grid.arrange(p1x2, p2x1, ncol = 1)
@@ -102,11 +100,11 @@ ccm_func <- function(data){
   # run the ccm
   # if wish to get CIs change random_libs = TRUE and add num_samples = xx
   v1_xmap_v2 <- CCM(dataFrame = data, E = E_v1, columns = 'V1_obs', target = 'V2_obs', 
-                    libSizes = c(seq(20, 100, by = 10), seq(125, lib_max, 25), lib_max), Tp = optimal_tp_v1xv2, random = TRUE,
+                    libSizes = c(seq(30, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v1xv2, random = TRUE,
                     sample = 100, includeData = TRUE, showPlot = FALSE)
   
   v2_xmap_v1 <- CCM(dataFrame = data, E = E_v2, columns = 'V2_obs', target = 'V1_obs', 
-                    libSizes = c(seq(20, 100, by = 10), seq(125, lib_max, 25), lib_max), Tp = optimal_tp_v2xv1, random = TRUE,
+                    libSizes = c(seq(30, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v2xv1, random = TRUE,
                     sample = 100, includeData = TRUE, showPlot = FALSE)
   
   # pull out the mean rho for each library size
@@ -274,13 +272,22 @@ ccm_func <- function(data){
   p_surr_v2xv1_alt <- (sum(rho_v2xv1 < rho_v2xv1_surr) + 1) / (length(rho_v2xv1_surr) + 1)
   
   # write out results
-  res_list <- list(res,
-                   surr_res,
-                   c(p_surr_v1xv2, p_surr_v2xv1, p_surr_v1xv2_alt, p_surr_v2xv1_alt),
-                   c(unlist(MannK_v1_xmap_v2), unlist(MannK_v2_xmap_v1)),
-                   # c(optimal_tp_v1xv2_wide, optimal_tp_v2xv1_wide),
-                   c(E_v1, E_v2, optimal_tp_v1xv2, optimal_tp_v2xv1))
-  return(res_list)
+  res <- res %>%
+    mutate(data = 'obs') %>%
+    mutate(MannK = if_else(direction == 'v2 -> v1', unlist(MannK_v1_xmap_v2), unlist(MannK_v2_xmap_v1)))
+  
+  surr_res <- surr_res %>%
+    mutate(data = 'surr') %>%
+    mutate(MannK = NA)
+  
+  res <- bind_rows(res, surr_res) %>%
+    mutate(E = if_else(direction == 'v2 -> v1', E_v1, E_v2),
+           tp_use = if_else(direction == 'v2 -> v1', optimal_tp_v1xv2, optimal_tp_v2xv1),
+           tp_opt = if_else(direction == 'v2 -> v1', optimal_tp_v1xv2_wide, optimal_tp_v2xv1_wide),
+           p_surr = if_else(direction == 'v2 -> v1', p_surr_v1xv2, p_surr_v2xv1),
+           p_surr_alt = if_else(direction == 'v2 -> v1', p_surr_v1xv2_alt, p_surr_v2xv1_alt))
+  
+  return(res)
   
 }
 

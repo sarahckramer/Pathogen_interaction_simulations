@@ -372,7 +372,17 @@ source('src/methods/CCM.R')
 
 if (!run_local) {
   tic <- Sys.time()
+  
   results$CCM <- dat %>% group_by(.id) %>% do(ccm_func(.))
+  
+  # res_list_temp <- vector('list', length = n_sim)
+  # for (ix in 1:n_sim) {
+  #   print(ix)
+  #   res_list_temp[[ix]] <- ccm_func(dat %>% filter(.id == ix))
+  #   print('-------------------------')
+  # }
+  # results$CCM <- res_list_temp
+  
   toc <- Sys.time()
   etime <- toc - tic
   units(etime) <- 'hours'
