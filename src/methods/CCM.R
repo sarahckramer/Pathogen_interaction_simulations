@@ -96,6 +96,7 @@ ccm_func <- function(data){
   
   # determine max library size
   lib_max <- nrow(data) - (max(abs(optimal_tp_v1xv2), abs(optimal_tp_v2xv1)) - 1) - (max(abs(E_v1), abs(E_v2)) - 1)
+  if (optimal_tp_v1xv2 == 0 & optimal_tp_v2xv1 == 0) lib_max <- lib_max - 1
   
   # run the ccm
   # if wish to get CIs change random_libs = TRUE and add num_samples = xx
