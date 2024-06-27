@@ -90,15 +90,14 @@ for (i in 1:n_sim) {
 rm(mu_Imloss, sd_Imloss)
 
 #---- generate range of values for Ri1/Ri2/w2/R02 ----#
-# r_eff_vals <- sobol_design(lower = setNames(c(1.0, 1.6, 1/52, 0.20), c('Ri1', 'Ri2', 'w2', 'R02')),
-#                            upper = setNames(c(1.4, 2.0, 1/26, 0.59), c('Ri1', 'Ri2', 'w2', 'R02')),
-#                            nseq = n_sim)
+r_eff_vals <- sobol_design(lower = setNames(c(1.0, 1.6, 1/52, 0.20), c('Ri1', 'Ri2', 'w2', 'R02')),
+                           upper = setNames(c(1.4, 2.0, 1/26, 0.59), c('Ri1', 'Ri2', 'w2', 'R02')),
+                           nseq = n_sim)
 
 #---- set all true parameter values ----#
 true_int_params <- int_params[jobid, ]
 
-true_params_init <- c(Ri1 = 1.1, Ri2 = 1.7,
-                      # Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
+true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       sigma1 = 7, sigma2 = 7/5,
                       gamma1 = 7/5, gamma2 = 7/10,
                       w1 = 1/52, w2 = 1/52,
@@ -120,10 +119,10 @@ true_params_init <- c(Ri1 = 1.1, Ri2 = 1.7,
 
 true_params <- parmat(true_params_init, nrep = n_sim)
 
-# true_params['Ri1', ] <- r_eff_vals[, 1]
-# true_params['Ri2', ] <- r_eff_vals[, 2]
-# true_params['w2', ] <- r_eff_vals[, 3]
-# true_params['R02', ] <- r_eff_vals[, 4]
+true_params['Ri1', ] <- r_eff_vals[, 1]
+true_params['Ri2', ] <- r_eff_vals[, 2]
+true_params['w2', ] <- r_eff_vals[, 3]
+true_params['R02', ] <- r_eff_vals[, 4]
 
 true_params[str_detect(rownames(true_params), 't_si_'), ] <- t_si_mat
 true_params[str_detect(rownames(true_params), 'w_delta_i_'), ] <- w_delta_i_mat
