@@ -61,7 +61,7 @@ te_jidt <- function(data, lag){
   CI_97.5_v1_x_v2 <- result_v1_x_v2 + 1.96 * sd_null_v1_x_v2
   
   res <- data.frame(cbind(te = c(result_v1_x_v2, result_v2_x_v1),
-                          direction = c('V2 -> V1', 'V1 -> V2'),
+                          direction = c('v2 -> v1', 'v1 -> v2'),
                           sd_null = c(sd_null_v1_x_v2, sd_null_v2_x_v1),
                           p_value = c(p_value_v1_x_v2, p_value_v2_x_v1),
                           CI_lower = c(CI_2.5_v1_x_v2, CI_2.5_v2_x_v1),

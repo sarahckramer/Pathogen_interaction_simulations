@@ -20,9 +20,6 @@ library(tidyverse)
 library(testthat)
 library(pomp)
 library(lubridate)
-# library(janitor)
-# library(ggfortify)
-# library(future) # allows for parallel processing
 library(foreach)
 library(doParallel)
 library(doSNOW)
@@ -68,8 +65,6 @@ rm(theta_lambda1, theta_lambda2, delta1, delta2)
 
 #---- generate timing of surges in immunity loss ----#
 set.seed(1234)
-
-# tot_seasons <- round((tot_weeks / 52) - 2) # convert to seasons
 
 n_surge <- round(tot_weeks / 52) # number of surges
 mu_Imloss <- 38 # average surge occurring in mid Oct
@@ -390,7 +385,7 @@ if (!run_local) {
 }
 
 # save out results
-save(results, file=sprintf('results/results_%s_%s.RData', jobid, run_local))
+save(results, file=sprintf('results/results_%s_%s.rds', jobid, run_local))
 
 #---- Clean up ----#
 toc_all <- Sys.time()
@@ -399,3 +394,5 @@ units(etime) <- 'mins'
 print(etime)
 
 rm(list = ls())
+
+print('Done!')

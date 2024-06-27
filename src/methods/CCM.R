@@ -17,6 +17,7 @@ library(gridExtra)
 
 ccm_func <- function(data){
   
+  print(unique(data$.id))
   data <- data %>% dplyr::select(time, V1_obs, V2_obs)
   
   #---- determine Embedding dimension (i.e. the number of lags used to build up the shadow manifold) ----#
