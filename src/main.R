@@ -12,6 +12,19 @@
 # Creation date: 28 Feb 2024
 ##################################################################################################################
 
+# # Code to run through all jobids locally (uncomment and copy-paste in console):
+# for (jobid_use in 1:16) {
+#   source('src/main.R')
+#   detachAllPackages <- function() {
+#     basic.packages <- c("package:stats","package:graphics","package:grDevices","package:utils","package:datasets","package:methods","package:base")
+#     package.list <- search()[ifelse(unlist(gregexpr("package:",search()))==1,TRUE,FALSE)]
+#     package.list <- setdiff(package.list,basic.packages)
+#     if (length(package.list)>0)  for (package in package.list) detach(package, character.only=TRUE)
+#   }
+#   detachAllPackages()
+#   # source: https://stackoverflow.com/questions/7505547/detach-all-packages-while-working-in-r
+# }
+
 # Setup
 tic_all <- Sys.time()
 
@@ -38,7 +51,14 @@ run_local <- as.logical(Sys.getenv("RUNLOCAL")); print(run_local)
 #---- run local or on cluster? ----#
 if (is.na(run_local)) {
   run_local <- TRUE
-  jobid <- 1
+  
+  if (exists('jobid_use')) {
+    jobid <- jobid_use
+  } else {
+    jobid <- 1
+  }
+  print(jobid)
+  
 }
 
 #---- set global parameters ----#
