@@ -104,7 +104,8 @@ for (i in 1:n_sim) {
   t_si[8:12] <- t_si[8:12] + 1
   
   t_si <- t_si[-which(t_si <= 104)] # remove first two years to allow system to reach equilibrium
-  w_delta_i <- runif(n = length(t_si), min = 0.01 * 7, max = 0.1 * 7) # yearly surge in rate of immunity loss
+  w_delta_i <- runif(n = length(t_si), min = 0.005 * 7, max = 0.05 * 7) # yearly surge in rate of immunity loss
+  # w_delta_i <- runif(n = length(t_si), min = 0.01 * 7, max = 0.1 * 7) # yearly surge in rate of immunity loss
   
   t_si_mat[, i] <- t_si
   w_delta_i_mat[, i] <- w_delta_i
@@ -114,8 +115,8 @@ for (i in 1:n_sim) {
 rm(mu_Imloss, sd_Imloss)
 
 #---- generate range of values for Ri1/Ri2/w2/R02 ----#
-r_eff_vals <- sobol_design(lower = setNames(c(1.0, 1.6, 1/52, 0.20), c('Ri1', 'Ri2', 'w2', 'R02')),
-                           upper = setNames(c(1.4, 2.0, 1/26, 0.59), c('Ri1', 'Ri2', 'w2', 'R02')),
+r_eff_vals <- sobol_design(lower = setNames(c(1.0, 1.6, 1/(52 * 1.0), 0.20), c('Ri1', 'Ri2', 'w2', 'R02')),
+                           upper = setNames(c(1.4, 2.0, 1/(52 * 0.6), 0.59), c('Ri1', 'Ri2', 'w2', 'R02')),
                            nseq = n_sim)
 
 #---- set all true parameter values ----#
