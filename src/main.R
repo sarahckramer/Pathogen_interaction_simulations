@@ -33,6 +33,7 @@ library(tidyverse)
 library(testthat)
 library(pomp)
 library(lubridate)
+library(gridExtra)
 library(foreach)
 library(doParallel)
 library(doSNOW)
@@ -212,24 +213,59 @@ if (debug_bool) {
     geom_line() +
     theme_classic()
   
+  dat %>%
+    filter(.id %in% 1:12) %>%
+    select(time:.id, V1_obs:V2_obs) %>%
+    pivot_longer(V1_obs:V2_obs) %>%
+    ggplot(aes(x = time, y = value, group = paste(name, .id), color = name)) +
+    geom_line() +
+    facet_wrap(~ .id) +
+    theme_classic()
+  
+  #---- check that surges in immunity happen correctly ----#
+  dat %>%
+    filter(.id %in% 1:12) %>%
+    mutate(S1 = X_SS + X_SE + X_SI + X_ST + X_SR) %>%
+    select(time:.id, S1) %>%
+    ggplot(aes(x = time, y = S1 / 3700000, group = .id)) + geom_line() + facet_wrap(~ .id) + theme_classic()
+  
   #---- check seasonal attack rates ----#
   season_breaks <- dat %>% filter(str_detect(date, '07-0[1-7]')) %>% pull(date) %>% unique()
   season_breaks <- c(season_breaks, '2024-07-01')
   
-  dat %>%
+  attack_rates <- dat %>%
     mutate(season = cut(date, breaks = season_breaks, labels = 1:10, include.lowest = TRUE)) %>%
     group_by(season, .id) %>%
     summarise(V1 = sum(V1),
               V2 = sum(V2)) %>%
     mutate(V1 = V1 / 3700000 * 100,
-           V2 = V2 / 3700000 * 100) %>%
-    summary()
+           V2 = V2 / 3700000 * 100)
+  print(summary(attack_rates))
   
-  #---- check that surges in immunity happen correctly ----#
-  dat %>%
-    mutate(S1 = X_SS + X_SE + X_SI + X_ST + X_SR) %>%
-    select(time:.id, S1) %>%
-    ggplot(aes(x = time, y = S1, group = .id)) + geom_line() + theme_classic()
+  #---- check influence of parameter values on attack rates ----#
+  params_df <- true_params %>%
+    t() %>%
+    as_tibble() %>%
+    select('Ri1', 'Ri2', 'w2', 'R02') %>%
+    mutate(.id = 1:n_sim)
+  
+  attack_rates <- attack_rates %>%
+    mutate(.id = as.integer(.id)) %>%
+    inner_join(params_df, by = '.id')
+  
+  p_ar1 <- ggplot(data = attack_rates %>%
+                    pivot_longer(Ri1:R02),
+                  aes(x = value, y = V1)) +
+    geom_point() +
+    facet_wrap(~ name, scales = 'free_x', nrow = 1) +
+    theme_classic()
+  p_ar2 <- ggplot(data = attack_rates %>%
+                    pivot_longer(Ri1:R02),
+                  aes(x = value, y = V2)) +
+    geom_point() +
+    facet_wrap(~ name, scales = 'free_x', nrow = 1) +
+    theme_classic()
+  grid.arrange(p_ar1, p_ar2, ncol = 1)
   
   #---- check relative peak timing of flu vs. rsv ----#
   rsv_first <- dat %>%
@@ -244,12 +280,6 @@ if (debug_bool) {
     pull(.id) %>%
     unique() %>%
     as.numeric()
-  
-  params_df <- true_params %>%
-    t() %>%
-    as_tibble() %>%
-    select('Ri1', 'Ri2', 'w2', 'R02') %>%
-    mutate(.id = 1:n_sim)
   
   params_df <- params_df %>%
     mutate(rsv_first = .id %in% rsv_first)
