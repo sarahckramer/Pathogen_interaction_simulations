@@ -100,6 +100,9 @@ for (i in 1:n_sim) {
   t_si <- t_si - 26 + seq(0, 52 * (n_surge - 1), by = 52)
   t_si <- round(t_si) # make whole numbers
   
+  t_si[2:12] <- t_si[2:12] + 1 # account for years with 53 weeks
+  t_si[8:12] <- t_si[8:12] + 1
+  
   t_si <- t_si[-which(t_si <= 104)] # remove first two years to allow system to reach equilibrium
   w_delta_i <- runif(n = length(t_si), min = 0.01 * 7, max = 0.1 * 7) # yearly surge in rate of immunity loss
   
