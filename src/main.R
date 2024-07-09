@@ -115,8 +115,8 @@ for (i in 1:n_sim) {
 rm(mu_Imloss, sd_Imloss)
 
 #---- generate range of values for Ri1/Ri2/w2/R02 ----#
-r_eff_vals <- sobol_design(lower = setNames(c(1.0, 1.6, 1/(52 * 1.0), 0.20), c('Ri1', 'Ri2', 'w2', 'R02')),
-                           upper = setNames(c(1.4, 2.0, 1/(52 * 0.6), 0.59), c('Ri1', 'Ri2', 'w2', 'R02')),
+r_eff_vals <- sobol_design(lower = setNames(c(1.0, 1.6, 1/(52.25 * 1.0), 0.20), c('Ri1', 'Ri2', 'w2', 'R02')),
+                           upper = setNames(c(1.4, 2.0, 1/(52.25 * 0.6), 0.59), c('Ri1', 'Ri2', 'w2', 'R02')),
                            nseq = n_sim)
 
 #---- set all true parameter values ----#
@@ -125,7 +125,7 @@ true_int_params <- int_params[jobid, ]
 true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       sigma1 = 7, sigma2 = 7/5,
                       gamma1 = 7/5, gamma2 = 7/10,
-                      w1 = 1/52, w2 = 1/52,
+                      w1 = 1/52.25, w2 = 1/52.25,
                       mu = 0.0002, nu = 0.0002,
                       rho1 = 0.002, rho2 = 0.002,
                       theta_lambda1 = true_int_params$theta_lambda1,

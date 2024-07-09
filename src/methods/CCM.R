@@ -172,11 +172,11 @@ ccm_func <- function(data){
   # between v1 and v2 whilst accounting for shared seasonality  
   
   # generate surrogates
-  surr_v1 <- SurrogateData(data$V1_obs, method = "seasonal", num_surr = num_surr, T_period = 52, alpha = 20)
-  surr_v2 <- SurrogateData(data$V2_obs, method = "seasonal", num_surr = num_surr, T_period = 52, alpha = 20) 
+  surr_v1 <- SurrogateData(data$V1_obs, method = "seasonal", num_surr = num_surr, T_period = 52.25, alpha = 20)
+  surr_v2 <- SurrogateData(data$V2_obs, method = "seasonal", num_surr = num_surr, T_period = 52.25, alpha = 20) 
   
-  # SurrogateData(data$V1_obs, method = "seasonal", num_surr = 10, T_period = 52, alpha=20) %>% matplot(type = 'l')
-  # SurrogateData(data$V2_obs, method = "seasonal", num_surr = 10, T_period = 52, alpha=20) %>% matplot(type = 'l')
+  # SurrogateData(data$V1_obs, method = "seasonal", num_surr = 10, T_period = 52.25, alpha=20) %>% matplot(type = 'l')
+  # SurrogateData(data$V2_obs, method = "seasonal", num_surr = 10, T_period = 52.25, alpha=20) %>% matplot(type = 'l')
   
   # turn any negative surrogates into 0 - can't have a negative number of cases
   surr_v1b = apply(surr_v1, 2, function(x) {

@@ -278,7 +278,7 @@ double beta2 = Ri2 / (1.0 - (R02 + R012)) * gamma2; // virus 2
 
 // incorporate seasonality parameter for each virus 
 // where A = amplitude, omega = annual angular frequency, t = time and phi = phase
-double omega = (2 * M_PI) / 52;
+double omega = (2 * M_PI) / 52.25;
 double s1 = 1 + A1 * cos(omega * (t - phi1));
 double s2 = 1 + A2 * cos(omega * (t - phi2));
 
@@ -399,7 +399,7 @@ beta2 = R0_2 * gamma2 * dW2 / dt;
 
 // incorporate seasonality parameter for each virus 
 // where A = amplitude, omega = annual angular frequency, t = time and phi = phase
-double omega = (2 * M_PI)/52;
+double omega = (2 * M_PI)/52.25;
 double s1 = 1 + A1 * cos(omega * (t - phi1));
 double s2 = 1 + A2 * cos(omega * (t - phi2));
 

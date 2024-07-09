@@ -39,7 +39,7 @@ gam_cor <- function(data){
   
   # calculate the shared seasonal component 
   data <- data %>%
-    mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52 * (data$time - 26)))
+    mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (data$time - 26)))
   
   # run gam model
   mvn_mod_confound <- gam(formula = list(V1_obs ~ s(time) + s(seasonal_component), V2_obs ~ s(time) +s(seasonal_component)),
@@ -90,7 +90,7 @@ gam_cor <- function(data){
     
     # calculating seasonal component
     boot_data_confound <- boot_data_confound %>%
-      mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52 * (data$time - 26)))
+      mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (data$time - 26)))
     
     # model not accounting for seasonal confounding
     boot_mvn_mod <- gam(formula = list(V1_obs ~ s(time), V2_obs ~ s(time)),

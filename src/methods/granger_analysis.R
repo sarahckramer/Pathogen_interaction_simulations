@@ -66,7 +66,7 @@ granger_func <- function(data){
   # estimate seasonal component
   data <- data %>%
     dplyr::select(time, V1_obs, V2_obs) %>%
-    mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52 * (time - 26)))
+    mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26)))
   
   # m1 <- lm(V1_obs ~ lag(V1_obs, 1) + lag(V1_obs, 2) + lag(V1_obs, 3) + V2_obs , data = data)
   # m2 <- lm(V1_obs ~ lag(V1_obs, 1) + lag(V1_obs, 2) + lag(V1_obs, 3) , data = data)
@@ -154,7 +154,7 @@ granger_func <- function(data){
       # get seasonal component
       bootstrap_data <- bootstrap_data %>%
         mutate(time = (min(orig_data$time) + p):max(orig_data$time)) %>%
-        mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52 * (time - 26))) %>%
+        mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26))) %>%
         dplyr::select(-time)
       
       # perform univariate AR models
