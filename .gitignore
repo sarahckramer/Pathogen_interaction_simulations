@@ -1,0 +1,9 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+/data/
+/notes/
+/results/
+/infodynamics-dist-1.6.1/
