@@ -41,7 +41,6 @@ ccm_func <- function(data){
                          lib = lib, pred = pred, maxE = 20, showPlot = FALSE)
   E_v2 <- E_v2 %>% slice_max(rho) %>% pull(E)
   
-  
   #---- check whether highest cross-map correlation is positive and for a negative lag ----#
   vars <- c('V1_obs', 'V2_obs')
   params <- expand.grid(lib_column = vars, target_column = vars, tp = -52:52) %>%
@@ -88,7 +87,6 @@ ccm_func <- function(data){
   optimal_tp_v1xv2 <- output %>% filter(target_column == 'V2_obs') %>% filter(`V1_obs:V2_obs` == max(`V1_obs:V2_obs`)) %>% pull(tp)
   optimal_tp_v2xv1 <- output %>% filter(target_column == 'V1_obs') %>% filter(`V2_obs:V1_obs` == max(`V2_obs:V1_obs`)) %>% pull(tp)
   
-  
   # p1x2 <- ggplot(output %>% filter(target_column == 'V2_obs'), aes(x = tp, y = `V1_obs:V2_obs`)) + geom_line() + theme_classic()
   # p2x1 <- ggplot(output %>% filter(target_column == 'V1_obs'), aes(x = tp, y = `V2_obs:V1_obs`)) + geom_line() + theme_classic()
   # grid.arrange(p1x2, p2x1, ncol = 1)
@@ -131,7 +129,7 @@ ccm_func <- function(data){
   all_predictions_v1 <- v1_xmap_v2$CCM1_PredictStat
   all_predictions_v2 <- v2_xmap_v1$CCM1_PredictStat
   
-  # calculate median aswell as lower and upper bounds (2.5, 97.5%) on rho for each lib size
+  # calculate median as well as lower and upper bounds (2.5, 97.5%) on rho for each lib size
   # because I have now changed this to doing no subsampling rho2.5 -> rho97.5 will all be the same
   intervals_perc_v1 <- all_predictions_v1 %>%
     group_by(LibSize) %>%
@@ -179,7 +177,7 @@ ccm_func <- function(data){
   # SurrogateData(data$V2_obs, method = "seasonal", num_surr = 10, T_period = 52.25, alpha=20) %>% matplot(type = 'l')
   
   # turn any negative surrogates into 0 - can't have a negative number of cases
-  surr_v1b = apply(surr_v1, 2, function(x) {
+  surr_v1 = apply(surr_v1, 2, function(x) {
     x[x < 0] <- 0
     x
   })

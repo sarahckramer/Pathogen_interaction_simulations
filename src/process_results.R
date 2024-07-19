@@ -472,9 +472,10 @@ res_granger <- res_granger %>%
 # Determine significance/direction of detected correlation:
 res_granger <- res_granger %>%
   mutate(int_est = if_else(ftest_p < 0.05, 'interaction', 'none'))
-# QUESTION: Which p-value is more reliable?
 
-# QUESTION: What to do when not stationary?
+# Check whether any datasets are not stationary:
+res_granger %>% filter(adf_p >= 0.05) %>% nrow() %>% print()
+res_granger %>% filter(kpss_p < 0.05) %>% nrow() %>% print()
 
 # Get results by direction, and by whether seasonality controlled for:
 res_granger_LIST <- vector('list', length = 4)
@@ -586,14 +587,11 @@ res_te <- res_te %>%
 # Determine significance/direction of detected correlation:
 res_te <- res_te %>%
   mutate(int_est = if_else(p_value < 0.05, 'interaction', 'none'))
-# QUESTION: p-values seem to be very coarse?
 
-# # choosing the best lag for each parameter combo
-# max_te_lag <- trans_res %>% group_by(theta_lambda1, theta_lambda2, delta1, delta2, id, direction) %>% 
-#   summarise(max_te = max(te))
-# trans_res <- trans_res %>% left_join(max_te_lag)
-# # remove the lags which don't give max transfer entropy
-# trans_res <- trans_res %>% filter(te == max_te)
+# Alternatively, base significance on confidence intervals:
+res_te <- res_te %>%
+  mutate(int_est = if_else(CI_lower > 0, 'interaction', 'none'))
+# Lower sensitivity but higher specificity, but only slightly
 
 # Get results by direction and lag:
 res_te_LIST <- vector('list', length = 8)
@@ -693,7 +691,14 @@ res_ccm <- res_ccm %>%
   select(run:direction, rho, MannK:p_surr_alt, theta_lambda:delta) %>%
   summarise(rho_mean = mean(rho), rho_max = rho[LibSize == max(LibSize)], MannK = unique(MannK), tp_opt = unique(tp_opt), p_surr = unique(p_surr_alt)) %>%
   ungroup()
-# QUESTION: Use mean or median rhos?
+
+# # Or instead use median rhos:
+# res_ccm <- res_ccm %>%
+#   group_by(run, .id, direction, theta_lambda, delta) %>%
+#   select(run:direction, rho_median, MannK:p_surr_alt, theta_lambda:delta) %>%
+#   summarise(rho_mean = mean(rho_median), rho_max = rho_median[LibSize == max(LibSize)], MannK = unique(MannK), tp_opt = unique(tp_opt), p_surr = unique(p_surr_alt)) %>%
+#   ungroup()
+# # very little difference in results
 
 # Determine significance/direction of true interaction:
 res_ccm <- res_ccm %>%
