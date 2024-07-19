@@ -15,7 +15,7 @@ library(viridis)
 
 # Open pdf to save plots:
 date <- format(Sys.Date(), '%d%m%y')
-pdf(file = paste0('results/plots/plot_accuracy_by_method_', date, '_VARYPARAMS.pdf'),
+pdf(file = paste0('results/plots/plot_accuracy_by_method_', date, '_EXTRADEMSTOCH.pdf'),
     width = 16, height = 12)
 
 # ------------------------------------------------------------------------------
@@ -23,8 +23,8 @@ pdf(file = paste0('results/plots/plot_accuracy_by_method_', date, '_VARYPARAMS.p
 # Read in all results
 
 # Get file names:
-res_filenames_T <- list.files(path = 'results/vary_other_params/', pattern = 'TRUE', full.names = TRUE) # run locally
-res_filenames_F <- list.files(path = 'results/vary_other_params/', pattern = 'FALSE', full.names = TRUE) # run on cluster
+res_filenames_T <- list.files(path = 'results/add_extrademo_stoch/', pattern = 'TRUE', full.names = TRUE) # run locally
+res_filenames_F <- list.files(path = 'results/add_extrademo_stoch/', pattern = 'FALSE', full.names = TRUE) # run on cluster
 
 # Read in results:
 results_T = results_F = vector('list', length = length(res_filenames_T))
