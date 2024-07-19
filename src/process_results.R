@@ -706,9 +706,13 @@ res_ccm <- res_ccm %>%
 
 # Determine significance of detected correlation:
 res_ccm <- res_ccm %>%
-  mutate(int_est_1 = if_else(p_surr < 0.05, 'interaction', 'none'), # method 1: check p-value
-         int_est_2 = if_else(p_surr < 0.05 & MannK < 0.05, 'interaction', 'none'), # method 2: method 1 + convergence
-         int_est_3 = if_else(p_surr < 0.05 & MannK < 0.05 & tp_opt < 0, 'interaction', 'none')) # method 3: method 2 + ideal tp negative
+  mutate(int_est_1 = if_else(p_surr < 0.05, 'interaction', 'none'), # method 1: check p-values based on surrogates
+         int_est_2 = if_else(MannK < 0.05, 'interaction', 'none'), # method 2: check convergence
+         int_est_3 = if_else(MannK < 0.05 & tp_opt < 0, 'interaction', 'none')) # method 3: check convergence + ideal tp negative
+# res_ccm <- res_ccm %>%
+#   mutate(int_est_1 = if_else(p_surr < 0.05, 'interaction', 'none'), # method 1: check p-value
+#          int_est_2 = if_else(p_surr < 0.05 & MannK < 0.05, 'interaction', 'none'), # method 2: method 1 + convergence
+#          int_est_3 = if_else(p_surr < 0.05 & MannK < 0.05 & tp_opt < 0, 'interaction', 'none')) # method 3: method 2 + ideal tp negative
 
 # Get results by direction and method of significance calculation:
 res_ccm_LIST <- vector('list', length = 6)
