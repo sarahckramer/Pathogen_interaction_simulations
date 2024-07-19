@@ -149,18 +149,26 @@ ccm_func <- function(data){
     left_join(bind_rows(intervals_perc_v1, intervals_perc_v2), by = c('LibSize', 'direction'))
   
   # check convergence using Mann Kendall - significant p-value implies convergence achieved
-  MannK_v1_xmap_v2 <- res %>%
+  rhos1 <- res %>%
     filter(direction == 'v2 -> v1') %>%
-    pull(rho) %>%
-    MannKendall() %>%
-    getElement('sl') %>%
-    purrr::map(~ .[1])
-  MannK_v2_xmap_v1 <- res %>%
+    pull(rho)
+  rhos2 <- res %>%
     filter(direction == 'v1 -> v2') %>%
-    pull(rho) %>%
+    pull(rho)
+  
+  MannK_v1_xmap_v2 <- rhos1 %>%
     MannKendall() %>%
     getElement('sl') %>%
     purrr::map(~ .[1])
+  MannK_v2_xmap_v1 <- rhos2 %>%
+    MannKendall() %>%
+    getElement('sl') %>%
+    purrr::map(~ .[1])
+  
+  # Check that monotonically increasing, not decreasing:
+  if(!(rhos1[length(rhos1)] > rhos1[1])) MannK_v1_xmap_v2 <- 99
+  if(!(rhos2[length(rhos2)] > rhos2[1])) MannK_v2_xmap_v1 <- 99
+  rm(rhos1, rhos2)
   
   #---- create the null hypothesis for comparison with our CCM output ----#
   
