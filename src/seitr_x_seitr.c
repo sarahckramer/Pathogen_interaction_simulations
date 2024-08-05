@@ -585,14 +585,22 @@ births = fromSS[2] + fromES[2] + fromIS[2] + fromTS[2] + fromRS[2] +
 
 // balance equations
 
-//double i0;
+double i0;
 //i0 = nearbyint(10.0 * 7 * dt); // x new infections / day
+for(int i = 0; i < nsurges + 1; i++){
+  if(floor(t) == t_vec[i]) {
+    i0 = nearbyint(10.0 * 7 * dt);
+    break;
+  } else{
+    i0 = 0;
+  }
+}
 //Rprintf("i0=%.2f\n", i0);
 
 // row 1 of schematic
-X_SS += births - fromSS[0] - fromSS[1] + fromRS[0] + fromSR[1] - fromSS[2];// - i0;
+X_SS += births - fromSS[0] - fromSS[1] + fromRS[0] + fromSR[1] - fromSS[2] - i0;
 X_ES += fromSS[0] - fromES[0] - fromES[1] + fromER[1] - fromES[2];
-X_IS += fromES[0] - fromIS[0] - fromIS[1] + fromIR[1] - fromIS[2];// + i0;
+X_IS += fromES[0] - fromIS[0] - fromIS[1] + fromIR[1] - fromIS[2] + i0;
 X_TS += fromIS[0] - fromTS[0] - fromTS[1] + fromTR[1] - fromTS[2];
 X_RS += fromTS[0] - fromRS[0] - fromRS[1] + fromRR[1] - fromRS[2];
 

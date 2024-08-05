@@ -146,15 +146,27 @@ dat <- dat %>%
 dat <- dat %>%
   mutate(date = ymd('2012-July-01') + weeks(time)) # add dates
 
-dat_red <- dat %>% # remove if outbreak never takes off
-  group_by(.id) %>%
-  mutate(sum_V1 = sum(V1_obs),
-         sum_V2 = sum(V2_obs)) %>%
-  filter(sum_V1 > 0 & sum_V2 > 0) %>%
-  select(-c(sum_V1:sum_V2)) %>%
-  ungroup()
-expect_true(all.equal(dim(dat), dim(dat_red)))
-rm(dat_red)
+#---- check for yearly outbreaks ----#
+season_breaks <- dat %>% filter(str_detect(date, '07-0[1-7]')) %>% pull(date) %>% unique()
+season_breaks <- c(season_breaks, '2024-07-01')
+
+dat_red <- dat %>%
+  mutate(season = cut(date, breaks = season_breaks, labels = 1:10, include.lowest = TRUE)) %>%
+  group_by(season, .id) %>%
+  summarise(V1 = sum(V1),
+            V2 = sum(V2)) %>%
+  filter(V1 < 300000)
+# dat_red <- dat %>%
+#   mutate(season = cut(date, breaks = season_breaks, labels = 1:10, include.lowest = TRUE)) %>%
+#   group_by(season, .id) %>%
+#   summarise(V1_obs = sum(V1_obs),
+#             V2_obs = sum(V2_obs)) %>%
+#   filter(V1_obs < 1000)
+
+if (true_int_params$theta_lambda1 == 1.0 & true_int_params$theta_lambda2 == 1.0) {
+  expect_true(nrow(dat_red) == 0)
+}
+rm(dat_red, season_breaks)
 
 # ---------------------------------------------------------------------------------------------------------------------
 
