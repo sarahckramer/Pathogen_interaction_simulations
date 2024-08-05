@@ -71,8 +71,8 @@ for (i in 1:n_sim) {
 rm(mu_Imloss, sd_Imloss)
 
 #---- generate range of values for Ri1/Ri2/w2/R02 ----#
-r_eff_vals <- sobol_design(lower = setNames(c(1.0, 1.6, 1/(52.25 * 1.0), 0.20), c('Ri1', 'Ri2', 'w2', 'R02')),
-                           upper = setNames(c(1.4, 2.0, 1/(52.25 * 0.6), 0.59), c('Ri1', 'Ri2', 'w2', 'R02')),
+r_eff_vals <- sobol_design(lower = setNames(c(1.05, 1.6, 1/(52.25 * 1.0)), c('Ri1', 'Ri2', 'w2')),
+                           upper = setNames(c(1.4, 2.0, 1/(52.25 * 0.6)), c('Ri1', 'Ri2', 'w2')),
                            nseq = n_sim)
 
 #---- set all true parameter values ----#
@@ -104,7 +104,7 @@ true_params <- parmat(true_params_init, nrep = n_sim)
 true_params['Ri1', ] <- r_eff_vals[, 1]
 true_params['Ri2', ] <- r_eff_vals[, 2]
 true_params['w2', ] <- r_eff_vals[, 3]
-true_params['R02', ] <- r_eff_vals[, 4]
+# true_params['R02', ] <- r_eff_vals[, 4]
 
 true_params[str_detect(rownames(true_params), 't_si_'), ] <- t_si_mat
 true_params[str_detect(rownames(true_params), 'w_delta_i_'), ] <- w_delta_i_mat
@@ -223,7 +223,7 @@ if (debug_bool) {
   params_df <- true_params %>%
     t() %>%
     as_tibble() %>%
-    select('Ri1', 'Ri2', 'w2', 'R02') %>%
+    select('Ri1', 'Ri2', 'w2') %>%
     mutate(.id = 1:n_sim)
   
   attack_rates <- attack_rates %>%
@@ -231,13 +231,13 @@ if (debug_bool) {
     inner_join(params_df, by = '.id')
   
   p_ar1 <- ggplot(data = attack_rates %>%
-                    pivot_longer(Ri1:R02),
+                    pivot_longer(Ri1:w2),
                   aes(x = value, y = V1)) +
     geom_point() +
     facet_wrap(~ name, scales = 'free_x', nrow = 1) +
     theme_classic()
   p_ar2 <- ggplot(data = attack_rates %>%
-                    pivot_longer(Ri1:R02),
+                    pivot_longer(Ri1:w2),
                   aes(x = value, y = V2)) +
     geom_point() +
     facet_wrap(~ name, scales = 'free_x', nrow = 1) +
@@ -262,7 +262,7 @@ if (debug_bool) {
     mutate(rsv_first = .id %in% rsv_first)
   
   ggplot(data = params_df %>%
-           pivot_longer(Ri1:R02),
+           pivot_longer(Ri1:w2),
          aes(x = rsv_first, y = value)) +
     geom_violin(fill = 'gray90') +
     facet_wrap(~ name, scales = 'free_y') +
