@@ -225,7 +225,7 @@ if ((X_SS + X_ES + X_RS + X_SE + X_SR + X_RR) != N) {
 
 // SIMULATION 
 //start_rmeas
-// generate the total number of tests positive to each virus 
+// generate the total number of tests positive to each virus
 V1_obs = rnbinom_mu(1 / k1, rho1 * V1); // virus 1
 V2_obs = rnbinom_mu(1 / k2, rho2 * V2); // virus 2
 //end_rmeas
@@ -319,7 +319,8 @@ Rprintf("N_sum=%.4f\n", N_sum);
 }
 
 // ODEs
-//column 1 of schematic
+
+// column 1 of schematic
 DX_SS = -(lambda1 + lambda2) * X_SS + w2 * X_SR + w1_s * X_RS + mu * N - nu * X_SS;
 DX_SE = lambda2 * X_SS - (lambda1 + sigma2) * X_SE + w1_s * X_RE - nu * X_SE;
 DX_SI = sigma2 * X_SE - (lambda1 * theta_lambda2 + gamma2) * X_SI + w1_s * X_RI - nu * X_SI;
@@ -340,14 +341,14 @@ DX_II = sigma1 * X_EI + sigma2 * X_IE - (gamma1 + gamma2) * X_II - nu * X_II;
 DX_IT = sigma1 * X_ET + gamma2 * X_II - (gamma1 + delta2) * X_IT - nu * X_IT;
 DX_IR = delta2 * X_IT + sigma1 * X_ER - gamma1 * X_IR - w2 * X_IR - nu * X_IR;
 
-//column 4  of schematic
+// column 4  of schematic
 DX_TS = gamma1 * X_IS - (delta1 + lambda2 * theta_lambda1) * X_TS + w2 * X_TR - nu * X_TS;
 DX_TE = lambda2 * theta_lambda1 * X_TS + gamma1 * X_IE - (delta1 + sigma2) * X_TE - nu * X_TE;
 DX_TI = sigma2 * X_TE + gamma1 * X_II - (delta1 + gamma2) * X_TI - nu * X_TI;
 DX_TT = gamma1 * X_IT + gamma2 * X_TI - (delta1 + delta2)* X_TT - nu * X_TT;
 DX_TR = gamma1 * X_IR + delta2 * X_TT - delta1 * X_TR - w2 * X_TR - nu * X_TR;
 
-//column 5  of schematic
+// column 5  of schematic
 DX_RS = delta1 * X_TS - lambda2 * X_RS + w2 * X_RR - w1_s * X_RS - nu * X_RS;
 DX_RE = lambda2 * X_RS + delta1 * X_TE - sigma2 * X_RE - w1_s * X_RE - nu * X_RE;
 DX_RI = sigma2 * X_RE + delta1 * X_TI - gamma2 * X_RI - w1_s * X_RI - nu * X_RI;
@@ -525,7 +526,7 @@ rates[74] = nu; // natural X_RR death rate
 // transitions due to virus 1 (i.e. horizontally across compartments) and c2 the transitions (i.e. vec[1])
 // due to virus 2 (i.e. vertically down compartments)
 
-// row 1 of schematic 
+// row 1 of schematic
 reulermultinom(3, X_SS, &rates[0], dt, &fromSS[0]);
 reulermultinom(3, X_ES, &rates[3], dt, &fromES[0]);
 reulermultinom(3, X_IS, &rates[6], dt, &fromIS[0]);
