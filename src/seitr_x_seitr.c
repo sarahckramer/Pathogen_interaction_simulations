@@ -250,6 +250,9 @@ ll_2 = dnbinom_mu(V2_obs, 1 / k2, rho2 * V2, 1);
 // Replace by a big, but finite penalty if that's the case 
 ll = fmax2(ll_1 + ll_2, -1e3);
 
+// If data are NA, ll will be NA; in this case, set to zero
+ll = ISNA(ll) ? 0.0 : ll;
+
 if(debug) {
   Rprintf("t=%.1f, V1_obs=%.2f, V2_obs=%.2f, V1=%.2f, V2=%.2f, rho1=%.4f, rho2=%.4f, ll_1=%.1f, ll_2=%.1f, sum=%.1f, ll=%.f\n", t, V1_obs, V2_obs, V1, V2, rho1, rho2, ll_1, ll_2, ll_1 + ll_2, ll);
 }
