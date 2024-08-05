@@ -49,7 +49,7 @@ create_SEITRxSEITR_mod <- function(n_weeks, parms, debug_bool = FALSE) {
              globals = components_l[['globs']],
              dmeasure = components_l[['dmeas']],
              rmeasure = components_l[['rmeas']],
-             rprocess = euler(step.fun = components_l[['rsim']], delta.t = 1),
+             rprocess = euler(step.fun = components_l[['rsim']], delta.t = 0.01),
              skeleton = vectorfield(components_l[['skel']]), # putting in deterministic for testing
              rinit = components_l[['rinit']]
   )

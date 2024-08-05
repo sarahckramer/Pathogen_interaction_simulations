@@ -384,7 +384,7 @@ double dW1 = rgammawn(beta_sd1, dt);
 double dW2 = rgammawn(beta_sd2, dt);
 
 if (debug) {
-  Rprintf("dW1=%.1f, dW2=%.1f\n", dW1, dW2);
+  Rprintf("dW1=%.4f, dW2=%.4f, dt=%.4f\n", dW1, dW2, dt);
 }
 
 beta1 = R0_1 * gamma1 * dW1 / dt;
@@ -420,7 +420,7 @@ double w1_s;
 // assigning the loss in immunity depending on the number of surges we have
 //Rprintf("t=%.2f\n", t);
 for(int i = 0; i < nsurges + 1; i++){
-    if(t == t_vec[i]) { // if t is a surge time point the add the surge in loss of immunity
+    if(floor(t) == t_vec[i]) { // if t is a surge time point the add the surge in loss of immunity
       w1_s = w1 + w_delta_vec[i];
       //Rprintf("Surge point found: %.3f\n", w1_s);
       break; // exit if we find a surge point
@@ -429,6 +429,11 @@ for(int i = 0; i < nsurges + 1; i++){
       //Rprintf("No surge found: %.3f\n", w1_s);
    }
 }
+
+if (debug) {
+  Rprintf("t=%.3f, t=%.3f, dt=%.3f, w1_s=%.3f\n", t, floor(t), dt, w1_s);
+}
+
 // specifying the transitions 
 double rates[75];// vector of length 75
 double fromSS[3], fromES[3], fromIS[3], fromTS[3], fromRS[3];
