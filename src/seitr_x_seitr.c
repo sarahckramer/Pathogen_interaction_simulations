@@ -323,8 +323,11 @@ Rprintf("N_sum=%.4f\n", N_sum);
 
 // ODEs
 
+//double i0;
+//i0 = 100.0; // x new infections / day
+
 // column 1 of schematic
-DX_SS = -(lambda1 + lambda2) * X_SS + w2 * X_SR + w1_s * X_RS + mu * N - nu * X_SS;
+DX_SS = -(lambda1 + lambda2) * X_SS + w2 * X_SR + w1_s * X_RS + mu * N - nu * X_SS;// - i0;
 DX_SE = lambda2 * X_SS - (lambda1 + sigma2) * X_SE + w1_s * X_RE - nu * X_SE;
 DX_SI = sigma2 * X_SE - (lambda1 * theta_lambda2 + gamma2) * X_SI + w1_s * X_RI - nu * X_SI;
 DX_ST = gamma2 * X_SI - (lambda1 * theta_lambda2 + delta2) * X_ST + w1_s * X_RT - nu * X_ST;
@@ -338,7 +341,7 @@ DX_ET = gamma2 * X_EI + lambda1 * theta_lambda2 * X_ST - (sigma1 + delta2) * X_E
 DX_ER = lambda1 * X_SR + delta2 * X_ET - sigma1 * X_ER - w2 * X_ER - nu * X_ER;
 
 // column 3  of schematic
-DX_IS = sigma1 * X_ES - (gamma1 + lambda2 * theta_lambda1) * X_IS + w2 * X_IR - nu * X_IS;
+DX_IS = sigma1 * X_ES - (gamma1 + lambda2 * theta_lambda1) * X_IS + w2 * X_IR - nu * X_IS;// + i0;
 DX_IE = lambda2 * theta_lambda1 * X_IS + sigma1 * X_EE - (gamma1 + sigma2) * X_IE - nu * X_IE;
 DX_II = sigma1 * X_EI + sigma2 * X_IE - (gamma1 + gamma2) * X_II - nu * X_II;
 DX_IT = sigma1 * X_ET + gamma2 * X_II - (gamma1 + delta2) * X_IT - nu * X_IT;
@@ -582,10 +585,14 @@ births = fromSS[2] + fromES[2] + fromIS[2] + fromTS[2] + fromRS[2] +
 
 // balance equations
 
+//double i0;
+//i0 = nearbyint(10.0 * 7 * dt); // x new infections / day
+//Rprintf("i0=%.2f\n", i0);
+
 // row 1 of schematic
-X_SS += births - fromSS[0] - fromSS[1] + fromRS[0] + fromSR[1] - fromSS[2];
+X_SS += births - fromSS[0] - fromSS[1] + fromRS[0] + fromSR[1] - fromSS[2];// - i0;
 X_ES += fromSS[0] - fromES[0] - fromES[1] + fromER[1] - fromES[2];
-X_IS += fromES[0] - fromIS[0] - fromIS[1] + fromIR[1] - fromIS[2];
+X_IS += fromES[0] - fromIS[0] - fromIS[1] + fromIR[1] - fromIS[2];// + i0;
 X_TS += fromIS[0] - fromTS[0] - fromTS[1] + fromTR[1] - fromTS[2];
 X_RS += fromTS[0] - fromRS[0] - fromRS[1] + fromRR[1] - fromRS[2];
 
