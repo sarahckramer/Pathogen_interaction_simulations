@@ -167,6 +167,7 @@ start_range <- start_range[, estpars]
 
 # Draw from start ranges:
 if (search_type == 'broad') {
+  set.seed(38564478)
   start_values <- sobol_design(lower = setNames(as.numeric(start_range[1, ]), names(start_range[1, ])),
                                upper = setNames(as.numeric(start_range[2, ]), names(start_range[2, ])),
                                nseq = sobol_size)
