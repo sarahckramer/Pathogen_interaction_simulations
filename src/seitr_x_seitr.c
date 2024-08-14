@@ -75,21 +75,32 @@ T_theta_lambda1 = logitCons(theta_lambda1, 0, 10);
 T_theta_lambda2 = logitCons(theta_lambda2, 0, 10);
 
 T_A1 = logit(A1);
-T_phi1 = logitCons(phi1, 20, 42); // 4 month period around Oct
+T_phi1 = logitCons(phi1, 0.0, 52.25);
 T_A2 = logit(A2);
-T_phi2 = logitCons(phi2, 20, 42);
+T_phi2 = logitCons(phi2, 0.0, 52.25);
 
-T_beta_sd1 = beta_sd1;
-T_beta_sd2 = beta_sd2;
+T_k1 = log(k1);
+T_k2 = log(k2);
+T_beta_sd1 = logit(beta_sd1);
+T_beta_sd2 = logit(beta_sd2);
+
 T_N = N;
 T_nsurges = nsurges;
 
-// dates of surges 
-int *t_vec = (int *) &t_si_1;
-int *T_t_vec = (int *) &t_si_1;
-for (int i = 0; i < (int) nsurges; i++) {
-  T_t_vec[i] = t_vec[i];
-}
+// dates of surges
+double *t_vec = (double *) &t_si_1;
+double *T_t_vec = (double *) &T_t_si_1;
+
+T_t_vec[0] = logitCons(t_vec[0], 105, 156);
+T_t_vec[1] = logitCons(t_vec[1], 157, 208);
+T_t_vec[2] = logitCons(t_vec[2], 209, 260);
+T_t_vec[3] = logitCons(t_vec[3], 261, 312);
+T_t_vec[4] = logitCons(t_vec[4], 313, 365);
+T_t_vec[5] = logitCons(t_vec[5], 366, 417);
+T_t_vec[6] = logitCons(t_vec[6], 418, 469);
+T_t_vec[7] = logitCons(t_vec[7], 470, 521);
+T_t_vec[8] = logitCons(t_vec[8], 522, 573);
+T_t_vec[9] = logitCons(t_vec[9], 574, 626);
 
 // surge in loss immunity
 double *w_delta_vec = (double *) &w_delta_i_1; 
@@ -135,21 +146,32 @@ theta_lambda1 = expitCons(T_theta_lambda1, 0, 10);
 theta_lambda2 = expitCons(T_theta_lambda2, 0, 10);
 
 A1 = expit(T_A1);
-phi1 = expitCons(T_phi1, 20, 42);
+phi1 = expitCons(T_phi1, 0.0, 52.25);
 A2 = expit(T_A2);
-phi2 = expitCons(T_phi2, 20, 42);
- 
-beta_sd1 = T_beta_sd1;
-beta_sd2 = T_beta_sd2;
+phi2 = expitCons(T_phi2, 0.0, 52.25);
+
+k1 = exp(T_k1);
+k2 = exp(T_k2);
+beta_sd1 = expit(T_beta_sd1);
+beta_sd2 = expit(T_beta_sd2);
+
 N = T_N;
 nsurges = T_nsurges;
 
 // dates of surges 
-int *t_vec = (int *) &t_si_1;
-int *T_t_vec = (int *) &t_si_1;
-for (int i = 0; i < (int) nsurges; i++) {
-  t_vec[i] = T_t_vec[i];
-}
+double *t_vec = (double *) &t_si_1;
+double *T_t_vec = (double *) &T_t_si_1;
+
+t_vec[0] = expitCons(T_t_vec[0], 105, 156);
+t_vec[1] = expitCons(T_t_vec[1], 157, 208);
+t_vec[2] = expitCons(T_t_vec[2], 209, 260);
+t_vec[3] = expitCons(T_t_vec[3], 261, 312);
+t_vec[4] = expitCons(T_t_vec[4], 313, 365);
+t_vec[5] = expitCons(T_t_vec[5], 366, 417);
+t_vec[6] = expitCons(T_t_vec[6], 418, 469);
+t_vec[7] = expitCons(T_t_vec[7], 470, 521);
+t_vec[8] = expitCons(T_t_vec[8], 522, 573);
+t_vec[9] = expitCons(T_t_vec[9], 574, 626);
 
 // surges in loss of immunity
 double *w_delta_vec = (double *) &w_delta_i_1;
@@ -308,7 +330,7 @@ double w1_s;
 
 // assigning the loss in immunity depending on the number of surges we have
 for(int i = 0; i < nsurges + 1; i++){
-  if(floor(t) == t_vec[i]) { // if t is a surge time point the add the surge in loss of immunity
+  if(floor(t) == nearbyint(t_vec[i])) { // if t is a surge time point the add the surge in loss of immunity
     w1_s = w1 + w_delta_vec[i];
     break; // exit if we find a surge point
   } else{
@@ -325,6 +347,8 @@ Rprintf("N_sum=%.4f\n", N_sum);
 
 //double i0;
 //i0 = 100.0; // x new infections / day
+
+//Rprintf("SS=%.1f, SE=%.1f, SI=%.1f, ST=%.1f, t1=%.4f, w1=%.4f\n", X_SS, X_SE, X_SI, X_ST, t_vec[0], w_delta_vec[0]);
 
 // column 1 of schematic
 DX_SS = -(lambda1 + lambda2) * X_SS + w2 * X_SR + w1_s * X_RS + mu * N - nu * X_SS;// - i0;
@@ -423,7 +447,7 @@ double w1_s;
 // assigning the loss in immunity depending on the number of surges we have
 //Rprintf("t=%.2f\n", t);
 for(int i = 0; i < nsurges + 1; i++){
-    if(floor(t) == t_vec[i]) { // if t is a surge time point the add the surge in loss of immunity
+    if(floor(t) == nearbyint(t_vec[i])) { // if t is a surge time point the add the surge in loss of immunity
       w1_s = w1 + w_delta_vec[i];
       //Rprintf("Surge point found: %.3f\n", w1_s);
       break; // exit if we find a surge point
@@ -588,7 +612,7 @@ births = fromSS[2] + fromES[2] + fromIS[2] + fromTS[2] + fromRS[2] +
 double i0;
 //i0 = nearbyint(10.0 * 7 * dt); // x new infections / day
 for(int i = 0; i < nsurges + 1; i++){
-  if(floor(t) == t_vec[i]) {
+  if(floor(t) == nearbyint(t_vec[i])) {
     i0 = nearbyint(10.0 * 7 * dt);
     break;
   } else{
