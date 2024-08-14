@@ -23,8 +23,8 @@ library(doMC)
 print(detectCores())
 
 # Get cluster environmental variables:
-jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # 1:1600
-jobid <- 31
+jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # 1:160
+# jobid <- 31
 run_parallel <- as.logical(Sys.getenv("RUNPARALLEL")); print(run_parallel)
 
 data_id <- (jobid - 1) %% 10 + 1; print(data_id)
@@ -74,22 +74,8 @@ resp_mod@data[, 106:627] <- dat %>%
 coef(resp_mod) <- true_params[, data_id]
 expect_true(all(coef(resp_mod) == true_params[, data_id]))
 
-# # Check that stochastic and deterministic models yield same patterns:
-# coef(resp_mod, c('beta_sd1', 'beta_sd2')) <- c(0, 0)
 # 
-# a <- trajectory(resp_mod, format = 'data.frame') %>%
-#   as_tibble() %>%
-#   select(-.id) %>%
-#   pivot_longer(-time, names_to = 'var') %>%
-#   filter(time >= 105)
-# b <- simulate(resp_mod, nsim = 50, format = 'data.frame') %>%
-#   as_tibble() %>%
-#   pivot_longer(-c(time, .id), names_to = 'var') %>%
-#   filter(time >= 105)
-# d <- a %>% inner_join(b, by = c('time', 'var'))
 # 
-# ggplot(data = d %>% filter(var %in% c('V1', 'V2'))) + geom_point(aes(x = time, y = value.x, group = .id)) +
-#   geom_line(aes(x = time, y = value.y, group = .id), alpha = 0.1) + facet_wrap(~ var, scales = 'free_y', ncol = 1) + theme_classic()
 
 # ---------------------------------------------------------------------------------------------------------------------
 
@@ -319,13 +305,6 @@ if (run_parallel) {
       print(out$message)
     }
     
-    # # Write to file:
-    # saveRDS(out,
-    #         file = sprintf('results/res_%d_%d_%d.rds',
-    #                        jobid,
-    #                        data_id,
-    #                        i)
-    # )
     
   }
   
