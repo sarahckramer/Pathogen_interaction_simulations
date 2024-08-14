@@ -373,9 +373,6 @@ if (run_parallel) {
   nmins_exec <- time_max * 60 / sobol_size
   print(sprintf("Max estimation time=%.1f min", nmins_exec))
   
-  # # Get unique identifiers:
-  # sub_start <- 1:sobol_size
-  
   # Loop through start values and perform trajectory matching:
   for (i in seq_along(1:sobol_size)) {
     
