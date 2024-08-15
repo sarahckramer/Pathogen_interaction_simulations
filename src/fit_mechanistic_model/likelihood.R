@@ -219,9 +219,9 @@ if (run_parallel) {
       
       # Fit:
       tic <- Sys.time()
-      m <- foreach(i = sub_start, .packages = c('tidyverse', 'testthat', 'pomp', 'nloptr')) %dopar% {
+      m <- foreach(ix = sub_start, .packages = c('tidyverse', 'testthat', 'pomp', 'nloptr')) %dopar% {
         
-        x0_trans <- start_values_tran[i, ]
+        x0_trans <- start_values_tran[ix, ]
         
         return(
           try(
@@ -231,7 +231,8 @@ if (run_parallel) {
                                maxtime = 60 * nmins_exec,
                                maxeval = -1, # Negative value: criterion is disabled
                                xtol_rel = -1, # Default value: 1e-4
-                               print_level = 0))
+                               print_level = 0,
+                               ranseed = 12345))
           )
         )
         

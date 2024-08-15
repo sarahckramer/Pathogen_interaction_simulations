@@ -106,7 +106,7 @@ T_t_vec[9] = logitCons(t_vec[9], 574, 626);
 double *w_delta_vec = (double *) &w_delta_i_1; 
 double *T_w_delta_vec = (double *) &T_w_delta_i_1;
 for (int i = 0; i < (int) nsurges; i++) {
-  T_w_delta_vec[i] = log(w_delta_vec[i]);
+  T_w_delta_vec[i] = logit(w_delta_vec[i]);
 }
 
 // we need to specify a transform on the sum of E and R
@@ -177,7 +177,7 @@ t_vec[9] = expitCons(T_t_vec[9], 574, 626);
 double *w_delta_vec = (double *) &w_delta_i_1;
 double *T_w_delta_vec = (double *) &T_w_delta_i_1;  
 for (int i = 0; i < (int) nsurges; i++) {
-  w_delta_vec[i] = exp(T_w_delta_vec[i]);
+  w_delta_vec[i] = expit(T_w_delta_vec[i]);
 }
 
 double sum_init = 0.0;
@@ -329,7 +329,7 @@ double *w_delta_vec = (double *) &w_delta_i_1;
 double w1_s;
 
 // assigning the loss in immunity depending on the number of surges we have
-for(int i = 0; i < nsurges + 1; i++){
+for(int i = 0; i < nsurges; i++){
   if(floor(t) == nearbyint(t_vec[i])) { // if t is a surge time point the add the surge in loss of immunity
     w1_s = w1 + w_delta_vec[i];
     break; // exit if we find a surge point
@@ -446,7 +446,7 @@ double w1_s;
 
 // assigning the loss in immunity depending on the number of surges we have
 //Rprintf("t=%.2f\n", t);
-for(int i = 0; i < nsurges + 1; i++){
+for(int i = 0; i < nsurges; i++){
     if(floor(t) == nearbyint(t_vec[i])) { // if t is a surge time point the add the surge in loss of immunity
       w1_s = w1 + w_delta_vec[i];
       //Rprintf("Surge point found: %.3f\n", w1_s);
@@ -611,7 +611,7 @@ births = fromSS[2] + fromES[2] + fromIS[2] + fromTS[2] + fromRS[2] +
 
 double i0;
 //i0 = nearbyint(10.0 * 7 * dt); // x new infections / day
-for(int i = 0; i < nsurges + 1; i++){
+for(int i = 0; i < nsurges; i++){
   if(floor(t) == nearbyint(t_vec[i])) {
     i0 = nearbyint(10.0 * 7 * dt);
     break;
