@@ -33,7 +33,7 @@ gam_cor <- function(data){
   corr_mat <- mvn_mod$family$data$R %>%
     crossprod() %>%
     solve() %>%
-    cov2cor() 
+    cov2cor()
   
   # GAM w/ seasonal confounding:
   
@@ -110,7 +110,7 @@ gam_cor <- function(data){
     boot_corr_mat_confound <- boot_mvn_mod_confound$family$data$R %>%
       crossprod() %>%
       solve() %>%
-      cov2cor() 
+      cov2cor()
     
     cor <- boot_corr_mat[2,1]
     cor_confound <- boot_corr_mat_confound[2,1]
@@ -121,7 +121,7 @@ gam_cor <- function(data){
   }
   
   # do the block resampling with 4 week size blocks
-  boot_out <- tsboot(tseries = cbind(orig_resid,orig_resid_confound), statistic=boot_func, R = R, sim = "fixed",
+  boot_out <- tsboot(tseries = cbind(orig_resid, orig_resid_confound), statistic = boot_func, R = R, sim = "fixed",
                      l = 4, orig_data = data, var_model = mvn_mod,  var_model_confound = mvn_mod_confound)
   
   # check out the correlation bootstrap distribution 

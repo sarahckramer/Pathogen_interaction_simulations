@@ -92,7 +92,6 @@ true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       A2=0.20, phi2=26,
                       k1 = 0.04, k2 = 0.02,
                       beta_sd1 = 0.1 * 0.1, beta_sd2 = 0.05 * 0.1,
-                      # beta_sd1 = 0.5, beta_sd2 = 0.1,
                       N = 3700000,
                       E01 = 0.001, E02 = 0.001,
                       R01 = 0.40, R02 = 0.25, R012 = 0.001,
@@ -104,7 +103,6 @@ true_params <- parmat(true_params_init, nrep = n_sim)
 true_params['Ri1', ] <- r_eff_vals[, 1]
 true_params['Ri2', ] <- r_eff_vals[, 2]
 true_params['w2', ] <- r_eff_vals[, 3]
-# true_params['R02', ] <- r_eff_vals[, 4]
 
 true_params[str_detect(rownames(true_params), 't_si_'), ] <- t_si_mat
 true_params[str_detect(rownames(true_params), 'w_delta_i_'), ] <- w_delta_i_mat
