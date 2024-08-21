@@ -278,8 +278,8 @@ if (run_parallel) {
           try(
             mif2(resp_mod,
                  params = coef(resp_mod),
-                 Np = 2000,
-                 Nmif = 100,
+                 Np = 1000,
+                 Nmif = 50,
                  cooling.fraction.50 = 0.5,
                  rw.sd = rw_sd(Ri1 = ifelse(time >= 105, 0.02, 0),
                                Ri2 = ifelse(time >= 105, 0.02, 0),
@@ -317,7 +317,7 @@ if (run_parallel) {
                                w_delta_i_8 = ifelse(time >= 470 & time <= 521, 0.02, 0),
                                w_delta_i_9 = ifelse(time >= 522 & time <= 573, 0.02, 0),
                                w_delta_i_10 = ifelse(time >= 574 & time <= 626, 0.02, 0))) %>%
-              mif2(Nmif = 100,
+              mif2(Nmif = 50,
                    cooling.fraction.50 = 0.25)# %>%
             # mif2(Nmif = 100,
             #      cooling.fraction.50 = 0.1)
@@ -330,13 +330,21 @@ if (run_parallel) {
       etime <- toc - tic
       units(etime) <- 'mins'
       print(etime)
+
+      # Write to file (temporary):
+      saveRDS(mf,
+            file = sprintf('results/res_%d_%d_%d_PARALLEL_mif_TEMP.rds',
+                           jobid,
+                           data_id,
+                           i)
+      )
       
       # Process results:
       m <- lapply(mf, function(ix) {
         
         if (!inherits(ix, 'try-error')) {
           
-          ll <- replicate(10, ix %>% pfilter(Np = 5000) %>% logLik()) %>%
+          ll <- replicate(10, ix %>% pfilter(Np = 2500) %>% logLik()) %>%
             logmeanexp(se = TRUE)
           
           mf.ll <- ix %>%
