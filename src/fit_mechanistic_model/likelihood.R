@@ -80,7 +80,7 @@ expect_true(all(coef(resp_mod) == true_params[, data_id]))
 
 # Choose parameters to be estimated:
 estpars <- c('Ri1', 'Ri2', 'rho1', 'rho2', 'theta_lambda1', 'theta_lambda2', 'delta1', 'delta2',
-             'A1', 'phi1', 'A2', 'phi2', 'k1', 'k2', 'E01', 'E02', 'R01', 'R02',
+             'A1', 'phi1', 'A2', 'phi2', 'k1', 'k2', 'E01', 'E02', 'R01', 'R02', 'R012',
              't_si_1', 't_si_2', 't_si_3', 't_si_4', 't_si_5', 't_si_6',
              't_si_7', 't_si_8', 't_si_9', 't_si_10',
              'w_delta_i_1', 'w_delta_i_2', 'w_delta_i_3', 'w_delta_i_4', 'w_delta_i_5', 'w_delta_i_6',
