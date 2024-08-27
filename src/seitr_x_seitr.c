@@ -235,10 +235,13 @@ V2 = 0;
 // if the compartments that are assigned some initial value don't sum to
 // N (likely due to rounding in the nearbyint function) print the values
 // then re calculate the initial value of X_SS by doing N - all other
-// inital values for the other compartments
+// initial values for the other compartments
+if ((X_SS + X_ES + X_RS + X_SE + X_SR + X_RR) != N) {
+  //Rprintf("SS=%f, ES=%f, RS=%f, SE=%f, SR=%f, RR=%f, sum=%f, N=%f, E01=%f, E02=%f, R01=%f, R02=%f, R012=%f\n", X_SS, X_ES, X_RS, X_SE, X_SR, X_RR, X_SS + X_ES + X_RS + X_SE + X_SR + X_RR, N, E01, E02,R01,R02,R012);
+  X_SS = nearbyint(N - X_ES - X_RS - X_SE - X_SR - X_RR);
+}
 if ((X_SS + X_ES + X_RS + X_SE + X_SR + X_RR) != N) {
   Rprintf("SS=%f, ES=%f, RS=%f, SE=%f, SR=%f, RR=%f, sum=%f, N=%f, E01=%f, E02=%f, R01=%f, R02=%f, R012=%f\n", X_SS, X_ES, X_RS, X_SE, X_SR, X_RR, X_SS + X_ES + X_RS + X_SE + X_SR + X_RR, N, E01, E02,R01,R02,R012);
-  X_SS = nearbyint(N - X_ES - X_RS - X_SE - X_SR - X_RR);
 }
 
 //end_rinit
