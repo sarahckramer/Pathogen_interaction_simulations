@@ -10,6 +10,8 @@
 # Load packages:
 library(tidyverse)
 library(testthat)
+library(viridis)
+library(gridExtra)
 
 # Function to load results:
 load_and_format_results <- function(res_files, get_top_5_perc = FALSE) {
@@ -110,6 +112,25 @@ where_run <- which(!is.na(as.numeric(str_split(data_files, '_')[[1]])))
 
 true_params_LIST <- true_params_LIST[order(as.numeric(unlist(map(str_split(data_files, '_'), where_run))))]
 data_LIST <- data_LIST[order(as.numeric(unlist(map(str_split(data_files, '_'), where_run))))]
+
+# Format true params as tibble:
+estpars <- c('Ri1', 'Ri2', 'rho1', 'rho2', 'theta_lambda1', 'theta_lambda2', 'delta1', 'delta2',
+             'A1', 'phi1', 'A2', 'phi2', 'k1', 'k2', 'E01', 'E02', 'R01', 'R02', 'R012',
+             't_si_1', 't_si_2', 't_si_3', 't_si_4', 't_si_5', 't_si_6',
+             't_si_7', 't_si_8', 't_si_9', 't_si_10',
+             'w_delta_i_1', 'w_delta_i_2', 'w_delta_i_3', 'w_delta_i_4', 'w_delta_i_5', 'w_delta_i_6',
+             'w_delta_i_7', 'w_delta_i_8', 'w_delta_i_9', 'w_delta_i_10')
+
+names(true_params_LIST) <- 1:16
+true_params <- lapply(1:length(true_params_LIST), function(ix) {
+  true_params_LIST[[ix]][estpars, ] %>%
+    t() %>%
+    as_tibble() %>%
+    rownames_to_column(var = '.id') %>%
+    mutate(int_set = ix, .before = .id) %>%
+    mutate(.id = ids_to_fit[as.numeric(.id)])
+}) %>%
+  bind_rows()
 
 # Clean up:
 rm(i, data_files, where_run)
@@ -297,5 +318,118 @@ ci_start <- ci_start %>%
 write_rds(ci_start, file = 'results/trajectory_matching/round2CI_startvals.rds')
 rm(ci_start)
 
+# ---------------------------------------------------------------------------------------------------------------------
 
+# TEMPORARY: Check round 1 accuracy
 
+# Join information on true parameter values:
+res <- res %>%
+  pivot_longer(Ri1:w_delta_i_10, names_to = 'param') %>%
+  inner_join(true_params %>% pivot_longer(Ri1:w_delta_i_10, names_to = 'param', values_to = 'truth'),
+             by = c('int_set', '.id', 'param'))
+
+# And also get true interaction parameters for each run:
+res <- res %>%
+  left_join(true_params %>%
+              select(int_set, theta_lambda1, delta1) %>%
+              distinct() %>%
+              rename('true_theta_lambda' = 'theta_lambda1',
+                     'true_delta' = 'delta1') %>%
+              mutate(true_delta = 7 / true_delta)
+  )
+
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Plot results
+
+# Interaction parameters:
+p1 <- ggplot(res %>%
+               filter(param == 'theta_lambda1') %>%
+               mutate(true_delta = factor(true_delta, levels = c(7, 28, 91)),
+                      x_use = case_when(int_set == 7 ~ 2, int_set == 12 ~ 3, int_set == 2 ~ 5, int_set == 8 ~ 6, int_set == 13 ~ 7,
+                                        int_set == 3 ~ 9, int_set == 9 ~ 10, int_set == 14 ~ 11, int_set == 4 ~ 13, int_set == 5 ~ 15,
+                                        int_set == 10 ~ 16, int_set == 15 ~ 17, int_set == 6 ~ 19, int_set == 11 ~ 20, int_set == 16 ~ 21,
+                                        .default = int_set))) +
+  geom_boxplot(aes(x = x_use, y = value, fill = true_delta, group = paste(true_delta, x_use))) +
+  geom_segment(aes(x = x_use - 0.5, xend = x_use + 0.5, y = truth, yend = truth), lty = 2, linewidth = 0.6) +
+  theme_classic() +
+  theme(legend.position = 'bottom') +
+  facet_wrap(~ .id, ncol = 1) +
+  scale_fill_manual(values = viridis(n = 3, option = 'mako')[1:3]) +
+  scale_x_continuous(breaks = c(2, 6, 10, 13, 16, 20), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(transform = 'sqrt', breaks = c(0, 0.5, 1, 2, 4, 6, 10)) +
+  labs(x = expression('True ' * theta[lambda]), y = 'Fit Value', fill = 'True Duration', title = expression(theta[lambda*1]))
+
+p2 <- ggplot(res %>%
+               filter(param == 'delta1') %>%
+               mutate(truth_recode = case_when(truth == 1 ~ 1, truth == 7 / 28 ~ 2, truth == 7 / 91 ~ 3),
+                      true_theta_lambda = if_else(true_theta_lambda == 0, 0.1, true_theta_lambda))) +
+  geom_boxplot(aes(x = truth_recode, y = 7 / value, fill = true_theta_lambda, group = paste(true_theta_lambda, truth_recode))) +
+  geom_segment(aes(x = truth_recode - 0.5, xend = truth_recode + 0.5, y = 7 / truth, yend = 7 / truth), lty = 2) +#, linewidth = 1.0) +
+  theme_classic() +
+  theme(legend.position = 'bottom') +
+  facet_wrap(~ .id, ncol = 1) +
+  scale_fill_viridis(option = 'mako', trans = 'log', breaks = c(0.1, 0.25, 0.5, 1.0, 2.0, 4.0), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_x_continuous(breaks = 1:3, labels = c(7, 28, 91)) +
+  scale_y_continuous(transform = 'sqrt', breaks = c(0, 10, 50, 100, 200)) +
+  labs(x = 'True Duration', y = 'Fit Value', fill = expression('True ' * theta[lambda] * '   '), title = expression(delta[1]))
+
+p3 <- ggplot(res %>%
+               filter(param == 'theta_lambda2') %>%
+               mutate(true_delta = factor(true_delta, levels = c(7, 28, 91)),
+                      x_use = case_when(int_set == 7 ~ 2, int_set == 12 ~ 3, int_set == 2 ~ 5, int_set == 8 ~ 6, int_set == 13 ~ 7,
+                                        int_set == 3 ~ 9, int_set == 9 ~ 10, int_set == 14 ~ 11, int_set == 4 ~ 13, int_set == 5 ~ 15,
+                                        int_set == 10 ~ 16, int_set == 15 ~ 17, int_set == 6 ~ 19, int_set == 11 ~ 20, int_set == 16 ~ 21,
+                                        .default = int_set))) +
+  geom_boxplot(aes(x = x_use, y = value, fill = true_delta, group = paste(true_delta, x_use))) +
+  geom_segment(aes(x = x_use - 0.5, xend = x_use + 0.5, y = truth, yend = truth), lty = 2, linewidth = 0.6) +
+  theme_classic() +
+  theme(legend.position = 'bottom') +
+  facet_wrap(~ .id, ncol = 1) +
+  scale_fill_manual(values = viridis(n = 3, option = 'mako')[1:3]) +
+  scale_x_continuous(breaks = c(2, 6, 10, 13, 16, 20), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(transform = 'sqrt', breaks = c(0, 0.5, 1, 2, 4, 6, 10)) +
+  labs(x = expression('True ' * theta[lambda]), y = 'Fit Value', fill = 'True Duration', title = expression(theta[lambda*2]))
+
+p4 <- ggplot(res %>%
+               filter(param == 'delta2') %>%
+               mutate(truth_recode = case_when(truth == 1 ~ 1, truth == 7 / 28 ~ 2, truth == 7 / 91 ~ 3),
+                      true_theta_lambda = if_else(true_theta_lambda == 0, 0.1, true_theta_lambda))) +
+  geom_boxplot(aes(x = truth_recode, y = 7 / value, fill = true_theta_lambda, group = paste(true_theta_lambda, truth_recode))) +
+  geom_segment(aes(x = truth_recode - 0.5, xend = truth_recode + 0.5, y = 7 / truth, yend = 7 / truth), lty = 2) +#, linewidth = 1.0) +
+  theme_classic() +
+  theme(legend.position = 'bottom') +
+  facet_wrap(~ .id, ncol = 1) +
+  scale_fill_viridis(option = 'mako', trans = 'log', breaks = c(0.1, 0.25, 0.5, 1.0, 2.0, 4.0), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_x_continuous(breaks = 1:3, labels = c(7, 28, 91)) +
+  scale_y_continuous(transform = 'sqrt', breaks = c(0, 10, 50, 100, 200, 500)) +
+  labs(x = 'True Duration', y = 'Fit Value', fill = expression('True ' * theta[lambda] * '   '), title = expression(delta[2]))
+
+grid.arrange(p1, p2, p3, p4, ncol = 2)
+
+# Other parameters:
+
+ggplot(res %>% filter(param %in% c('Ri1', 'Ri2'))) +
+  geom_violin(aes(x = as.character(int_set), y = value, group = int_set)) +
+  geom_hline(aes(yintercept = truth), lty = 2) +
+  facet_grid(.id ~ param, scales = 'free_y') +
+  theme_classic()
+
+ggplot(res %>% filter(param %in% c('E01', 'E02', 'R01', 'R02', 'R012', 'A1', 'A2', 'phi1', 'phi2', 'rho1', 'rho2', 'k1', 'k2'))) +
+  geom_violin(aes(x = as.character(.id), y = value, group = paste(int_set, .id), fill = int_set)) +
+  geom_hline(aes(yintercept = truth), lty = 2) +
+  facet_wrap(~ param, scales = 'free_y', ncol = 2) +
+  theme_classic() +
+  scale_fill_viridis()
+
+ggplot(res %>% filter(str_detect(param, 't_si'))) +
+  geom_violin(aes(x = as.character(int_set), y = value, group = int_set), fill = 'gray90') +
+  geom_hline(aes(yintercept = truth), lty = 2) +
+  facet_grid(param ~ .id, scales = 'free_y') +
+  theme_classic()
+
+ggplot(res %>% filter(str_detect(param, 'w_delta'))) +
+  geom_violin(aes(x = as.character(int_set), y = value, group = int_set), fill = 'gray90') +
+  geom_hline(aes(yintercept = truth), lty = 2) +
+  facet_grid(param ~ .id, scales = 'free_y') +
+  theme_classic()
