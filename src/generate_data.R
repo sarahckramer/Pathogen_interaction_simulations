@@ -44,7 +44,7 @@ rm(theta_lambda1, theta_lambda2, delta1, delta2)
 set.seed(1234)
 
 n_surge <- round(tot_weeks / 52) # number of surges
-mu_Imloss <- 38 # average surge occurring in mid Oct
+mu_Imloss <- 12 # average surge occurring 12 weeks into season
 sd_Imloss <- 4 # standard deviation of 4 weeks
 
 t_si_mat <- matrix(nrow = n_surge - 2, ncol = n_sim)
@@ -53,7 +53,7 @@ w_delta_i_mat <- matrix(nrow = n_surge - 2, ncol = n_sim)
 for (i in 1:n_sim) {
   
   t_si <- rnorm(n = n_surge, mean = mu_Imloss, sd = sd_Imloss) # draw from normal dist
-  t_si <- t_si - 26 + seq(0, 52 * (n_surge - 1), by = 52)
+  t_si <- t_si + seq(0, 52 * (n_surge - 1), by = 52)
   t_si <- round(t_si) # make whole numbers
   
   t_si[2:12] <- t_si[2:12] + 1 # account for years with 53 weeks
