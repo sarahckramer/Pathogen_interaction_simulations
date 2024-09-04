@@ -26,7 +26,7 @@ gam_cor <- function(data){
                  data = data)
   
   # extract model residuals
-  orig_resid <- residuals(mvn_mod)
+  orig_resid <- residuals(mvn_mod, type = 'response')
   
   # pull out the covariance matrix and then calculate the correlation matrix. 
   # output: 2 x 2 symmetric matrix
@@ -47,7 +47,7 @@ gam_cor <- function(data){
                           data = data)
   
   # extract model residuals
-  orig_resid_confound <- residuals(mvn_mod_confound)
+  orig_resid_confound <- residuals(mvn_mod_confound, type = 'response')
   
   # pull out the covariance matrix and then calculate the correlation matrix. 
   # output: 2 x 2 symmetric matrix
@@ -67,14 +67,14 @@ gam_cor <- function(data){
     # generating new simulated data not accounting for confounding
     bootstrap_residuals <- data.frame(tseries[, c(1:2)])
     names(bootstrap_residuals) <- c("V1_obs", "V2_obs")
-    bootstrap_data_v1 <- as.vector(orig_data$V1_obs - residuals(var_model)[,1] + bootstrap_residuals$V1_obs)
-    bootstrap_data_v2 <- as.vector(orig_data$V2_obs - residuals(var_model)[,2] + bootstrap_residuals$V2_obs)
+    bootstrap_data_v1 <- as.vector(orig_data$V1_obs - residuals(var_model, type = 'response')[,1] + bootstrap_residuals$V1_obs)
+    bootstrap_data_v2 <- as.vector(orig_data$V2_obs - residuals(var_model, type = 'response')[,2] + bootstrap_residuals$V2_obs)
 
     # generating new simulated data accounting for confounding
     bootstrap_residuals_confound <- data.frame(tseries[, c(3:4)])
     names(bootstrap_residuals_confound) <- c("V1_obs", "V2_obs")
-    bootstrap_data_v1_confound <- as.vector(orig_data$V1_obs - residuals(var_model_confound)[,1] + bootstrap_residuals_confound$V1_obs)
-    bootstrap_data_v2_confound <- as.vector(orig_data$V2_obs - residuals(var_model_confound)[,2] + bootstrap_residuals_confound$V2_obs)
+    bootstrap_data_v1_confound <- as.vector(orig_data$V1_obs - residuals(var_model_confound, type = 'response')[,1] + bootstrap_residuals_confound$V1_obs)
+    bootstrap_data_v2_confound <- as.vector(orig_data$V2_obs - residuals(var_model_confound, type = 'response')[,2] + bootstrap_residuals_confound$V2_obs)
     
     # making the dataframes
     boot_data <- orig_data %>%
