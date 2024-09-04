@@ -122,7 +122,7 @@ gam_cor <- function(data){
   
   # do the block resampling with 4 week size blocks
   boot_out <- tsboot(tseries = cbind(orig_resid, orig_resid_confound), statistic = boot_func, R = R, sim = "fixed",
-                     l = 4, orig_data = data, var_model = mvn_mod,  var_model_confound = mvn_mod_confound)
+                     l = 10, orig_data = data, var_model = mvn_mod,  var_model_confound = mvn_mod_confound)
   
   # check out the correlation bootstrap distribution 
   boot_corr <- data.frame(boot_out$t)
