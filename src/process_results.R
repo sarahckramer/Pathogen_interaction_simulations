@@ -15,16 +15,16 @@ library(viridis)
 
 # Open pdf to save plots:
 date <- format(Sys.Date(), '%d%m%y')
-pdf(file = paste0('results/plots/plot_accuracy_by_method_', date, '_EXTRADEMSTOCH.pdf'),
-    width = 16, height = 12)
+# pdf(file = paste0('results/plots/plot_accuracy_by_method_', date, '_UPDATED.pdf'),
+#     width = 16, height = 12)
 
 # ------------------------------------------------------------------------------
 
 # Read in all results
 
 # Get file names:
-res_filenames_T <- list.files(path = 'results/add_extrademo_stoch/', pattern = 'TRUE', full.names = TRUE) # run locally
-res_filenames_F <- list.files(path = 'results/add_extrademo_stoch/', pattern = 'FALSE', full.names = TRUE) # run on cluster
+res_filenames_T <- list.files(path = 'results/', pattern = 'TRUE', full.names = TRUE) # run locally
+res_filenames_F <- list.files(path = 'results/', pattern = 'FALSE', full.names = TRUE) # run on cluster
 
 # Read in results:
 results_T = results_F = vector('list', length = length(res_filenames_T))
@@ -261,11 +261,10 @@ calculate_accuracy_matrix <- function(df) {
 }
 
 # Function to assess whether higher values of a method's metric are associated with stronger true interaction strenghts:
-calculate_assoc_true_strength <- function(df, method, met, p_val) {
+calculate_assoc_true_strength <- function(df, method, met) {
   
   df <- df %>%
-    rename('metric' = all_of(met),
-           'p_value' = all_of(p_val))
+    rename('metric' = all_of(met))
   
   res_temp <- NULL
   
@@ -276,14 +275,14 @@ calculate_assoc_true_strength <- function(df, method, met, p_val) {
       cor_temp_overall <- df %>%
         mutate(theta_lambda = if_else(theta_lambda < 1, 1 / theta_lambda, theta_lambda)) %>%
         filter(delta == d | theta_lambda == 1) %>%
-        filter(p_value < 0.05) %>%
+        # filter(p_value < 0.05) %>%
         cor.test(~ theta_lambda + metric, data = ., method = 'spearman')
       
     } else {
       
       cor_temp_overall <- df %>%
         filter(delta == d | theta_lambda == 1) %>%
-        filter(p_value < 0.05) %>%
+        # filter(p_value < 0.05) %>%
         cor.test(~ theta_lambda + metric, data = ., method = 'spearman')
       
     }
@@ -291,12 +290,12 @@ calculate_assoc_true_strength <- function(df, method, met, p_val) {
     cor_temp_neg <- df %>%
       filter(theta_lambda < 1,
              delta == d) %>%
-      filter(p_value < 0.05) %>%
+      filter(sig == 'yes') %>%
       cor.test(~ theta_lambda + metric, data = ., method = 'spearman') # lm(data = ., metric ~ theta_lambda)
     cor_temp_pos <- df %>%
       filter(theta_lambda > 1,
              delta == d) %>%
-      filter(p_value < 0.05) %>%
+      filter(sig == 'yes') %>%
       cor.test(~ theta_lambda + metric, data = ., method = 'spearman')
     
     # bind_rows(rbind(c(d, cor_temp_neg$estimate, cor_temp_neg$p.value, cor_temp_neg$conf.int[1], cor_temp_neg$conf.int[2]),
@@ -354,17 +353,19 @@ print((res_corr %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) /
 acc_corr <- calculate_accuracy_matrix(res_corr)
 
 # Are correlation coefficient magnitudes associated with true interaction strength?:
-assoc_corr <- calculate_assoc_true_strength(res_corr, method = 'corr', met = 'cor', p_val = 'p_value')
+assoc_corr <- calculate_assoc_true_strength(res_corr %>% mutate(sig = if_else(int_est == 'none', 'no', 'yes')),
+                                            method = 'corr', met = 'cor')
 
 # Plot:
-p.corr.1 <- ggplot(res_corr) +
+p.corr.1 <- ggplot(res_corr %>% mutate(sig = if_else(int_est == 'none', 'no', 'yes'))) +
   geom_violin(aes(x = as.character(theta_lambda), y = cor, group = theta_lambda)) +
-  geom_jitter(aes(x = as.character(theta_lambda), y = cor, col = p_value < 0.05)) +
+  geom_jitter(aes(x = as.character(theta_lambda), y = cor, col = sig)) +
   facet_wrap(~ delta, ncol = 1) +
   theme_classic() +
   labs(title = 'Correlation Coefficients')
 
-p.corr.2 <- ggplot(res_corr, aes(x = theta_lambda, y = cor, ymin = CI_lower_95, ymax = CI_upper_95, col = p_value < 0.05)) +
+p.corr.2 <- ggplot(res_corr %>% mutate(sig = if_else(int_est == 'none', 'no', 'yes')),
+                   aes(x = theta_lambda, y = cor, ymin = CI_lower_95, ymax = CI_upper_95, col = sig)) +
   geom_pointrange(position = 'jitter') +
   theme_classic() +
   labs(title = 'Correlation Coefficients')
@@ -392,12 +393,10 @@ res_gam <- res_gam %>%
 
 # Determine significance/direction of detected correlation:
 res_gam <- res_gam %>%
-  mutate(p_value = if_else(CI_lower95 < 0 & CI_upper95 > 0, 'not sig', 'sig'),
-         p_value_confound = if_else(CI_lower95_confound < 0 & CI_upper95_confound > 0, 'not sig', 'sig')) %>%
   mutate(int_est = if_else(cor > 0, 'pos', 'neg'),
-         int_est = if_else(p_value == 'sig', int_est, 'none')) %>%
+         int_est = if_else(CI_lower95 > 0 | CI_upper95 < 0, int_est, 'none')) %>%
   mutate(int_est_confound = if_else(cor_confound > 0, 'pos', 'neg'),
-         int_est_confound = if_else(p_value_confound == 'sig', int_est_confound, 'none'))
+         int_est_confound = if_else(CI_lower95_confound > 0 | CI_upper95_confound < 0, int_est_confound, 'none'))
 
 # Calculate sensitivity/specificity (overall):
 print('Sensitivity (Any Interaction) (Overall):')
@@ -421,23 +420,22 @@ acc_gam_confound <- calculate_accuracy_matrix(res_gam %>%
 
 # Are correlation coefficient magnitudes associated with true interaction strength?:
 assoc_gam <- calculate_assoc_true_strength(res_gam %>%
-                                             mutate(p_value = if_else(p_value == 'sig', 0.01, 0.5)),
-                                           method = 'gam', met = 'cor', p_val = 'p_value')
+                                             mutate(sig = if_else(int_est == 'none', 'no', 'yes')),
+                                           method = 'gam', met = 'cor')
 assoc_gam_confound <- calculate_assoc_true_strength(res_gam %>%
-                                                      select(-p_value) %>%
-                                                      mutate(p_value_confound = if_else(p_value_confound == 'sig', 0.01, 0.5)),
-                                                    method = 'gam', met = 'cor_confound', p_val = 'p_value_confound')
+                                                      mutate(sig = if_else(int_est_confound == 'none', 'no', 'yes')),
+                                                    method = 'gam', met = 'cor_confound')
 
 # Plot:
-p.gam.1.1 <- ggplot(res_gam) +
+p.gam.1.1 <- ggplot(res_gam %>% mutate(sig = if_else(int_est == 'none', 'no', 'yes'))) +
   geom_violin(aes(x = as.character(theta_lambda), y = cor, group = theta_lambda)) +
-  geom_jitter(aes(x = as.character(theta_lambda), y = cor, col = p_value)) +
+  geom_jitter(aes(x = as.character(theta_lambda), y = cor, col = sig)) +
   facet_wrap(~ delta, nrow = 1) +
   theme_classic() +
   labs(title = 'GAMs')
-p.gam.1.2 <- ggplot(res_gam) +
+p.gam.1.2 <- ggplot(res_gam %>% mutate(sig = if_else(int_est_confound == 'none', 'no', 'yes'))) +
   geom_violin(aes(x = as.character(theta_lambda), y = cor_confound, group = theta_lambda)) +
-  geom_jitter(aes(x = as.character(theta_lambda), y = cor_confound, col = p_value_confound)) +
+  geom_jitter(aes(x = as.character(theta_lambda), y = cor_confound, col = sig)) +
   facet_wrap(~ delta, nrow = 1) +
   theme_classic() +
   labs(title = 'GAMs (Seasonality Controlled)')
@@ -515,36 +513,41 @@ assoc_granger_LIST <- vector('list', length = 4)
 names(assoc_granger_LIST) <- names(res_granger_LIST)
 
 for (i in 1:length(assoc_granger_LIST)) {
-  assoc_granger_LIST[[i]] <- calculate_assoc_true_strength(res_granger_LIST[[i]], method = 'granger', met = 'logRSS', p_val = 'ftest_p')
+  assoc_granger_LIST[[i]] <- calculate_assoc_true_strength(res_granger_LIST[[i]] %>% mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')),
+                                                           method = 'granger', met = 'logRSS')
 }
 rm(i)
 
 # Plot:
 p.granger.1.1 <- res_granger_LIST[[1]] %>%
+  mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')) %>%
   ggplot(aes(x = as.character(theta_lambda), y = logRSS, group = theta_lambda)) +
   geom_violin() +
-  geom_jitter(aes(col = ftest_p < 0.05)) +
+  geom_jitter(aes(col = sig)) +
   theme_classic() +
   facet_wrap(~ 1 / delta, nrow = 1) +
   labs(title = paste0('Granger Causality (', names(res_granger_LIST)[1], ')'))
 p.granger.1.2 <- res_granger_LIST[[2]] %>%
+  mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')) %>%
   ggplot(aes(x = as.character(theta_lambda), y = logRSS, group = theta_lambda)) +
   geom_violin() +
-  geom_jitter(aes(col = ftest_p < 0.05)) +
+  geom_jitter(aes(col = sig)) +
   theme_classic() +
   facet_wrap(~ 1 / delta, nrow = 1) +
   labs(title = paste0('Granger Causality (', names(res_granger_LIST)[2], ')'))
 p.granger.2.1 <- res_granger_LIST[[3]] %>%
+  mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')) %>%
   ggplot(aes(x = as.character(theta_lambda), y = logRSS, group = theta_lambda)) +
   geom_violin() +
-  geom_jitter(aes(col = ftest_p < 0.05)) +
+  geom_jitter(aes(col = sig)) +
   theme_classic() +
   facet_wrap(~ 1 / delta, nrow = 1) +
   labs(title = paste0('Granger Causality (', names(res_granger_LIST)[3], ')'))
 p.granger.2.2 <- res_granger_LIST[[4]] %>%
+  mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')) %>%
   ggplot(aes(x = as.character(theta_lambda), y = logRSS, group = theta_lambda)) +
   geom_violin() +
-  geom_jitter(aes(col = ftest_p < 0.05)) +
+  geom_jitter(aes(col = sig)) +
   theme_classic() +
   facet_wrap(~ 1 / delta, nrow = 1) +
   labs(title = paste0('Granger Causality (', names(res_granger_LIST)[4], ')'))
@@ -645,22 +648,25 @@ assoc_te_LIST <- vector('list', length = 2)
 names(assoc_te_LIST) <- names(res_te_LIST)
 
 for (i in 1:length(assoc_te_LIST)) {
-  assoc_te_LIST[[i]] <- calculate_assoc_true_strength(res_te_LIST[[i]], method = 'te', met = 'te', p_val = 'p_value')
+  assoc_te_LIST[[i]] <- calculate_assoc_true_strength(res_te_LIST[[i]] %>% mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')),
+                                                      method = 'te', met = 'te')
 }
 rm(i)
 
 # Plot:
 p.te.1.1 <- res_te_LIST[[1]] %>%
+  mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')) %>%
   ggplot(aes(x = as.character(theta_lambda), y = te, group = theta_lambda)) +
   geom_violin() +
-  geom_jitter(aes(col = p_value < 0.05)) +
+  geom_jitter(aes(col = sig)) +
   theme_classic() +
   facet_wrap(~ 1 / delta, nrow = 1) +
   labs(title = paste0('Transfer Entropy (', names(res_te_LIST)[1], ')'))
 p.te.1.2 <- res_te_LIST[[2]] %>%
+  mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')) %>%
   ggplot(aes(x = as.character(theta_lambda), y = te, group = theta_lambda)) +
   geom_violin() +
-  geom_jitter(aes(col = p_value < 0.05)) +
+  geom_jitter(aes(col = sig)) +
   theme_classic() +
   facet_wrap(~ 1 / delta, nrow = 1) +
   labs(title = paste0('Transfer Entropy (', names(res_te_LIST)[2], ')'))
@@ -678,7 +684,7 @@ p.te.2.2 <- ggplot(data = acc_te_LIST[[2]], aes(x = strength, y = duration, fill
   labs(title = paste0('Transfer Entropy (', names(acc_te_LIST)[2], ')'))
 # grid.arrange(p.te.2.1, p.te.2.2, ncol = 2)
 
-rm(p.te.1.1, p.te.1.2, res_te, res_te_LIST)
+rm(p.te.1.1, p.te.1.2, res_te_LIST)#, res_te)
 # rm(p.te.1.1, p.te.1.2, p.te.2.1, p.te.2.2, res_te, res_te_LIST, acc_te_LIST, assoc_te_LIST)
 
 # ------------------------------------------------------------------------------
@@ -755,14 +761,14 @@ names(assoc_ccm_LIST_mean) <- names(res_ccm_LIST)
 names(assoc_ccm_LIST_max) <- names(res_ccm_LIST)
 
 res_ccm_LIST <- lapply(res_ccm_LIST, function(ix) {
-  ix %>% mutate(p_value = if_else(int_est == 'interaction', 0.01, 0.5))
+  ix %>% mutate(sig = if_else(int_est == 'interaction', 'yes', 'no'))
 })
 
 for (i in 1:length(assoc_ccm_LIST_mean)) {
-  assoc_ccm_LIST_mean[[i]] <- calculate_assoc_true_strength(res_ccm_LIST[[i]], method = 'ccm', met = 'rho_mean', p_val = 'p_value')
+  assoc_ccm_LIST_mean[[i]] <- calculate_assoc_true_strength(res_ccm_LIST[[i]], method = 'ccm', met = 'rho_mean')
 }
 for (i in 1:length(assoc_ccm_LIST_max)) {
-  assoc_ccm_LIST_max[[i]] <- calculate_assoc_true_strength(res_ccm_LIST[[i]], method = 'ccm', met = 'rho_max', p_val = 'p_value')
+  assoc_ccm_LIST_max[[i]] <- calculate_assoc_true_strength(res_ccm_LIST[[i]], method = 'ccm', met = 'rho_max')
 }
 rm(i)
 
