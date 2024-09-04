@@ -339,15 +339,34 @@ res_corr <- res_corr %>%
          int_est = if_else(p_value < 0.05, int_est, 'none'))
 
 # Calculate sensitivity/specificity (overall):
+sens_pos <- (res_corr %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow()) / (res_corr %>% filter(int_true == 'pos') %>% nrow())
+sens_neg <- (res_corr %>% filter(int_true == 'neg' & int_est == 'neg') %>% nrow()) / (res_corr %>% filter(int_true == 'neg') %>% nrow())
+spec <- (res_corr %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_corr %>% filter(int_true == 'none') %>% nrow())
+
 print('Sensitivity (Any Interaction) (Overall):')
 print((res_corr %>% filter(int_true != 'none' & int_est != 'none') %>% nrow()) / (res_corr %>% filter(int_true != 'none') %>% nrow()))
 
 print('Sensitivity (Correct Direction) (Overall):')
-print((res_corr %>% filter(int_true == 'neg' & int_est == 'neg') %>% nrow()) / (res_corr %>% filter(int_true == 'neg') %>% nrow()))
-print((res_corr %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow()) / (res_corr %>% filter(int_true == 'pos') %>% nrow()))
+print(sens_pos)
+print(sens_neg)
 
 print('Specificity (Overall):')
-print((res_corr %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_corr %>% filter(int_true == 'none') %>% nrow()))
+print(spec)
+
+# Calculate overall accuracy (weighted):
+weight_pos <- min(table(res_corr$int_true)) / (res_corr %>% filter(int_true == 'pos') %>% nrow())
+weight_neg <- min(table(res_corr$int_true)) / (res_corr %>% filter(int_true == 'neg') %>% nrow())
+weight_null <- min(table(res_corr$int_true)) / (res_corr %>% filter(int_true == 'none') %>% nrow())
+
+# sens_pos_weighted <- sens_pos * (res_corr %>% filter(int_true == 'pos') %>% nrow()) / nrow(res_corr)
+# sens_neg_weighted <- sens_neg * (res_corr %>% filter(int_true == 'neg') %>% nrow()) / nrow(res_corr)
+# spec_weighted <- spec * (res_corr %>% filter(int_true == 'none') %>% nrow()) / nrow(res_corr)
+
+acc_weighted_corr <- (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null)
+
+print('Overall accuracy (weighted):')
+print(acc_weighted_corr)
+# print(sens_pos_weighted + sens_neg_weighted + spec_weighted)
 
 # Calculate sensitivity/specificity (by true params):
 acc_corr <- calculate_accuracy_matrix(res_corr)
@@ -379,7 +398,7 @@ p.corr.3 <- ggplot(data = acc_corr, aes(x = strength, y = duration, fill = perc_
 print(p.corr.1)
 # print(p.corr.2)
 # print(p.corr.3)
-rm(p.corr.1, p.corr.2, res_corr)
+rm(p.corr.1, p.corr.2, sens_pos, sens_neg, spec)#, res_corr)
 # rm(p.corr.1, p.corr.2, p.corr.3, res_corr, acc_corr, assoc_corr)
 
 # ------------------------------------------------------------------------------
@@ -399,19 +418,34 @@ res_gam <- res_gam %>%
          int_est_confound = if_else(CI_lower95_confound > 0 | CI_upper95_confound < 0, int_est_confound, 'none'))
 
 # Calculate sensitivity/specificity (overall):
+sens_pos <- (res_gam %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow()) / (res_gam %>% filter(int_true == 'pos') %>% nrow())
+sens_neg <- (res_gam %>% filter(int_true == 'neg' & int_est == 'neg') %>% nrow()) / (res_gam %>% filter(int_true == 'neg') %>% nrow())
+sens_pos_confound <- (res_gam %>% filter(int_true == 'pos' & int_est_confound == 'pos') %>% nrow()) / (res_gam %>% filter(int_true == 'pos') %>% nrow())
+sens_neg_confound <- (res_gam %>% filter(int_true == 'neg' & int_est_confound == 'neg') %>% nrow()) / (res_gam %>% filter(int_true == 'neg') %>% nrow())
+spec <- (res_gam %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_gam %>% filter(int_true == 'none') %>% nrow())
+spec_confound <- (res_gam %>% filter(int_true == 'none' & int_est_confound == 'none') %>% nrow()) / (res_gam %>% filter(int_true == 'none') %>% nrow())
+
 print('Sensitivity (Any Interaction) (Overall):')
 print((res_gam %>% filter(int_true != 'none' & int_est != 'none') %>% nrow()) / (res_gam %>% filter(int_true != 'none') %>% nrow()))
 print((res_gam %>% filter(int_true != 'none' & int_est_confound != 'none') %>% nrow()) / (res_gam %>% filter(int_true != 'none') %>% nrow()))
 
 print('Sensitivity (Correct Direction) (Overall):')
-print((res_gam %>% filter(int_true == 'neg' & int_est == 'neg') %>% nrow()) / (res_gam %>% filter(int_true == 'neg') %>% nrow()))
-print((res_gam %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow()) / (res_gam %>% filter(int_true == 'pos') %>% nrow()))
-print((res_gam %>% filter(int_true == 'neg' & int_est_confound == 'neg') %>% nrow()) / (res_gam %>% filter(int_true == 'neg') %>% nrow()))
-print((res_gam %>% filter(int_true == 'pos' & int_est_confound == 'pos') %>% nrow()) / (res_gam %>% filter(int_true == 'pos') %>% nrow()))
+print(sens_pos)
+print(sens_neg)
+print(sens_pos_confound)
+print(sens_neg_confound)
 
 print('Specificity (Overall):')
-print((res_gam %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_gam %>% filter(int_true == 'none') %>% nrow()))
-print((res_gam %>% filter(int_true == 'none' & int_est_confound == 'none') %>% nrow()) / (res_gam %>% filter(int_true == 'none') %>% nrow()))
+print(spec)
+print(spec_confound)
+
+# Calculate overall accuracy (weighted):
+acc_weighted_gam <- (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null)
+acc_weighted_gam_confound <- (sens_pos_confound * weight_pos + sens_neg_confound * weight_neg + spec_confound * weight_null) / (weight_pos + weight_neg + weight_null)
+
+print('Overall accuracy (weighted):')
+print(acc_weighted_gam)
+print(acc_weighted_gam_confound)
 
 # Calculate sensitivity/specificity (by true params):
 acc_gam <- calculate_accuracy_matrix(res_gam)
@@ -454,7 +488,8 @@ p.gam.2.2 <- ggplot(data = acc_gam_confound, aes(x = strength, y = duration, fil
 grid.arrange(p.gam.1.1, p.gam.1.2, ncol = 1)
 # grid.arrange(p.gam.2.1, p.gam.2.2, nrow = 1)
 
-rm(p.gam.1.1, p.gam.1.2, res_gam)
+rm(p.gam.1.1, p.gam.1.2, sens_pos, sens_pos_confound,
+   sens_neg, sens_neg_confound, spec, spec_confound)#, res_gam)
 # rm(p.gam.1.1, p.gam.1.2, p.gam.2.1, p.gam.2.2, res_gam, acc_gam, acc_gam_confound, assoc_gam, assoc_gam_confound)
 
 # ------------------------------------------------------------------------------
@@ -465,7 +500,10 @@ rm(p.gam.1.1, p.gam.1.2, res_gam)
 res_granger <- res_granger %>%
   # mutate(int_true = if_else(theta_lambda > 1, 'pos', 'neg'),
   #        int_true = if_else(theta_lambda == 1, 'none', int_true)) %>%
-  mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'))
+  mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'),
+         int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
+         int_true_dir = if_else(theta_lambda < 1, 'neg', int_true_dir)) %>%
+  ungroup()
 
 # Determine significance/direction of detected correlation:
 res_granger <- res_granger %>%
@@ -485,15 +523,30 @@ res_granger_LIST[[3]] <- res_granger %>% filter(direction == 'v1 -> v2', confoun
 res_granger_LIST[[4]] <- res_granger %>% filter(direction == 'v2 -> v1', confounding == 'seasonal')
 
 # Calculate sensitivity/specificity (overall):
+acc_weighted_granger <- vector('list', length = length(res_granger_LIST))
+names(acc_weighted_granger) <- names(res_granger_LIST)
 for (i in 1:length(res_granger_LIST)) {
   
   print(names(res_granger_LIST)[i])
   
+  sens_pos <- (res_granger_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow())
+  sens_neg <- (res_granger_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow())
+  spec <- (res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
+  
   print('Sensitivity:')
-  print((res_granger_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true != 'none') %>% nrow()))
+  print(sens_pos)
+  print(sens_neg)
   
   print('Specificity:')
-  print((res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true == 'none') %>% nrow()))
+  print(spec)
+  
+  acc_weighted_temp <- (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null)
+  
+  print('Overall accuracy (weighted):')
+  print(acc_weighted_temp)
+  
+  acc_weighted_granger[[i]] <- acc_weighted_temp
+  rm(acc_weighted_temp, sens_pos, sens_neg, spec)
   
   print('-----------')
   
@@ -585,7 +638,10 @@ rm(p.granger.1.1, p.granger.1.2, p.granger.2.1, p.granger.2.2, res_granger, res_
 
 # Determine significance/direction of true interaction:
 res_te <- res_te %>%
-  mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'))
+  mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'),
+         int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
+         int_true_dir = if_else(theta_lambda < 1, 'neg', int_true_dir)) %>%
+  ungroup()
 
 # Determine significance/direction of detected correlation:
 res_te <- res_te %>%
@@ -611,15 +667,31 @@ res_te_LIST[[7]] <- res_te %>% filter(direction == 'v2 -> v1' & lag == '4')
 res_te_LIST[[8]] <- res_te %>% filter(direction == 'v2 -> v1' & lag == '6')
 
 # Calculate sensitivity/specificity (overall):
+acc_weighted_te <- vector('list', length = length(res_te_LIST))
+names(acc_weighted_te) <- names(res_te_LIST)
+
 for (i in 1:length(res_te_LIST)) {
   
   print(names(res_te_LIST)[i])
   
+  sens_pos <- (res_te_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow())
+  sens_neg <- (res_te_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow())
+  spec <- (res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
+  
   print('Sensitivity:')
-  print((res_te_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true != 'none') %>% nrow()))
+  print(sens_pos)
+  print(sens_neg)
   
   print('Specificity:')
-  print((res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true == 'none') %>% nrow()))
+  print(spec)
+  
+  acc_weighted_temp <- (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null)
+  
+  print('Overall accuracy (weighted):')
+  print(acc_weighted_temp)
+  
+  acc_weighted_te[[i]] <- acc_weighted_temp
+  rm(acc_weighted_temp, sens_pos, sens_neg, spec)
   
   print('-----------')
   
@@ -635,11 +707,12 @@ for (i in 1:length(acc_te_LIST)) {
 }
 
 # Keep only best-performing lag for each direction:
-best_v1xv2 <- acc_te_LIST[1:4] %>% lapply(., function (ix) {mean(ix$perc_correct)}) %>% bind_rows() %>% which.max() %>% names()
-best_v2xv1 <- acc_te_LIST[5:8] %>% lapply(., function (ix) {mean(ix$perc_correct)}) %>% bind_rows() %>% which.max() %>% names()
+best_v1xv2 <- acc_weighted_te[1:4] %>% bind_rows() %>% which.max() %>% names()
+best_v2xv1 <- acc_weighted_te[5:8] %>% bind_rows() %>% which.max() %>% names()
 
 res_te_LIST <- res_te_LIST[c(best_v1xv2, best_v2xv1)]
 acc_te_LIST <- acc_te_LIST[c(best_v1xv2, best_v2xv1)]
+acc_weighted_te <- acc_weighted_te[c(best_v1xv2, best_v2xv1)]
 
 rm(best_v1xv2, best_v2xv1)
 
@@ -708,7 +781,9 @@ res_ccm <- res_ccm %>%
 
 # Determine significance/direction of true interaction:
 res_ccm <- res_ccm %>%
-  mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'))
+  mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'),
+         int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
+         int_true_dir = if_else(theta_lambda < 1, 'neg', int_true_dir))
 
 # Determine significance of detected correlation:
 res_ccm <- res_ccm %>%
@@ -732,15 +807,31 @@ res_ccm_LIST[[5]] <- res_ccm %>% filter(direction == 'v2 -> v1') %>% select(-c(i
 res_ccm_LIST[[6]] <- res_ccm %>% filter(direction == 'v2 -> v1') %>% select(-c(int_est_1, int_est_2)) %>% rename('int_est' = 'int_est_3')
 
 # Calculate sensitivity/specificity (overall):
+acc_weighted_ccm <- vector('list', length = length(res_ccm_LIST))
+names(acc_weighted_ccm) <- names(res_ccm_LIST)
+
 for (i in 1:length(res_ccm_LIST)) {
   
   print(names(res_ccm_LIST)[i])
   
+  sens_pos <- (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow())
+  sens_neg <- (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow())
+  spec <- (res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
+  
   print('Sensitivity:')
-  print((res_ccm_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true != 'none') %>% nrow()))
+  print(sens_pos)
+  print(sens_neg)
   
   print('Specificity:')
-  print((res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true == 'none') %>% nrow()))
+  print(spec)
+  
+  acc_weighted_temp <- (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null)
+  
+  print('Overall accuracy (weighted):')
+  print(acc_weighted_temp)
+  
+  acc_weighted_ccm[[i]] <- acc_weighted_temp
+  rm(acc_weighted_temp, sens_pos, sens_neg, spec)
   
   print('-----------')
   
@@ -867,7 +958,8 @@ p.ccm.3.6 <- ggplot(data = acc_ccm_LIST[[6]], aes(x = strength, y = duration, fi
   labs(title = paste0('CCM (', names(acc_ccm_LIST)[6], ')'))
 # grid.arrange(p.ccm.3.1, p.ccm.3.4, p.ccm.3.2, p.ccm.3.5, p.ccm.3.3, p.ccm.3.6, ncol = 2)
 
-rm(p.ccm.1.1, p.ccm.1.2, p.ccm.1.3, p.ccm.1.4, p.ccm.1.5, p.ccm.1.6, res_ccm, res_ccm_LIST)
+rm(p.ccm.1.1, p.ccm.1.2, p.ccm.1.3, p.ccm.1.4, p.ccm.1.5, p.ccm.1.6, res_ccm_LIST,
+   weight_pos, weight_neg, weight_null)#, res_ccm)
 # rm(p.ccm.1.1, p.ccm.1.2, p.ccm.1.3, p.ccm.1.4, p.ccm.1.5, p.ccm.1.6,
 #    p.ccm.3.1, p.ccm.3.2, p.ccm.3.3, p.ccm.3.4, p.ccm.3.5, p.ccm.3.6,
 #    res_ccm, res_ccm_LIST, acc_ccm_LIST, assoc_ccm_LIST_mean, assoc_ccm_LIST_max)
