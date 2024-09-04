@@ -417,6 +417,45 @@ res_gam <- res_gam %>%
   mutate(int_est_confound = if_else(cor_confound > 0, 'pos', 'neg'),
          int_est_confound = if_else(CI_lower95_confound > 0 | CI_upper95_confound < 0, int_est_confound, 'none'))
 
+# # CHECK ALTERNATIVE CONFIDENCE INTERVALS:
+# res_gam_check <- res_gam %>%
+#   mutate(int_est_alt = if_else(cor > 0, 'pos', 'neg'),
+#          int_est_alt = if_else(CI_lower95_alt > 0 | CI_upper95_alt < 0, int_est_alt, 'none')) %>%
+#   mutate(int_est_confound_alt = if_else(cor_confound > 0, 'pos', 'neg'),
+#          int_est_confound_alt = if_else(CI_lower95_confound_alt > 0 | CI_upper95_confound_alt < 0, int_est_confound_alt, 'none'))
+# 
+# table(res_gam_check$int_true, res_gam_check$int_est)
+# table(res_gam_check$int_true, res_gam_check$int_est_alt)
+# # same accuracy; only one classification different
+# 
+# table(res_gam_check$int_true, res_gam_check$int_est_confound)
+# table(res_gam_check$int_true, res_gam_check$int_est_confound_alt)
+# # same
+# 
+# # ggplot(data = res_gam_check) +
+#   geom_point(aes(x = .id, y = cor, col = theta_lambda)) +
+#   # geom_linerange(aes(x = .id, ymin = CI_lower95, ymax = CI_upper95), col = 'black', linewidth = 2) +
+#   geom_linerange(aes(x = .id, ymin = CI_lower95_alt, ymax = CI_upper95_alt), col = 'red', linewidth = 2) +
+#   facet_wrap(~ delta, ncol = 1) +
+#   theme_classic() +
+#   scale_color_viridis()
+# ggplot(data = res_gam_check) +
+#   geom_point(aes(x = .id, y = cor_confound, col = theta_lambda)) +
+#   # geom_linerange(aes(x = .id, ymin = CI_lower95_confound, ymax = CI_upper95_confound), col = 'black', linewidth = 2) +
+#   geom_linerange(aes(x = .id, ymin = CI_lower95_confound_alt, ymax = CI_upper95_confound_alt), col = 'red', linewidth = 2) +
+#   facet_wrap(~ delta, ncol = 1) +
+#   theme_classic() +
+#   scale_color_viridis()
+# # both types of CIs are very very narrow
+# 
+# res_gam_check %>%
+#   select(cor, CI_lower95_alt, CI_upper95_alt, cor_confound, CI_lower95_confound_alt, CI_upper95_confound_alt) %>%
+#   mutate(cor_within = (cor > CI_lower95_alt & cor < CI_upper95_alt),
+#          cor_confound_within = (cor_confound > CI_lower95_confound_alt & cor_confound < CI_upper95_confound_alt)) %>%
+#   summarise(cor_within = sum(cor_within),
+#             cor_confound_within = sum(cor_confound_within))
+# # 474 / 1600, 756 / 1600 are within the confidence intervals
+
 # Calculate sensitivity/specificity (overall):
 sens_pos <- (res_gam %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow()) / (res_gam %>% filter(int_true == 'pos') %>% nrow())
 sens_neg <- (res_gam %>% filter(int_true == 'neg' & int_est == 'neg') %>% nrow()) / (res_gam %>% filter(int_true == 'neg') %>% nrow())
