@@ -43,9 +43,6 @@ te_jidt <- function(data, lag){
   sd_null_v2_x_v1 <- .jcall(nullDist_v2_x_v1, 'D', 'getStdOfDistribution')
   p_value_v2_x_v1 <- nullDist_v2_x_v1$pValue
   
-  CI_2.5_v2_x_v1 <- result_v2_x_v1 - 1.96 * sd_null_v2_x_v1
-  CI_97.5_v2_x_v1 <- result_v2_x_v1 + 1.96 * sd_null_v2_x_v1
-  
   # TE calculation for V2 -> V1
   .jcall(teCalc, 'V', 'setObservations', destArray, sourceArray)
   
@@ -57,22 +54,15 @@ te_jidt <- function(data, lag){
   sd_null_v1_x_v2 <- .jcall(nullDist_v1_x_v2, 'D', 'getStdOfDistribution')
   p_value_v1_x_v2 <- nullDist_v1_x_v2$pValue
   
-  CI_2.5_v1_x_v2 <- result_v1_x_v2 - 1.96 * sd_null_v1_x_v2
-  CI_97.5_v1_x_v2 <- result_v1_x_v2 + 1.96 * sd_null_v1_x_v2
-  
   res <- data.frame(cbind(te = c(result_v1_x_v2, result_v2_x_v1),
                           direction = c('v2 -> v1', 'v1 -> v2'),
                           sd_null = c(sd_null_v1_x_v2, sd_null_v2_x_v1),
                           p_value = c(p_value_v1_x_v2, p_value_v2_x_v1),
-                          CI_lower = c(CI_2.5_v1_x_v2, CI_2.5_v2_x_v1),
-                          CI_upper = c(CI_97.5_v1_x_v2, CI_97.5_v2_x_v1),
                           lag = rep(lag))) %>%
     as_tibble() %>%
     mutate(te = as.numeric(te),
            sd_null = as.numeric(sd_null),
-           p_value = as.numeric(p_value),
-           CI_lower = as.numeric(CI_lower),
-           CI_upper = as.numeric(CI_upper))
+           p_value = as.numeric(p_value))
   
   #---- Analysis w/ confounding ----#
   

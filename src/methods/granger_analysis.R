@@ -122,108 +122,16 @@ granger_func <- function(data){
   p_gt1_ftest_confound <- causality(var1_confound, cause = 'V2_obs')$Granger$p.value
   p_gt2_ftest_confound <- causality(var1_confound, cause = 'V1_obs')$Granger$p.value
   
-  #---- estimating the uncertainty around these statistics ----# 
-  # get residuals
-  residuals_orig <- data.frame(residuals(var1))
-  residuals_orig_confound <- data.frame(residuals(var1_confound))
-  
-  ## ---- block bootstrapping ----# 
-  
-  # creating a function to define the statistics for the tsboot function which will do 
-  # the resampling in a block wise fashion
-  boot_func <- function(tseries, orig_data, var_model, p, exogen = NA) {
-    
-    bootstrap_residuals <- tseries
-    
-    # estimate new simulated data by taking original data - residuals + new bootstrapped residual
-    bootstrap_data_v1 <- as.vector(orig_data$V1_obs[-c(1:p)] - residuals(var_model)[,'V1_obs'] + bootstrap_residuals$V1_obs)
-    bootstrap_data_v2 <- as.vector(orig_data$V2_obs[-c(1:p)] - residuals(var_model)[,'V2_obs'] + bootstrap_residuals$V2_obs)
-    bootstrap_data <- data.frame(cbind(V1_obs = bootstrap_data_v1, V2_obs = bootstrap_data_v2))
-    
-    if (is.na(exogen)) {
-      
-      # perform univariate AR models
-      bootstrap_AR_v1 <- ar(bootstrap_data$V1_obs, order = p, aic = F, method = "ols")
-      bootstrap_AR_v2 <- ar(bootstrap_data$V2_obs, order = p, aic = F, method = "ols")
-      
-      # perform multivariate VAR model 
-      bootstrap_VAR <- VAR(y = bootstrap_data, p = p)
-      
-    } else {
-      
-      # get seasonal component
-      bootstrap_data <- bootstrap_data %>%
-        mutate(time = (min(orig_data$time) + p):max(orig_data$time)) %>%
-        mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26))) %>%
-        dplyr::select(-time)
-      
-      # perform univariate AR models
-      sink(file = nullfile())
-      bootstrap_AR_v1 <- VARfit(bootstrap_data$V1_obs, p = p, exogen = bootstrap_data$seasonal_component)
-      bootstrap_AR_v2 <- VARfit(bootstrap_data$V2_obs, p = p, exogen = bootstrap_data$seasonal_component)
-      sink()
-      
-      # perform multivariate VAR model 
-      bootstrap_VAR <- VAR(y = bootstrap_data[, c('V1_obs', 'V2_obs')], p = p, exogen = bootstrap_data[, 'seasonal_component'])
-      
-    }
-    
-    # calculate log RS 
-    logRSS_v1 <- log(sum(bootstrap_AR_v1$resid ** 2, na.rm=TRUE) / sum(residuals(bootstrap_VAR)[, 1] ** 2)) 
-    logRSS_v2 <- log(sum(bootstrap_AR_v2$resid ** 2, na.rm=TRUE) / sum(residuals(bootstrap_VAR)[, 2] ** 2))
-    
-    # combine results into vector for output
-    res <- c(logRSS_v1, logRSS_v2)
-    return(res)
-    
-  }
-  
-  # generate bootstrapped replicates in blocks of 4 weeks
-  boot_out <- tsboot(tseries = residuals_orig, statistic = boot_func, R = 100, sim = 'fixed', l = 4,
-                     orig_data = data, var_model = var1, p = p, exogen = NA)
-  boot_out_confound <- tsboot(tseries = residuals_orig_confound, statistic = boot_func, R = 100, sim = 'fixed', l = 4,
-                              orig_data = data, var_model = var1_confound, p = p, exogen = 'seasonal')
-  
-  # check out the bootstrap distributions
-  bootstrap_samples <- boot_out$t %>%
-    as_tibble() %>%
-    rename('logRSS_v1_x_v2' = 'V1',
-           'logRSS_v2_x_v1' = 'V2')
-  bootstrap_samples_confound <- boot_out_confound$t %>%
-    as_tibble() %>%
-    rename('logRSS_v1_x_v2' = 'V1',
-           'logRSS_v2_x_v1' = 'V2')
-  
-  # calculate the 95% CI for each statistic
-  # standard approach assuming normality of the sampling dist
-  # v1 x v2
-  CI_lower95_v1_x_v2 <- logRSS_v1 - 1.96 * sd(bootstrap_samples$logRSS_v1_x_v2)
-  CI_upper95_v1_x_v2 <- logRSS_v1 + 1.96 * sd(bootstrap_samples$logRSS_v1_x_v2)
-  # v2 x v1
-  CI_lower95_v2_x_v1 <- logRSS_v2 - 1.96 * sd(bootstrap_samples$logRSS_v2_x_v1)
-  CI_upper95_v2_x_v1 <- logRSS_v2 + 1.96 * sd(bootstrap_samples$logRSS_v2_x_v1)
-  
-  # v1 x v2
-  CI_lower95_v1_x_v2_confound <- logRSS_v1_confound - 1.96 * sd(bootstrap_samples_confound$logRSS_v1_x_v2)
-  CI_upper95_v1_x_v2_confound <- logRSS_v1_confound + 1.96 * sd(bootstrap_samples_confound$logRSS_v1_x_v2)
-  # v2 x v1
-  CI_lower95_v2_x_v1_confound <- logRSS_v2_confound - 1.96 * sd(bootstrap_samples_confound$logRSS_v2_x_v1)
-  CI_upper95_v2_x_v1_confound <- logRSS_v2_confound + 1.96 * sd(bootstrap_samples_confound$logRSS_v2_x_v1)
-  
   # output results
   res <- data.frame(cbind(logRSS = c(logRSS_v1, logRSS_v2, logRSS_v1_confound, logRSS_v2_confound),
                           direction = rep(c('v2 -> v1', 'v1 -> v2'), 2),
                           confounding = rep(c('none', 'none', 'seasonal', 'seasonal')),
-                          CI_lower = c(CI_lower95_v1_x_v2, CI_lower95_v2_x_v1, CI_lower95_v1_x_v2_confound, CI_lower95_v2_x_v1_confound),
-                          CI_upper = c(CI_upper95_v1_x_v2, CI_upper95_v2_x_v1, CI_upper95_v1_x_v2_confound, CI_upper95_v2_x_v1_confound),
                           granger_p = c(p_gt1_wald, p_gt2_wald, NA, NA),
                           ftest_p = c(p_gt1_ftest, p_gt2_ftest, p_gt1_ftest_confound, p_gt2_ftest_confound),
                           adf_p = c(adf_v1$p.value, adf_v2$p.value, NA, NA),
                           kpss_p = c(kpss_v1$p.value, kpss_v2$p.value, NA, NA))) %>%
     as_tibble() %>%
     mutate(logRSS = as.numeric(logRSS),
-           CI_lower = as.numeric(CI_lower),
-           CI_upper = as.numeric(CI_upper),
            granger_p = as.numeric(granger_p),
            ftest_p = as.numeric(ftest_p),
            adf_p = as.numeric(adf_p),
