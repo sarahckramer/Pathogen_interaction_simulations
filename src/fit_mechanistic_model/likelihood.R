@@ -26,13 +26,14 @@ print(detectCores())
 jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # 1:160
 # jobid <- 31
 run_parallel <- as.logical(Sys.getenv("RUNPARALLEL")); print(run_parallel)
+search_type <- as.character(Sys.getenv("SEARCHTYPE")); print(search_type)
 
 data_id <- (jobid - 1) %% 10 + 1; print(data_id)
 jobid <- ceiling(jobid / 10); print(jobid)
 
 # Set relevant parameters:
 sobol_size <- 500
-search_type <- 'broad'
+# search_type <- 'round1_CIs'
 
 n_cores <- 50 # Number of cores to use
 time_max <- 23.75 # Maximal execution time (in hours)
@@ -135,12 +136,23 @@ start_range <- data.frame(Ri1 = c(1.0, 2.0),
 start_range <- start_range[, estpars]
 
 # Draw from start ranges:
-if (search_type == 'broad') {
-  set.seed(38564478)
-  start_values <- sobol_design(lower = setNames(as.numeric(start_range[1, ]), names(start_range[1, ])),
-                               upper = setNames(as.numeric(start_range[2, ]), names(start_range[2, ])),
-                               nseq = sobol_size)
+if (search_type == 'round1_CIs') {
+  
+  start_range <- read_rds('results/trajectory_matching/round2CI_startvals.rds') %>%
+    filter(int_set == jobid, .id == data_id) %>%
+    ungroup() %>%
+    select(-c(int_set, .id, minmax)) %>%
+    as.data.frame()
+  
+  expect_true(all(estpars %in% names(start_range)))
+  expect_true(all(names(start_range) %in% estpars))
+  
 }
+
+set.seed(38564478)
+start_values <- sobol_design(lower = setNames(as.numeric(start_range[1, ]), names(start_range[1, ])),
+                             upper = setNames(as.numeric(start_range[2, ]), names(start_range[2, ])),
+                             nseq = sobol_size)
 
 print(estpars)
 print(start_range)
