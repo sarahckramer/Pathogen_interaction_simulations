@@ -38,7 +38,7 @@ te_jidt <- function(data, lag){
   result_v2_x_v1 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
   
   nullDist_v2_x_v1 <- .jcall(teCalc, 'Linfodynamics/utils/EmpiricalMeasurementDistribution;',
-                             'computeSignificance', 100L)
+                             'computeSignificance', 500L)
   mean_null_v2_x_v1 <- .jcall(nullDist_v2_x_v1, 'D', 'getMeanOfDistribution')
   sd_null_v2_x_v1 <- .jcall(nullDist_v2_x_v1, 'D', 'getStdOfDistribution')
   p_value_v2_x_v1 <- nullDist_v2_x_v1$pValue
@@ -49,7 +49,7 @@ te_jidt <- function(data, lag){
   result_v1_x_v2 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
   
   nullDist_v1_x_v2 <- .jcall(teCalc, 'Linfodynamics/utils/EmpiricalMeasurementDistribution;',
-                             'computeSignificance', 100L)
+                             'computeSignificance', 500L)
   mean_null_v1_x_v2 <- .jcall(nullDist_v1_x_v2, 'D', 'getMeanOfDistribution')
   sd_null_v1_x_v2 <- .jcall(nullDist_v1_x_v2, 'D', 'getStdOfDistribution')
   p_value_v1_x_v2 <- nullDist_v1_x_v2$pValue
