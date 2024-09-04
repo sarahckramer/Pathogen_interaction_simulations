@@ -22,14 +22,8 @@ granger_func <- function(data){
   # automatically determine the best lag doing several models with lags
   # 1-12 (approximately 3 month) then choose the best lag number based on BIC
   
-  # initialise lists to put results in 
-  # lags <- list()
-  # lag_v1 <- list()
-  # lag_v2 <- list()
-  
   # determine the number of lags for each simulated dataset
   df <- data %>% dplyr::select(V1_obs, V2_obs)
-  # df$.id <- NULL
   
   lags <- lapply(df, VARselect, lag.max = 15) # lag of approx 3 month
   rm(df)
@@ -42,9 +36,6 @@ granger_func <- function(data){
   rm(lags)
   
   #---- checking stationary of time series ---# 
-  # simply plan to just report if the series is stationary or not rather 
-  # than apply difference as this is difficult to do in practice when lags
-  # will differ by simulation run
   
   # ADF Test hypotheses
   # H0: there is a unit root - i.e. the time series is not stationary 
@@ -68,10 +59,6 @@ granger_func <- function(data){
     dplyr::select(time, V1_obs, V2_obs) %>%
     mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26)))
   
-  # m1 <- lm(V1_obs ~ lag(V1_obs, 1) + lag(V1_obs, 2) + lag(V1_obs, 3) + V2_obs , data = data)
-  # m2 <- lm(V1_obs ~ lag(V1_obs, 1) + lag(V1_obs, 2) + lag(V1_obs, 3) , data = data)
-  # anova(m1, m2)
-  
   # specifying the lag to be the minimum of the two series
   p <- min(lag_v1, lag_v2)
   
@@ -81,19 +68,11 @@ granger_func <- function(data){
   var1 <- VAR(y = data[, c('V1_obs', 'V2_obs')], p = p)
   var1_confound <- VAR(y = data[, c('V1_obs', 'V2_obs')], p = p, exogen = data[, 'seasonal_component'])
   
-  # # pull out effect of seasonal component
-  # summary(var1_confound)$varresult$V1_obs$coefficients['exo1', 1]
-  # summary(var1_confound)$varresult$V2_obs$coefficients['exo1', 1]
-  # summary(var1_confound)$varresult$V1_obs$coefficients['exo1', 'Pr(>|t|)']
-  # summary(var1_confound)$varresult$V2_obs$coefficients['exo1', 'Pr(>|t|)']
-  
   # run AR for univariate analysis - models of just the single virus against its 
   # own lags (VAR is only for multivariate and if you try to run a univariate analysis
   # like this with VAR it will tell you to use ar or arima)
   ar_v1 = ar(data$V1_obs, order = var1$p, aic = F, method="ols")
   ar_v2 = ar(data$V2_obs, order = var1$p, aic = F, method="ols")
-  # ar_v1_alt <- VARfit(data$V1_obs, p = var1$p)
-  # ar_v2_alt <- VARfit(data$V2_obs, p = var1$p)
   
   sink(file = nullfile())
   ar_v1_confound <- VARfit(data$V1_obs, p = var1$p, exogen = data$seasonal_component)
@@ -101,10 +80,7 @@ granger_func <- function(data){
   sink()
   
   # Estimating the effect size using log RSS (Barraquand et al. 2021)
-  # log RSS = log(RSS_univariate/RSS_multivariate) interpretation: 
-  # 0 = no interaction
-  # -ve = strong negative interaction 
-  # +ve = strong positive interaction 
+  # log RSS = log(RSS_univariate/RSS_multivariate)
   logRSS_v1 <- log(sum(ar_v1$resid ** 2, na.rm = TRUE) / sum(residuals(var1)[, 'V1_obs'] ** 2));# logRSS_v1 
   logRSS_v2 <- log(sum(ar_v2$resid ** 2, na.rm = TRUE) / sum(residuals(var1)[, 'V2_obs'] ** 2));# logRSS_v2
   
