@@ -139,10 +139,18 @@ gam_cor <- function(data){
   CI_lower95_confound <-  corr_mat_confound[2, 1] - 1.96 * sd(boot_corr$cor_confound)
   CI_upper95_confound <-  corr_mat_confound[2, 1] + 1.96 * sd(boot_corr$cor_confound)
   
+  # get alternative CIs:
+  CI_lower95_alt <- quantile(boot_corr$cor, p = 0.025) %>% unname()
+  CI_upper95_alt <- quantile(boot_corr$cor, p = 0.975) %>% unname()
+  CI_lower95_confound_alt <- quantile(boot_corr$cor_confound, p = 0.025) %>% unname()
+  CI_upper95_confound_alt <- quantile(boot_corr$cor_confound, p = 0.975) %>% unname()
+  
   # summarise results to output
   res <- data.frame(cbind(cor = corr_mat[2, 1], CI_lower95 = CI_lower95, CI_upper95 = CI_upper95,
                           cor_confound = corr_mat_confound[2, 1], CI_lower95_confound = CI_lower95_confound, 
-                          CI_upper95_confound = CI_upper95_confound), row.names = '')
+                          CI_upper95_confound = CI_upper95_confound, CI_lower95_alt = CI_lower95_alt,
+                          CI_upper95_alt = CI_upper95_alt, CI_lower95_confound_alt = CI_lower95_confound_alt,
+                          CI_upper95_confound_alt = CI_upper95_confound_alt), row.names = '')
   return(res)
   
 }
