@@ -44,7 +44,7 @@ rm(theta_lambda1, theta_lambda2, delta1, delta2)
 set.seed(1234)
 
 n_surge <- round(tot_weeks / 52) # number of surges
-mu_Imloss <- 38 # average surge occurring in mid Oct
+mu_Imloss <- 12 # average surge occurring 12 weeks into season
 sd_Imloss <- 4 # standard deviation of 4 weeks
 
 t_si_mat <- matrix(nrow = n_surge - 2, ncol = n_sim)
@@ -53,7 +53,7 @@ w_delta_i_mat <- matrix(nrow = n_surge - 2, ncol = n_sim)
 for (i in 1:n_sim) {
   
   t_si <- rnorm(n = n_surge, mean = mu_Imloss, sd = sd_Imloss) # draw from normal dist
-  t_si <- t_si - 26 + seq(0, 52 * (n_surge - 1), by = 52)
+  t_si <- t_si + seq(0, 52 * (n_surge - 1), by = 52)
   t_si <- round(t_si) # make whole numbers
   
   t_si[2:12] <- t_si[2:12] + 1 # account for years with 53 weeks
@@ -92,7 +92,6 @@ true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       A2=0.20, phi2=26,
                       k1 = 0.04, k2 = 0.02,
                       beta_sd1 = 0.1 * 0.1, beta_sd2 = 0.05 * 0.1,
-                      # beta_sd1 = 0.5, beta_sd2 = 0.1,
                       N = 3700000,
                       E01 = 0.001, E02 = 0.001,
                       R01 = 0.40, R02 = 0.25, R012 = 0.001,
@@ -104,7 +103,6 @@ true_params <- parmat(true_params_init, nrep = n_sim)
 true_params['Ri1', ] <- r_eff_vals[, 1]
 true_params['Ri2', ] <- r_eff_vals[, 2]
 true_params['w2', ] <- r_eff_vals[, 3]
-# true_params['R02', ] <- r_eff_vals[, 4]
 
 true_params[str_detect(rownames(true_params), 't_si_'), ] <- t_si_mat
 true_params[str_detect(rownames(true_params), 'w_delta_i_'), ] <- w_delta_i_mat
