@@ -61,6 +61,9 @@ ccm_func <- function(data){
   optimal_tp_v1xv2_wide <- output %>% filter(target_column == 'V2_obs') %>% filter(`V1_obs:V2_obs` == max(`V1_obs:V2_obs`)) %>% pull(tp)
   optimal_tp_v2xv1_wide <- output %>% filter(target_column == 'V1_obs') %>% filter(`V2_obs:V1_obs` == max(`V2_obs:V1_obs`)) %>% pull(tp)
   
+  highest_crossmap_cor_v1xv2 <- output %>% filter(target_column == 'V2_obs') %>% pull(`V1_obs:V2_obs`) %>% max()
+  highest_crossmap_cor_v2xv1 <- output %>% filter(target_column == 'V1_obs') %>% pull(`V2_obs:V1_obs`) %>% max()
+
   #---- determine if any time delay needs considering: i.e. tp parameter ----#
   # generate all combinations of lib_column, target_column, tp
   params <- expand.grid(lib_column = vars, target_column = vars, tp = -52:0) %>% # alternatively, -20:5
@@ -248,13 +251,9 @@ ccm_func <- function(data){
   rho_v1xv2 <- res %>% filter(direction == 'v2 -> v1', LibSize == lib_max_use) %>% pull(rho)
   rho_v2xv1 <- res %>% filter(direction == 'v1 -> v2', LibSize == lib_max_use) %>% pull(rho)
   
-  # original:
-  p_surr_v1xv2 <- 1 - ecdf(rho_v1xv2_surr)(rho_v1xv2)
-  p_surr_v2xv1 <- 1 - ecdf(rho_v2xv1_surr)(rho_v2xv1)
-  
   # as in ha0ye tutorial:
-  p_surr_v1xv2_alt <- (sum(rho_v1xv2 < rho_v1xv2_surr) + 1) / (length(rho_v1xv2_surr) + 1)
-  p_surr_v2xv1_alt <- (sum(rho_v2xv1 < rho_v2xv1_surr) + 1) / (length(rho_v2xv1_surr) + 1)
+  p_surr_v1xv2 <- (sum(rho_v1xv2 < rho_v1xv2_surr) + 1) / (length(rho_v1xv2_surr) + 1)
+  p_surr_v2xv1 <- (sum(rho_v2xv1 < rho_v2xv1_surr) + 1) / (length(rho_v2xv1_surr) + 1)
   
   # write out results
   res <- res %>%
@@ -269,8 +268,8 @@ ccm_func <- function(data){
     mutate(E = if_else(direction == 'v2 -> v1', E_v1, E_v2),
            tp_use = if_else(direction == 'v2 -> v1', optimal_tp_v1xv2, optimal_tp_v2xv1),
            tp_opt = if_else(direction == 'v2 -> v1', optimal_tp_v1xv2_wide, optimal_tp_v2xv1_wide),
-           p_surr = if_else(direction == 'v2 -> v1', p_surr_v1xv2, p_surr_v2xv1),
-           p_surr_alt = if_else(direction == 'v2 -> v1', p_surr_v1xv2_alt, p_surr_v2xv1_alt))
+           max_cmc = if_else(direction == 'v2 -> v1', highest_crossmap_cor_v1xv2, highest_crossmap_cor_v2xv1),
+           p_surr = if_else(direction == 'v2 -> v1', p_surr_v1xv2, p_surr_v2xv1))
   
   return(res)
   
