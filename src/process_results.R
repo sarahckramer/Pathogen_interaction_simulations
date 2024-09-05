@@ -432,7 +432,7 @@ res_gam <- res_gam %>%
 # table(res_gam_check$int_true, res_gam_check$int_est_confound_alt)
 # # same
 # 
-# # ggplot(data = res_gam_check) +
+# ggplot(data = res_gam_check) +
 #   geom_point(aes(x = .id, y = cor, col = theta_lambda)) +
 #   # geom_linerange(aes(x = .id, ymin = CI_lower95, ymax = CI_upper95), col = 'black', linewidth = 2) +
 #   geom_linerange(aes(x = .id, ymin = CI_lower95_alt, ymax = CI_upper95_alt), col = 'red', linewidth = 2) +

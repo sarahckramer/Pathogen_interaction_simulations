@@ -28,7 +28,7 @@ granger_func <- function(data){
   lags <- lapply(df, VARselect, lag.max = 15) # lag of approx 3 month
   rm(df)
   
-  # pull out the lag with lowest BIC (not BIC is labeled SV)
+  # pull out the lag with lowest BIC
   # regardless of whether raw of normalised data used the lag chosen is the same
   lag_v1 <- as.numeric(lags$V1_obs$selection[3])
   lag_v2 <- as.numeric(lags$V2_obs$selection[3])
@@ -112,6 +112,7 @@ granger_func <- function(data){
            ftest_p = as.numeric(ftest_p),
            adf_p = as.numeric(adf_p),
            kpss_p = as.numeric(kpss_p))
+  
   return(res)
   
 }
