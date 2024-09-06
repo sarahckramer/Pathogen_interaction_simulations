@@ -109,7 +109,6 @@ source('src/methods/gam_cor.R')
 if (!run_local) {
   
   # setting up parallelism for the foreach loop
-  # registerDoParallel(cl <- makeCluster(50))
   registerDoMC(50)
   
   # apply the GAM correlation approach to each simulated data set and save the results
@@ -117,11 +116,6 @@ if (!run_local) {
   res_gam_cor <- foreach(i = 1:n_sim, .packages=c('tidyverse', 'mgcv', 'vars', 'boot')) %dopar% {
     
     dat %>% filter(.id == i) %>% gam_cor()
-    
-    # # if the dataset was removed because the outbreak died out then skip it
-    # if(dim(results$data %>% filter(.id==i))[1]!=0){
-    #   results$data %>% filter(.id==i) %>% gam_cor(.)
-    # }
     
   }
   toc <- Sys.time()
@@ -139,7 +133,7 @@ if (!run_local) {
 # apply granger analysis to each simulated data set and save the results
 if (run_local) {
   source('src/methods/granger_analysis.R')
-  
+
   tic <- Sys.time()
   results$granger <- dat %>% group_by(.id) %>% do(granger_func(.))
   toc <- Sys.time()
@@ -150,11 +144,11 @@ if (run_local) {
 
 #---- Transfer entropy analysis ----#
 if (run_local) {
-  
+
   source('src/methods/transfer_entropy_jidt.R')
-  
+
   tic <- Sys.time()
-  
+
   # lag = 1
   res_te_1 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '1'))
   # lag = 2
@@ -163,16 +157,16 @@ if (run_local) {
   res_te_4 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '4'))
   # lag = 6
   res_te_6 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '6'))
-  
+
   toc <- Sys.time()
   etime <- toc - tic
   units(etime) <- 'mins'
   print(etime)
-  
+
   # combine results and store
   results$transfer_entropy <- bind_rows(res_te_1, res_te_2, res_te_4, res_te_6)
   rm(res_te_1, res_te_2, res_te_4, res_te_6)
-  
+
 }
 
 #---- Convergent Cross mapping analysis ----#
