@@ -200,11 +200,6 @@ res_te <- lapply(results_T, getElement, 'transfer_entropy') %>%
   mutate(run = as.numeric(run)) %>%
   inner_join(res_trueparams, by = 'run')
 
-if ('V1 -> V2' %in% unique(res_te$direction)) {
-  res_te <- res_te %>%
-    mutate(direction = if_else(direction == 'V1 -> V2', 'v1 -> v2', 'v2 -> v1'))
-}
-
 # CCM:
 res_ccm <- lapply(results_F, getElement, 'CCM') %>%
   bind_rows(.id = 'run') %>%
@@ -298,11 +293,6 @@ calculate_assoc_true_strength <- function(df, method, met) {
       filter(sig == 'yes') %>%
       cor.test(~ theta_lambda + metric, data = ., method = 'spearman')
     
-    # bind_rows(rbind(c(d, cor_temp_neg$estimate, cor_temp_neg$p.value, cor_temp_neg$conf.int[1], cor_temp_neg$conf.int[2]),
-    #                 c(d, cor_temp_pos$estimate, cor_temp_pos$p.value, cor_temp_pos$conf.int[1], cor_temp_pos$conf.int[2])) %>%
-    #   as_tibble() %>%
-    #   mutate(true_int = c('neg', 'pos')))
-    
     res_temp <- res_temp %>% bind_rows(rbind(c(d, cor_temp_overall$estimate, cor_temp_overall$p.value),
                                              c(d, cor_temp_neg$estimate, cor_temp_neg$p.value),
                                              c(d, cor_temp_pos$estimate, cor_temp_pos$p.value)) %>%
@@ -358,15 +348,10 @@ weight_pos <- min(table(res_corr$int_true)) / (res_corr %>% filter(int_true == '
 weight_neg <- min(table(res_corr$int_true)) / (res_corr %>% filter(int_true == 'neg') %>% nrow())
 weight_null <- min(table(res_corr$int_true)) / (res_corr %>% filter(int_true == 'none') %>% nrow())
 
-# sens_pos_weighted <- sens_pos * (res_corr %>% filter(int_true == 'pos') %>% nrow()) / nrow(res_corr)
-# sens_neg_weighted <- sens_neg * (res_corr %>% filter(int_true == 'neg') %>% nrow()) / nrow(res_corr)
-# spec_weighted <- spec * (res_corr %>% filter(int_true == 'none') %>% nrow()) / nrow(res_corr)
-
 acc_weighted_corr <- (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null)
 
 print('Overall accuracy (weighted):')
 print(acc_weighted_corr)
-# print(sens_pos_weighted + sens_neg_weighted + spec_weighted)
 
 # Calculate sensitivity/specificity (by true params):
 acc_corr <- calculate_accuracy_matrix(res_corr)
@@ -537,8 +522,6 @@ rm(p.gam.1.1, p.gam.1.2, sens_pos, sens_pos_confound,
 
 # Determine significance/direction of true interaction:
 res_granger <- res_granger %>%
-  # mutate(int_true = if_else(theta_lambda > 1, 'pos', 'neg'),
-  #        int_true = if_else(theta_lambda == 1, 'none', int_true)) %>%
   mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'),
          int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
          int_true_dir = if_else(theta_lambda < 1, 'neg', int_true_dir)) %>%
@@ -686,11 +669,6 @@ res_te <- res_te %>%
 res_te <- res_te %>%
   mutate(int_est = if_else(p_value < 0.05, 'interaction', 'none'))
 
-# Alternatively, base significance on confidence intervals:
-res_te <- res_te %>%
-  mutate(int_est = if_else(CI_lower > 0, 'interaction', 'none'))
-# Lower sensitivity but higher specificity, but only slightly
-
 # Get results by direction and lag:
 res_te_LIST <- vector('list', length = 8)
 names(res_te_LIST) <- c('v1 -> v2 (lag 1)', 'v1 -> v2 (lag 2)', 'v1 -> v2 (lag 4)', 'v1 -> v2 (lag 6)',
@@ -829,10 +807,6 @@ res_ccm <- res_ccm %>%
   mutate(int_est_1 = if_else(p_surr < 0.05, 'interaction', 'none'), # method 1: check p-values based on surrogates
          int_est_2 = if_else(MannK < 0.05, 'interaction', 'none'), # method 2: check convergence
          int_est_3 = if_else(MannK < 0.05 & tp_opt < 0, 'interaction', 'none')) # method 3: check convergence + ideal tp negative
-# res_ccm <- res_ccm %>%
-#   mutate(int_est_1 = if_else(p_surr < 0.05, 'interaction', 'none'), # method 1: check p-value
-#          int_est_2 = if_else(p_surr < 0.05 & MannK < 0.05, 'interaction', 'none'), # method 2: method 1 + convergence
-#          int_est_3 = if_else(p_surr < 0.05 & MannK < 0.05 & tp_opt < 0, 'interaction', 'none')) # method 3: method 2 + ideal tp negative
 
 # Get results by direction and method of significance calculation:
 res_ccm_LIST <- vector('list', length = 6)
@@ -886,17 +860,13 @@ for (i in 1:length(acc_ccm_LIST)) {
 }
 
 # Are higher values of rho associated with higher true interaction strength?:
-assoc_ccm_LIST_mean = assoc_ccm_LIST_max = vector('list', length = 6)
-names(assoc_ccm_LIST_mean) <- names(res_ccm_LIST)
+assoc_ccm_LIST_max <- vector('list', length = 6)
 names(assoc_ccm_LIST_max) <- names(res_ccm_LIST)
 
 res_ccm_LIST <- lapply(res_ccm_LIST, function(ix) {
   ix %>% mutate(sig = if_else(int_est == 'interaction', 'yes', 'no'))
 })
 
-for (i in 1:length(assoc_ccm_LIST_mean)) {
-  assoc_ccm_LIST_mean[[i]] <- calculate_assoc_true_strength(res_ccm_LIST[[i]], method = 'ccm', met = 'rho_mean')
-}
 for (i in 1:length(assoc_ccm_LIST_max)) {
   assoc_ccm_LIST_max[[i]] <- calculate_assoc_true_strength(res_ccm_LIST[[i]], method = 'ccm', met = 'rho_max')
 }
