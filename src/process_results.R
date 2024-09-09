@@ -692,7 +692,7 @@ rm(p.ccm.1.1, p.ccm.1.2, p.ccm.1.3, p.ccm.1.4, p.ccm.1.5, p.ccm.1.6, res_ccm_LIS
 
 # ------------------------------------------------------------------------------
 
-# Plot results of all methods
+# Compile/plot results of all methods
 
 # Heatmaps:
 p.comb.1 <- arrangeGrob(p.corr.3, p.gam.2.1, p.gam.2.2, p.granger.3.1, p.granger.3.2, p.granger.3.3, p.granger.3.4, p.te.2.1, p.te.2.2, p.ccm.3.1, p.ccm.3.4, p.ccm.3.3, p.ccm.3.6,
@@ -704,7 +704,9 @@ p.comb.1 <- arrangeGrob(p.corr.3, p.gam.2.1, p.gam.2.2, p.granger.3.1, p.granger
                                               c(NA, 10, 10, 11, 11, NA),
                                               c(NA, 12, 12, 13, 13, NA)))
 plot(p.comb.1)
-rm(p.corr.3, p.gam.2.1, p.gam.2.2, p.granger.3.1, p.granger.3.2, p.granger.3.3, p.granger.3.4, p.te.2.1, p.te.2.2, p.ccm.3.1, p.ccm.3.4, p.ccm.3.2, p.ccm.3.5, p.ccm.3.3, p.ccm.3.6)
+ggsave(filename = 'results/plots/heatmaps.svg', p.comb.1, width = 13, height = 18)
+rm(p.corr.3,p.gam.2.1, p.gam.2.2, p.granger.3.1, p.granger.3.2, p.granger.3.3, p.granger.3.4,
+   p.te.2.1, p.te.2.2, p.ccm.3.1, p.ccm.3.4, p.ccm.3.2, p.ccm.3.5, p.ccm.3.3, p.ccm.3.6)
 
 # Plot percent accurate for all methods:
 res_acc <- acc_corr %>% mutate(method = 'Corr. Coef.', direction = 'v1 -> v2') %>%
@@ -740,7 +742,7 @@ p.comb.2 <- ggplot(res_acc, aes(x = x_use, y = perc_correct, group = method, sha
   theme_bw() +
   scale_x_continuous(limits = c(-2.4, 3.3), breaks = -2:3, labels = c('0', '0.25', '0.5', '1', '2', '4')) +
   scale_y_continuous(limits = c(0, 1)) +
-  scale_shape_manual(values = c(16, 17, 17, 15, 15, 3, 8, 8)) +
+  scale_shape_manual(values = c(18, 17, 17, 15, 15, 3, 8, 8)) +
   scale_color_manual(values = c('#ff7f00', '#e31a1c', '#fb9a99', '#1f78b4', '#a6cee3', '#6a3d9a', '#33a02c', '#b2df8a')) +
   labs(x = 'Interaction Strength', y = '% Correct', shape = 'Method', col = 'Method')
 print(p.comb.2)
@@ -782,11 +784,56 @@ p.comb.3 <- ggplot(res_assoc, aes(x = x_use, y = rho, group = method, shape = me
   theme_bw() +
   scale_x_continuous(limits = c(0.6, 3.3), breaks = 1:3, labels = c('1', '4', '13')) +
   scale_y_continuous(limits = c(-1, 1)) +
-  scale_shape_manual(values = c(16, 17, 17, 15, 15, 3, 18, 18)) +
+  scale_shape_manual(values = c(18, 17, 17, 15, 15, 3, 18, 18)) +
   scale_color_manual(values = c('#ff7f00', '#e31a1c', '#fb9a99', '#1f78b4', '#a6cee3', '#6a3d9a', '#33a02c', '#b2df8a')) +
   labs(x = 'Interaction Duration', y = "Spearman's Rho", shape = 'Method', col = 'Method')
 print(p.comb.3)
 rm(assoc_corr, assoc_gam, assoc_gam_confound, assoc_granger_LIST, assoc_te_LIST, assoc_ccm_LIST_mean, assoc_ccm_LIST_max)
+
+# Calculate measure of overall accuracy, weighted by number of simulations per true parameter set:
+# Note that correlation, GAMs, and gradient boosting will have some disadvantage here, since it matters
+# for them whether the predicted interaction is positive or negative
+
+res_acc_weighted <- bind_cols(method = 'Corr. Coef.', weighted_acc = acc_weighted_corr, direction = 'v1 -> v2') %>%
+  bind_rows(bind_cols(method = 'Corr. Coef.', weighted_acc = acc_weighted_corr, direction = 'v2 -> v1')) %>%
+  bind_rows(bind_cols(method = 'GAMs', weighted_acc = acc_weighted_gam, direction = 'v1 -> v2')) %>%
+  bind_rows(bind_cols(method = 'GAMs', weighted_acc = acc_weighted_gam, direction = 'v2 -> v1')) %>%
+  bind_rows(bind_cols(method = 'GAMs (w/ Seas.)', weighted_acc = acc_weighted_gam_confound, direction = 'v1 -> v2')) %>%
+  bind_rows(bind_cols(method = 'GAMs (w/ Seas.)', weighted_acc = acc_weighted_gam_confound, direction = 'v2 -> v1')) %>%
+  bind_rows(acc_weighted_granger %>%
+              bind_rows() %>%
+              pivot_longer(everything(), values_to = 'weighted_acc') %>%
+              mutate(direction = str_sub(name, 1, 8),
+                     method = if_else(str_detect(name, 'Seasonality'), 'GC (w/ Seas.)', 'GC')) %>%
+              select(method, weighted_acc, direction)) %>%
+  bind_rows(acc_weighted_te %>%
+              bind_rows() %>%
+              pivot_longer(everything(), names_to = 'direction', values_to = 'weighted_acc') %>%
+              mutate(direction = str_sub(direction, 1, 8),
+                     method = 'TE') %>%
+              select(method, weighted_acc, direction)) %>%
+  bind_rows(acc_weighted_ccm %>%
+              bind_rows() %>%
+              pivot_longer(everything(), values_to = 'weighted_acc') %>%
+              mutate(direction = str_sub(name, 1, 8),
+                     method = paste0('CCM ', str_sub(name, 10))) %>%
+              select(method, weighted_acc, direction) %>%
+              filter(!str_detect(method, '2')))
+
+res_acc_weighted <- res_acc_weighted %>%
+  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GAMs (w/ Seas.)', 'GC', 'GC (w/ Seas.)', 'TE', 'CCM (Method 1)', 'CCM (Method 3)')))
+
+p.comb.4 <- ggplot(res_acc_weighted, aes(x = direction, y = weighted_acc, shape = method, col = method)) +
+  geom_point(size = 3) +
+  # facet_wrap(~ direction, nrow = 1) +
+  theme_bw() +
+  scale_y_continuous(limits = c(0, 0.75), n.breaks = 20) +
+  scale_shape_manual(values = c(18, 17, 17, 15, 15, 3, 8, 8, 16)) +
+  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#fb9a99', '#1f78b4', '#a6cee3', '#6a3d9a', '#33a02c', '#b2df8a', '#000000')) +
+  labs(x = 'Direction', y = 'Accuracy (Weighted)', shape = 'Method', col = 'Method')
+print(p.comb.4)
+rm(acc_weighted_corr, acc_weighted_gam, acc_weighted_gam_confound,
+   acc_weighted_granger, acc_weighted_te, acc_weighted_ccm)
 
 # Close pdf:
 dev.off()
