@@ -13,6 +13,9 @@ library(gridExtra)
 library(testthat)
 library(viridis)
 
+# Load functions:
+source('src/functions_etc/fxns_process_results.R')
+
 # Open pdf to save plots:
 date <- format(Sys.Date(), '%d%m%y')
 # pdf(file = paste0('results/plots/plot_accuracy_by_method_', date, '_UPDATED.pdf'),
@@ -21,83 +24,7 @@ date <- format(Sys.Date(), '%d%m%y')
 # ------------------------------------------------------------------------------
 
 # Read in all results
-
-# Get file names:
-res_filenames_T <- list.files(path = 'results/', pattern = 'TRUE', full.names = TRUE) # run locally
-res_filenames_F <- list.files(path = 'results/', pattern = 'FALSE', full.names = TRUE) # run on cluster
-
-# Read in results:
-results_T = results_F = vector('list', length = length(res_filenames_T))
-
-for (i in 1:length(res_filenames_T)) {
-  results_T[[i]] <- read_rds(res_filenames_T[i])
-  results_F[[i]] <- read_rds(res_filenames_F[i])
-}
-rm(i)
-
-# Label each results list with run number:
-where_run <- which(!is.na(as.numeric(str_split(res_filenames_T, '_')[[1]])))
-
-names(results_T) <- unlist(map(str_split(res_filenames_T, '_'), where_run))
-names(results_F) <- unlist(map(str_split(res_filenames_F, '_'), where_run))
-
-rm(res_filenames_T, res_filenames_F, where_run)
-
-# ------------------------------------------------------------------------------
-
-# Extract true parameter values and data
-
-# Get true parameter values:
-int_params <- c('theta_lambda1', 'delta1')
-
-res_trueparams <- lapply(1:length(results_T), function(ix) {
-  results_T[[ix]]$true_param[int_params, 1]
-}) %>%
-  bind_rows() %>%
-  rename('theta_lambda' = 'theta_lambda1',
-         'delta' = 'delta1') %>%
-  mutate(run = as.numeric(names(results_T))) %>%
-  arrange(run)
-
-res_trueparams_CHECK <- lapply(1:length(results_F), function(ix) {
-  results_F[[ix]]$true_param[int_params, 1]
-}) %>%
-  bind_rows() %>%
-  rename('theta_lambda' = 'theta_lambda1',
-         'delta' = 'delta1') %>%
-  mutate(run = as.numeric(names(results_T))) %>%
-  arrange(run)
-
-expect_true(all.equal(res_trueparams, res_trueparams_CHECK))
-rm(res_trueparams_CHECK)
-
-# Get data:
-data_list = data_list_CHECK = vector('list', length = length(results_T))
-
-for (i in 1:length(results_T)) {
-  
-  data_list[[i]] <- results_T[[i]]$data %>%
-    select(time, date, .id, V1_obs, V2_obs) %>%
-    mutate(run = as.numeric(names(results_T)[i]))
-  
-  data_list_CHECK[[i]] <- results_F[[i]]$data %>%
-    select(time, date, .id, V1_obs, V2_obs) %>%
-    mutate(run = as.numeric(names(results_F)[i]))
-  
-}
-
-dat <- bind_rows(data_list) %>%
-  arrange(run)
-dat_CHECK <- bind_rows(data_list_CHECK) %>%
-  arrange(run)
-expect_true(all.equal(dat, dat_CHECK))
-
-rm(data_list, data_list_CHECK, i, dat_CHECK, int_params)
-
-# Join true parameter values:
-dat <- dat %>%
-  as_tibble() %>%
-  inner_join(res_trueparams, by = 'run')
+source('src/functions_etc/load_main_results.R')
 
 # ------------------------------------------------------------------------------
 
@@ -173,165 +100,7 @@ rm(p1.1, p1.2, p1.3, p2, p3.1, p3.2, dat_plot, ids_to_plot)
 
 # ------------------------------------------------------------------------------
 
-# Extract results for all statistical methods
-
-# Correlation coefficients:
-res_corr <- lapply(results_T, getElement, 'cor') %>%
-  bind_rows(.id = 'run') %>%
-  mutate(run = as.numeric(run)) %>%
-  inner_join(res_trueparams, by = 'run')
-
-# GAMs:
-res_gam <- lapply(results_F, getElement, 'gam_cor') %>%
-  bind_rows(.id = 'run') %>%
-  mutate(run = as.numeric(run)) %>%
-  inner_join(res_trueparams, by = 'run') %>%
-  as_tibble()
-
-# Granger causality:
-res_granger <- lapply(results_T, getElement, 'granger') %>%
-  bind_rows(.id = 'run') %>%
-  mutate(run = as.numeric(run)) %>%
-  inner_join(res_trueparams, by = 'run')
-
-# Transfer entropy:
-res_te <- lapply(results_T, getElement, 'transfer_entropy') %>%
-  bind_rows(.id = 'run') %>%
-  mutate(run = as.numeric(run)) %>%
-  inner_join(res_trueparams, by = 'run')
-
-# CCM:
-res_ccm <- lapply(results_F, getElement, 'CCM') %>%
-  bind_rows(.id = 'run') %>%
-  mutate(run = as.numeric(run)) %>%
-  ungroup() %>%
-  inner_join(res_trueparams, by = 'run')
-
-res_ccm_surr <- res_ccm %>%
-  filter(data == 'surr')
-res_ccm <- res_ccm %>%
-  filter(data == 'obs')
-
-# Clean up:
-rm(results_T, results_F, res_trueparams)
-
-# ------------------------------------------------------------------------------
-
-# Functions
-
-# Function to calculate accuracy for all values of theta_lambda/delta:
-calculate_accuracy_matrix <- function(df) {
-  
-  all_tl <- sort(unique(df$theta_lambda))
-  all_delta <- sort(unique(1 / df$delta))
-  
-  mat_correct <- matrix(nrow = length(all_tl), ncol = length(all_delta))
-  rownames(mat_correct) <- all_tl
-  colnames(mat_correct) <- all_delta
-  
-  for (tl in all_tl) {
-    
-    if (tl != 1) {
-      for (d in all_delta) {
-        
-        df_temp <- df %>% filter(theta_lambda == tl & delta == 1 / d)
-        mat_correct[rownames(mat_correct) == tl, colnames(mat_correct) == d] <- (df_temp %>% filter(int_est == int_true) %>% nrow()) / nrow(df_temp)
-        
-      }
-    } else {
-      
-      df_temp <- df %>% filter(theta_lambda == tl)
-      mat_correct[rownames(mat_correct) == tl, ] <- (df_temp %>% filter(int_est == int_true) %>% nrow()) / nrow(df_temp)
-      
-    }
-    
-  }
-  
-  mat_correct <- mat_correct %>%
-    as_tibble(rownames = 'strength') %>%
-    pivot_longer(-strength, names_to = 'duration', values_to = 'perc_correct') %>%
-    mutate(duration = factor(duration, levels = c(1, 4, 13)))
-  return(mat_correct)
-  
-}
-
-# Function to assess whether higher values of a method's metric are associated with stronger true interaction strenghts:
-calculate_assoc_true_strength <- function(df, method, met) {
-  
-  df <- df %>%
-    rename('metric' = all_of(met))
-  
-  res_temp <- NULL
-  
-  for (d in unique(df$delta)) {
-    
-    if (method %in% c('granger', 'te', 'ccm')) {
-      
-      cor_temp_overall <- df %>%
-        mutate(theta_lambda = if_else(theta_lambda < 1, 1 / theta_lambda, theta_lambda)) %>%
-        filter(delta == d | theta_lambda == 1) %>%
-        # filter(p_value < 0.05) %>%
-        cor.test(~ theta_lambda + metric, data = ., method = 'spearman')
-      
-    } else {
-      
-      cor_temp_overall <- df %>%
-        filter(delta == d | theta_lambda == 1) %>%
-        # filter(p_value < 0.05) %>%
-        cor.test(~ theta_lambda + metric, data = ., method = 'spearman')
-      
-    }
-    
-    cor_temp_neg <- df %>%
-      filter(theta_lambda < 1,
-             delta == d) %>%
-      filter(sig == 'yes') %>%
-      cor.test(~ theta_lambda + metric, data = ., method = 'spearman') # lm(data = ., metric ~ theta_lambda)
-    cor_temp_pos <- df %>%
-      filter(theta_lambda > 1,
-             delta == d) %>%
-      filter(sig == 'yes') %>%
-      cor.test(~ theta_lambda + metric, data = ., method = 'spearman')
-    
-    res_temp <- res_temp %>% bind_rows(rbind(c(d, cor_temp_overall$estimate, cor_temp_overall$p.value),
-                                             c(d, cor_temp_neg$estimate, cor_temp_neg$p.value),
-                                             c(d, cor_temp_pos$estimate, cor_temp_pos$p.value)) %>%
-                                         as_tibble() %>%
-                                         mutate(true_int = c('all', 'neg', 'pos')))
-    
-  }
-  
-  names(res_temp) <- c('delta', 'rho', 'p_value', 'true_int')
-  
-  if (method %in% c('granger', 'te', 'ccm')) {
-    
-    res_temp <- res_temp %>%
-      mutate(rho = if_else(true_int == 'neg', -1 * rho, rho))
-    
-  }
-  
-  return(res_temp)
-  
-}
-
-# Function to calculate Matthews correlation coefficient (MCC):
-mcc <- function(tp, tn, fp, fn) {
-  return((tp * tn - fp * fn) / sqrt(exp(log(tp + fp) + log(tp + fn) + log(tn + fp) + log(tn + fn))))
-}
-
-# ------------------------------------------------------------------------------
-
 # Process accuracy of results (correlation coefficients)
-
-# Determine significance/direction of true interaction:
-res_corr <- res_corr %>%
-  mutate(int_true = if_else(theta_lambda > 1, 'pos', 'neg'),
-         int_true = if_else(theta_lambda == 1, 'none', int_true))
-
-# Determine significance/direction of detected correlation:
-res_corr <- res_corr %>%
-  mutate(int_est = if_else(cor > 0, 'pos', 'neg'),
-         int_est = if_else(p_value < 0.05, int_est, 'none'))
 
 # Calculate sensitivity/specificity (overall):
 sens_pos <- (res_corr %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow()) / (res_corr %>% filter(int_true == 'pos') %>% nrow())
@@ -349,10 +118,6 @@ print('Specificity (Overall):')
 print(spec)
 
 # Calculate overall accuracy (weighted):
-weight_pos <- min(table(res_corr$int_true)) / (res_corr %>% filter(int_true == 'pos') %>% nrow())
-weight_neg <- min(table(res_corr$int_true)) / (res_corr %>% filter(int_true == 'neg') %>% nrow())
-weight_null <- min(table(res_corr$int_true)) / (res_corr %>% filter(int_true == 'none') %>% nrow())
-
 acc_weighted_corr <- (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null)
 
 print('Overall accuracy (weighted):')
@@ -397,24 +162,13 @@ p.corr.3 <- ggplot(data = acc_corr, aes(x = strength, y = duration, fill = perc_
 print(p.corr.1)
 # print(p.corr.2)
 # print(p.corr.3)
-rm(p.corr.1, p.corr.2, sens_pos, sens_neg, spec)#, res_corr)
+rm(p.corr.1, p.corr.2, sens_pos, sens_neg, spec, res_corr)
 # rm(p.corr.1, p.corr.2, p.corr.3, res_corr, acc_corr, assoc_corr)
 
 # ------------------------------------------------------------------------------
 
 # Process accuracy of results (GAMs)
 
-# Determine significance/direction of true interaction:
-res_gam <- res_gam %>%
-  mutate(int_true = if_else(theta_lambda > 1, 'pos', 'neg'),
-         int_true = if_else(theta_lambda == 1, 'none', int_true))
-
-# Determine significance/direction of detected correlation:
-res_gam <- res_gam %>%
-  mutate(int_est = if_else(cor > 0, 'pos', 'neg'),
-         int_est = if_else(CI_lower95 > 0 | CI_upper95 < 0, int_est, 'none')) %>%
-  mutate(int_est_confound = if_else(cor_confound > 0, 'pos', 'neg'),
-         int_est_confound = if_else(CI_lower95_confound > 0 | CI_upper95_confound < 0, int_est_confound, 'none'))
 
 # # CHECK ALTERNATIVE CONFIDENCE INTERVALS:
 # res_gam_check <- res_gam %>%
@@ -542,36 +296,16 @@ grid.arrange(p.gam.1.1, p.gam.1.2, ncol = 1)
 # grid.arrange(p.gam.2.1, p.gam.2.2, nrow = 1)
 
 rm(p.gam.1.1, p.gam.1.2, sens_pos, sens_pos_confound,
-   sens_neg, sens_neg_confound, spec, spec_confound)#, res_gam)
+   sens_neg, sens_neg_confound, spec, spec_confound, res_gam)
 # rm(p.gam.1.1, p.gam.1.2, p.gam.2.1, p.gam.2.2, res_gam, acc_gam, acc_gam_confound, assoc_gam, assoc_gam_confound)
 
 # ------------------------------------------------------------------------------
 
 # Process accuracy of results (Granger causality)
 
-# Determine significance/direction of true interaction:
-res_granger <- res_granger %>%
-  mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'),
-         int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
-         int_true_dir = if_else(theta_lambda < 1, 'neg', int_true_dir)) %>%
-  ungroup()
-
-# Determine significance/direction of detected correlation:
-res_granger <- res_granger %>%
-  mutate(int_est = if_else(ftest_p < 0.05, 'interaction', 'none'))
-
 # Check whether any datasets are not stationary:
 res_granger %>% filter(adf_p >= 0.05) %>% nrow() %>% print()
 res_granger %>% filter(kpss_p < 0.05) %>% nrow() %>% print()
-
-# Get results by direction, and by whether seasonality controlled for:
-res_granger_LIST <- vector('list', length = 4)
-names(res_granger_LIST) <- c('v1 -> v2 (No confounding)', 'v2 -> v1 (No confounding)', 'v1 -> v2 (Seasonality Controlled)', 'v2 -> v1 (Seasonality Controlled)')
-
-res_granger_LIST[[1]] <- res_granger %>% filter(direction == 'v1 -> v2', confounding == 'none')
-res_granger_LIST[[2]] <- res_granger %>% filter(direction == 'v2 -> v1', confounding == 'none')
-res_granger_LIST[[3]] <- res_granger %>% filter(direction == 'v1 -> v2', confounding == 'seasonal')
-res_granger_LIST[[4]] <- res_granger %>% filter(direction == 'v2 -> v1', confounding == 'seasonal')
 
 # Calculate sensitivity/specificity (overall):
 acc_weighted_granger <- vector('list', length = length(res_granger_LIST))
@@ -696,31 +430,6 @@ rm(p.granger.1.1, p.granger.1.2, p.granger.2.1, p.granger.2.2, res_granger, res_
 
 # Process accuracy of results (transfer entropy)
 
-# Determine significance/direction of true interaction:
-res_te <- res_te %>%
-  mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'),
-         int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
-         int_true_dir = if_else(theta_lambda < 1, 'neg', int_true_dir)) %>%
-  ungroup()
-
-# Determine significance/direction of detected correlation:
-res_te <- res_te %>%
-  mutate(int_est = if_else(p_value < 0.05, 'interaction', 'none'))
-
-# Get results by direction and lag:
-res_te_LIST <- vector('list', length = 8)
-names(res_te_LIST) <- c('v1 -> v2 (lag 1)', 'v1 -> v2 (lag 2)', 'v1 -> v2 (lag 4)', 'v1 -> v2 (lag 6)',
-                        'v2 -> v1 (lag 1)', 'v2 -> v1 (lag 2)', 'v2 -> v1 (lag 4)', 'v2 -> v1 (lag 6)')
-
-res_te_LIST[[1]] <- res_te %>% filter(direction == 'v1 -> v2' & lag == '1')
-res_te_LIST[[2]] <- res_te %>% filter(direction == 'v1 -> v2' & lag == '2')
-res_te_LIST[[3]] <- res_te %>% filter(direction == 'v1 -> v2' & lag == '4')
-res_te_LIST[[4]] <- res_te %>% filter(direction == 'v1 -> v2' & lag == '6')
-res_te_LIST[[5]] <- res_te %>% filter(direction == 'v2 -> v1' & lag == '1')
-res_te_LIST[[6]] <- res_te %>% filter(direction == 'v2 -> v1' & lag == '2')
-res_te_LIST[[7]] <- res_te %>% filter(direction == 'v2 -> v1' & lag == '4')
-res_te_LIST[[8]] <- res_te %>% filter(direction == 'v2 -> v1' & lag == '6')
-
 # Calculate sensitivity/specificity (overall):
 acc_weighted_te <- vector('list', length = length(res_te_LIST))
 names(acc_weighted_te) <- names(res_te_LIST)
@@ -763,22 +472,12 @@ for (i in 1:length(res_te_LIST)) {
 rm(i)
 
 # Calculate accuracy by true parameter values:
-acc_te_LIST <- vector('list', length = 8)
+acc_te_LIST <- vector('list', length = 2)
 names(acc_te_LIST) <- names(res_te_LIST)
 
 for (i in 1:length(acc_te_LIST)) {
   acc_te_LIST[[i]] <- calculate_accuracy_matrix(res_te_LIST[[i]])
 }
-
-# Keep only best-performing lag for each direction:
-best_v1xv2 <- acc_weighted_te[1:4] %>% bind_rows() %>% which.max() %>% names()
-best_v2xv1 <- acc_weighted_te[5:8] %>% bind_rows() %>% which.max() %>% names()
-
-res_te_LIST <- res_te_LIST[c(best_v1xv2, best_v2xv1)]
-acc_te_LIST <- acc_te_LIST[c(best_v1xv2, best_v2xv1)]
-acc_weighted_te <- acc_weighted_te[c(best_v1xv2, best_v2xv1)]
-
-rm(best_v1xv2, best_v2xv1)
 
 # Are higher values of te associated with higher true interaction strength?:
 assoc_te_LIST <- vector('list', length = 2)
@@ -821,50 +520,12 @@ p.te.2.2 <- ggplot(data = acc_te_LIST[[2]], aes(x = strength, y = duration, fill
   labs(title = paste0('Transfer Entropy (', names(acc_te_LIST)[2], ')'))
 # grid.arrange(p.te.2.1, p.te.2.2, ncol = 2)
 
-rm(p.te.1.1, p.te.1.2, res_te_LIST)#, res_te)
+rm(p.te.1.1, p.te.1.2, res_te_LIST, res_te)
 # rm(p.te.1.1, p.te.1.2, p.te.2.1, p.te.2.2, res_te, res_te_LIST, acc_te_LIST, assoc_te_LIST)
 
 # ------------------------------------------------------------------------------
 
 # Process accuracy of results (CCM)
-
-# Remove unneeded columns:
-res_ccm <- res_ccm %>%
-  group_by(run, .id, direction, theta_lambda, delta) %>%
-  select(run:direction, rho, MannK:p_surr, theta_lambda:delta) %>%
-  summarise(rho_mean = mean(rho), rho_max = rho[LibSize == max(LibSize)], MannK = unique(MannK), tp_opt = unique(tp_opt), max_cmc = unique(max_cmc), p_surr = unique(p_surr)) %>%
-  ungroup()
-
-# # Or instead use median rhos:
-# res_ccm <- res_ccm %>%
-#   group_by(run, .id, direction, theta_lambda, delta) %>%
-#   select(run:direction, rho_median, MannK:p_surr_alt, theta_lambda:delta) %>%
-#   summarise(rho_mean = mean(rho_median), rho_max = rho_median[LibSize == max(LibSize)], MannK = unique(MannK), tp_opt = unique(tp_opt), p_surr = unique(p_surr_alt)) %>%
-#   ungroup()
-# # very little difference in results
-
-# Determine significance/direction of true interaction:
-res_ccm <- res_ccm %>%
-  mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'),
-         int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
-         int_true_dir = if_else(theta_lambda < 1, 'neg', int_true_dir))
-
-# Determine significance of detected correlation:
-res_ccm <- res_ccm %>%
-  mutate(int_est_1 = if_else(p_surr < 0.05, 'interaction', 'none'), # method 1: check p-values based on surrogates
-         int_est_2 = if_else(MannK < 0.05 & max_cmc > 0, 'interaction', 'none'), # method 2: check convergence
-         int_est_3 = if_else(MannK < 0.05 & max_cmc > 0 & tp_opt < 0, 'interaction', 'none')) # method 3: check convergence + ideal tp negative
-
-# Get results by direction and method of significance calculation:
-res_ccm_LIST <- vector('list', length = 6)
-names(res_ccm_LIST) <- c('v1 -> v2 (Method 1)', 'v1 -> v2 (Method 2)', 'v1 -> v2 (Method 3)', 'v2 -> v1 (Method 1)', 'v2 -> v1 (Method 2)', 'v2 -> v1 (Method 3)')
-
-res_ccm_LIST[[1]] <- res_ccm %>% filter(direction == 'v1 -> v2') %>% select(-c(int_est_2, int_est_3)) %>% rename('int_est' = 'int_est_1')
-res_ccm_LIST[[2]] <- res_ccm %>% filter(direction == 'v1 -> v2') %>% select(-c(int_est_1, int_est_3)) %>% rename('int_est' = 'int_est_2')
-res_ccm_LIST[[3]] <- res_ccm %>% filter(direction == 'v1 -> v2') %>% select(-c(int_est_1, int_est_2)) %>% rename('int_est' = 'int_est_3')
-res_ccm_LIST[[4]] <- res_ccm %>% filter(direction == 'v2 -> v1') %>% select(-c(int_est_2, int_est_3)) %>% rename('int_est' = 'int_est_1')
-res_ccm_LIST[[5]] <- res_ccm %>% filter(direction == 'v2 -> v1') %>% select(-c(int_est_1, int_est_3)) %>% rename('int_est' = 'int_est_2')
-res_ccm_LIST[[6]] <- res_ccm %>% filter(direction == 'v2 -> v1') %>% select(-c(int_est_1, int_est_2)) %>% rename('int_est' = 'int_est_3')
 
 # Calculate sensitivity/specificity (overall):
 acc_weighted_ccm <- vector('list', length = length(res_ccm_LIST))
@@ -1024,7 +685,7 @@ p.ccm.3.6 <- ggplot(data = acc_ccm_LIST[[6]], aes(x = strength, y = duration, fi
 # grid.arrange(p.ccm.3.1, p.ccm.3.4, p.ccm.3.2, p.ccm.3.5, p.ccm.3.3, p.ccm.3.6, ncol = 2)
 
 rm(p.ccm.1.1, p.ccm.1.2, p.ccm.1.3, p.ccm.1.4, p.ccm.1.5, p.ccm.1.6, res_ccm_LIST,
-   weight_pos, weight_neg, weight_null)#, res_ccm)
+   weight_pos, weight_neg, weight_null, res_ccm)
 # rm(p.ccm.1.1, p.ccm.1.2, p.ccm.1.3, p.ccm.1.4, p.ccm.1.5, p.ccm.1.6,
 #    p.ccm.3.1, p.ccm.3.2, p.ccm.3.3, p.ccm.3.4, p.ccm.3.5, p.ccm.3.6,
 #    res_ccm, res_ccm_LIST, acc_ccm_LIST, assoc_ccm_LIST_mean, assoc_ccm_LIST_max)
