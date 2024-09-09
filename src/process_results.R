@@ -314,6 +314,11 @@ calculate_assoc_true_strength <- function(df, method, met) {
   
 }
 
+# Function to calculate Matthews correlation coefficient (MCC):
+mcc <- function(tp, tn, fp, fn) {
+  return((tp * tn - fp * fn) / sqrt(exp(log(tp + fp) + log(tp + fn) + log(tn + fp) + log(tn + fn))))
+}
+
 # ------------------------------------------------------------------------------
 
 # Process accuracy of results (correlation coefficients)
@@ -352,6 +357,15 @@ acc_weighted_corr <- (sens_pos * weight_pos + sens_neg * weight_neg + spec * wei
 
 print('Overall accuracy (weighted):')
 print(acc_weighted_corr)
+
+# Calculate Matthews correlation coefficient (MCC):
+tp <- res_corr %>% filter(int_true != 'none' & int_est != 'none') %>% nrow()
+tn <- res_corr %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()
+fp <- res_corr %>% filter(int_true == 'none' & int_est != 'none') %>% nrow()
+fn <- res_corr %>% filter(int_true != 'none' & int_est == 'none') %>% nrow()
+
+print('MCC:')
+print(mcc(tp, tn, fp, fn))
 
 # Calculate sensitivity/specificity (by true params):
 acc_corr <- calculate_accuracy_matrix(res_corr)
@@ -471,6 +485,21 @@ print('Overall accuracy (weighted):')
 print(acc_weighted_gam)
 print(acc_weighted_gam_confound)
 
+# Calculate Matthews correlation coefficient (MCC):
+tp <- res_gam %>% filter(int_true != 'none' & int_est != 'none') %>% nrow()
+tn <- res_gam %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()
+fp <- res_gam %>% filter(int_true == 'none' & int_est != 'none') %>% nrow()
+fn <- res_gam %>% filter(int_true != 'none' & int_est == 'none') %>% nrow()
+
+tp_confound <- res_gam %>% filter(int_true != 'none' & int_est_confound != 'none') %>% nrow()
+tn_confound <- res_gam %>% filter(int_true == 'none' & int_est_confound == 'none') %>% nrow()
+fp_confound <- res_gam %>% filter(int_true == 'none' & int_est_confound != 'none') %>% nrow()
+fn_confound <- res_gam %>% filter(int_true != 'none' & int_est_confound == 'none') %>% nrow()
+
+print('MCC:')
+print(mcc(tp, tn, fp, fn))
+print(mcc(tp_confound, tn_confound, fp_confound, fn_confound))
+
 # Calculate sensitivity/specificity (by true params):
 acc_gam <- calculate_accuracy_matrix(res_gam)
 acc_gam_confound <- calculate_accuracy_matrix(res_gam %>%
@@ -569,6 +598,15 @@ for (i in 1:length(res_granger_LIST)) {
   
   acc_weighted_granger[[i]] <- acc_weighted_temp
   rm(acc_weighted_temp, sens_pos, sens_neg, spec)
+  
+  # Calculate Matthews correlation coefficient (MCC):
+  tp <- res_granger_LIST[[i]] %>% filter(int_true != 'none' & int_est != 'none') %>% nrow()
+  tn <- res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()
+  fp <- res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est != 'none') %>% nrow()
+  fn <- res_granger_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'none') %>% nrow()
+  
+  print('MCC:')
+  print(mcc(tp, tn, fp, fn))
   
   print('-----------')
   
@@ -710,6 +748,15 @@ for (i in 1:length(res_te_LIST)) {
   acc_weighted_te[[i]] <- acc_weighted_temp
   rm(acc_weighted_temp, sens_pos, sens_neg, spec)
   
+  # Calculate Matthews correlation coefficient (MCC):
+  tp <- res_te_LIST[[i]] %>% filter(int_true != 'none' & int_est != 'none') %>% nrow()
+  tn <- res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()
+  fp <- res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est != 'none') %>% nrow()
+  fn <- res_te_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'none') %>% nrow()
+  
+  print('MCC:')
+  print(mcc(tp, tn, fp, fn))
+  
   print('-----------')
   
 }
@@ -845,6 +892,15 @@ for (i in 1:length(res_ccm_LIST)) {
   
   acc_weighted_ccm[[i]] <- acc_weighted_temp
   rm(acc_weighted_temp, sens_pos, sens_neg, spec)
+  
+  # Calculate Matthews correlation coefficient (MCC):
+  tp <- res_ccm_LIST[[i]] %>% filter(int_true != 'none' & int_est != 'none') %>% nrow()
+  tn <- res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()
+  fp <- res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est != 'none') %>% nrow()
+  fn <- res_ccm_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'none') %>% nrow()
+  
+  print('MCC:')
+  print(mcc(tp, tn, fp, fn))
   
   print('-----------')
   
