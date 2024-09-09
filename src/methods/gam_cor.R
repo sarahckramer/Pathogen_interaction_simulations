@@ -18,6 +18,13 @@ library(boot)
 
 gam_cor <- function(data){ 
   
+  # # log-transform data
+  # data <- data %>%
+  #   mutate(V1_obs = log(V1_obs),
+  #          V2_obs = log(V2_obs)) %>%
+  #   mutate(V1_obs = if_else(V1_obs == -Inf, -5, V1_obs),
+  #          V2_obs = if_else(V2_obs == -Inf, -5, V2_obs))
+  
   # GAM w/o confounding:
   
   # run gam model
