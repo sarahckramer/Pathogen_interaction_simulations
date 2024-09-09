@@ -831,8 +831,8 @@ rm(p.te.1.1, p.te.1.2, res_te_LIST)#, res_te)
 # Remove unneeded columns:
 res_ccm <- res_ccm %>%
   group_by(run, .id, direction, theta_lambda, delta) %>%
-  select(run:direction, rho, MannK:p_surr_alt, theta_lambda:delta) %>%
-  summarise(rho_mean = mean(rho), rho_max = rho[LibSize == max(LibSize)], MannK = unique(MannK), tp_opt = unique(tp_opt), p_surr = unique(p_surr_alt)) %>%
+  select(run:direction, rho, MannK:p_surr, theta_lambda:delta) %>%
+  summarise(rho_mean = mean(rho), rho_max = rho[LibSize == max(LibSize)], MannK = unique(MannK), tp_opt = unique(tp_opt), max_cmc = unique(max_cmc), p_surr = unique(p_surr)) %>%
   ungroup()
 
 # # Or instead use median rhos:
@@ -852,8 +852,8 @@ res_ccm <- res_ccm %>%
 # Determine significance of detected correlation:
 res_ccm <- res_ccm %>%
   mutate(int_est_1 = if_else(p_surr < 0.05, 'interaction', 'none'), # method 1: check p-values based on surrogates
-         int_est_2 = if_else(MannK < 0.05, 'interaction', 'none'), # method 2: check convergence
-         int_est_3 = if_else(MannK < 0.05 & tp_opt < 0, 'interaction', 'none')) # method 3: check convergence + ideal tp negative
+         int_est_2 = if_else(MannK < 0.05 & max_cmc > 0, 'interaction', 'none'), # method 2: check convergence
+         int_est_3 = if_else(MannK < 0.05 & max_cmc > 0 & tp_opt < 0, 'interaction', 'none')) # method 3: check convergence + ideal tp negative
 
 # Get results by direction and method of significance calculation:
 res_ccm_LIST <- vector('list', length = 6)
