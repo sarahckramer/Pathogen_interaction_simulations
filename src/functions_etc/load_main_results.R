@@ -224,20 +224,6 @@ best_v2xv1 <- acc_weighted_te[5:8] %>% bind_rows() %>% which.max() %>% names()
 res_te_LIST <- res_te_LIST[c(best_v1xv2, best_v2xv1)]
 
 # CCM:
-
-# CHECK USING MEDIANS INSTEAD:
-res_ccm_check <- res_ccm %>%
-  group_by(run, .id, direction, theta_lambda, delta) %>%
-  select(run:direction, rho_median, MannK:p_surr, theta_lambda:delta) %>%
-  summarise(rho_mean = mean(rho_median), rho_max = rho_median[LibSize == max(LibSize)], MannK = unique(MannK), tp_opt = unique(tp_opt), max_cmc = unique(max_cmc), p_surr = unique(p_surr)) %>%
-  ungroup()
-
-res_ccm_check <- res_ccm_check %>%
-  mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction')) %>%
-  mutate(int_est_1 = if_else(p_surr < 0.05, 'interaction', 'none'), # method 1: check p-values based on surrogates
-         int_est_3 = if_else(MannK < 0.05 & max_cmc > 0 & tp_opt < 0, 'interaction', 'none')) # method 3: check convergence + ideal tp negative
-# very little difference in results
-
 res_ccm <- res_ccm %>%
   group_by(run, .id, direction, theta_lambda, delta) %>%
   select(run:direction, rho, MannK:p_surr, theta_lambda:delta) %>%
