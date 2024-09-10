@@ -169,45 +169,55 @@ rm(p.corr.1, p.corr.2, sens_pos, sens_neg, spec, res_corr)
 
 # Process accuracy of results (GAMs)
 
+# CHECK NEW CONFIDENCE INTERVALS:
+res_gam %>%
+  select(run, .id, cor, CI_lower95, CI_upper95, cor_confound, CI_lower95_confound, CI_upper95_confound) %>%
+  mutate(cor_within = (cor > CI_lower95 & cor < CI_upper95),
+         cor_confound_within = (cor_confound > CI_lower95_confound & cor_confound < CI_upper95_confound)) %>%
+  summarise(cor_within = sum(cor_within),
+            cor_confound_within = sum(cor_confound_within))
 
-# # CHECK ALTERNATIVE CONFIDENCE INTERVALS:
-# res_gam_check <- res_gam %>%
-#   mutate(int_est_alt = if_else(cor > 0, 'pos', 'neg'),
-#          int_est_alt = if_else(CI_lower95_alt > 0 | CI_upper95_alt < 0, int_est_alt, 'none')) %>%
-#   mutate(int_est_confound_alt = if_else(cor_confound > 0, 'pos', 'neg'),
-#          int_est_confound_alt = if_else(CI_lower95_confound_alt > 0 | CI_upper95_confound_alt < 0, int_est_confound_alt, 'none'))
-# 
-# table(res_gam_check$int_true, res_gam_check$int_est)
-# table(res_gam_check$int_true, res_gam_check$int_est_alt)
-# # same accuracy; only one classification different
-# 
-# table(res_gam_check$int_true, res_gam_check$int_est_confound)
-# table(res_gam_check$int_true, res_gam_check$int_est_confound_alt)
-# # same
-# 
-# ggplot(data = res_gam_check) +
-#   geom_point(aes(x = .id, y = cor, col = theta_lambda)) +
-#   # geom_linerange(aes(x = .id, ymin = CI_lower95, ymax = CI_upper95), col = 'black', linewidth = 2) +
-#   geom_linerange(aes(x = .id, ymin = CI_lower95_alt, ymax = CI_upper95_alt), col = 'red', linewidth = 2) +
-#   facet_wrap(~ delta, ncol = 1) +
-#   theme_classic() +
-#   scale_color_viridis()
-# ggplot(data = res_gam_check) +
-#   geom_point(aes(x = .id, y = cor_confound, col = theta_lambda)) +
-#   # geom_linerange(aes(x = .id, ymin = CI_lower95_confound, ymax = CI_upper95_confound), col = 'black', linewidth = 2) +
-#   geom_linerange(aes(x = .id, ymin = CI_lower95_confound_alt, ymax = CI_upper95_confound_alt), col = 'red', linewidth = 2) +
-#   facet_wrap(~ delta, ncol = 1) +
-#   theme_classic() +
-#   scale_color_viridis()
-# # both types of CIs are very very narrow
-# 
-# res_gam_check %>%
-#   select(cor, CI_lower95_alt, CI_upper95_alt, cor_confound, CI_lower95_confound_alt, CI_upper95_confound_alt) %>%
-#   mutate(cor_within = (cor > CI_lower95_alt & cor < CI_upper95_alt),
-#          cor_confound_within = (cor_confound > CI_lower95_confound_alt & cor_confound < CI_upper95_confound_alt)) %>%
-#   summarise(cor_within = sum(cor_within),
-#             cor_confound_within = sum(cor_confound_within))
-# # 474 / 1600, 756 / 1600 are within the confidence intervals
+# CHECK RESULTS ON LOG-TRANSFORMED DATA:
+filelist_temp <- list.files(path = 'results/gam_log_transform/', full.names = TRUE)
+
+res_gam_log <- vector('list', length = length(filelist_temp))
+for (i in 1:length(filelist_temp)) {
+  res_gam_log[[i]] <- read_rds(filelist_temp[i])
+}
+rm(filelist_temp, i)
+
+res_gam_log <- bind_rows(res_gam_log) %>%
+  mutate(int_est = if_else(cor > 0, 'pos', 'neg'),
+         int_est = if_else(CI_lower95 > 0 | CI_upper95 < 0, int_est, 'none')) %>%
+  mutate(int_est_confound = if_else(cor_confound > 0, 'pos', 'neg'),
+         int_est_confound = if_else(CI_lower95_confound > 0 | CI_upper95_confound < 0, int_est_confound, 'none')) %>%
+  mutate(cor_within = (cor > CI_lower95 & cor < CI_upper95),
+         cor_confound_within = (cor_confound > CI_lower95_confound & cor_confound < CI_upper95_confound))
+
+summary(res_gam_log$cor_within)
+summary(res_gam_log$cor_confound_within)
+
+res_gam_check <- res_gam %>%
+  left_join(res_gam_log %>% select(run, .id, int_est:int_est_confound),
+            by = c('run', '.id'))
+
+table(res_gam_check$int_true, res_gam_check$int_est.x)
+table(res_gam_check$int_true, res_gam_check$int_est.y)
+
+table(res_gam_check$int_true, res_gam_check$int_est_confound.x)
+table(res_gam_check$int_true, res_gam_check$int_est_confound.y)
+
+sens_pos <- (res_gam_check %>% filter(int_true == 'pos' & int_est.y == 'pos') %>% nrow()) / (res_gam_check %>% filter(int_true == 'pos') %>% nrow())
+sens_neg <- (res_gam_check %>% filter(int_true == 'neg' & int_est.y == 'neg') %>% nrow()) / (res_gam_check %>% filter(int_true == 'neg') %>% nrow())
+sens_pos_confound <- (res_gam_check %>% filter(int_true == 'pos' & int_est_confound.y == 'pos') %>% nrow()) / (res_gam_check %>% filter(int_true == 'pos') %>% nrow())
+sens_neg_confound <- (res_gam_check %>% filter(int_true == 'neg' & int_est_confound.y == 'neg') %>% nrow()) / (res_gam_check %>% filter(int_true == 'neg') %>% nrow())
+spec <- (res_gam_check %>% filter(int_true == 'none' & int_est.y == 'none') %>% nrow()) / (res_gam_check %>% filter(int_true == 'none') %>% nrow())
+spec_confound <- (res_gam_check %>% filter(int_true == 'none' & int_est_confound.y == 'none') %>% nrow()) / (res_gam_check %>% filter(int_true == 'none') %>% nrow())
+
+print((sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null))
+print((sens_pos_confound * weight_pos + sens_neg_confound * weight_neg + spec_confound * weight_null) / (weight_pos + weight_neg + weight_null))
+
+rm(res_gam_log, res_gam_check)
 
 # Calculate sensitivity/specificity (overall):
 sens_pos <- (res_gam %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow()) / (res_gam %>% filter(int_true == 'pos') %>% nrow())
@@ -520,7 +530,7 @@ p.te.2.2 <- ggplot(data = acc_te_LIST[[2]], aes(x = strength, y = duration, fill
   labs(title = paste0('Transfer Entropy (', names(acc_te_LIST)[2], ')'))
 # grid.arrange(p.te.2.1, p.te.2.2, ncol = 2)
 
-rm(p.te.1.1, p.te.1.2, res_te_LIST, res_te)
+rm(p.te.1.1, p.te.1.2, res_te_LIST, res_te, best_v1xv2, best_v2xv1)
 # rm(p.te.1.1, p.te.1.2, p.te.2.1, p.te.2.2, res_te, res_te_LIST, acc_te_LIST, assoc_te_LIST)
 
 # ------------------------------------------------------------------------------
@@ -588,6 +598,26 @@ for (i in 1:length(assoc_ccm_LIST_max)) {
   assoc_ccm_LIST_max[[i]] <- calculate_assoc_true_strength(res_ccm_LIST[[i]], method = 'ccm', met = 'rho_max')
 }
 rm(i)
+
+# CHECK USING MEDIANS:
+res_ccm_LIST_check = assoc_ccm_LIST_max_check = vector('list', length = 4)
+
+res_ccm_LIST_check[[1]] <- res_ccm_check %>% filter(direction == 'v1 -> v2') %>% select(-int_est_3) %>% rename('int_est' = 'int_est_1')
+res_ccm_LIST_check[[2]] <- res_ccm_check %>% filter(direction == 'v1 -> v2') %>% select(-int_est_1) %>% rename('int_est' = 'int_est_3')
+res_ccm_LIST_check[[3]] <- res_ccm_check %>% filter(direction == 'v2 -> v1') %>% select(-int_est_3) %>% rename('int_est' = 'int_est_1')
+res_ccm_LIST_check[[4]] <- res_ccm_check %>% filter(direction == 'v2 -> v1') %>% select(-int_est_1) %>% rename('int_est' = 'int_est_3')
+
+res_ccm_LIST_check <- lapply(res_ccm_LIST_check, function(ix) {
+  ix %>% mutate(sig = if_else(int_est == 'interaction', 'yes', 'no'))
+})
+
+for (i in 1:length(assoc_ccm_LIST_max_check)) {
+  assoc_ccm_LIST_max_check[[i]] <- calculate_assoc_true_strength(res_ccm_LIST_check[[i]], method = 'ccm', met = 'rho_max')
+}
+rm(i)
+
+print(assoc_ccm_LIST_max[c(1, 3, 4, 6)] %>% bind_rows() %>% filter(rho > 0 & p_value < 0.05))
+print(assoc_ccm_LIST_max_check %>% bind_rows() %>% filter(rho > 0 & p_value < 0.05))
 
 # Check whether there are any places were surrogate rhos are very different from observed rho
 # (Could suggest that the surrogates are not representative of the null distribution accounting
