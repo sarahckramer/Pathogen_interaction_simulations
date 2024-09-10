@@ -163,7 +163,6 @@ print(p.corr.1)
 # print(p.corr.2)
 # print(p.corr.3)
 rm(p.corr.1, p.corr.2, sens_pos, sens_neg, spec, res_corr)
-# rm(p.corr.1, p.corr.2, p.corr.3, res_corr, acc_corr, assoc_corr)
 
 # ------------------------------------------------------------------------------
 
@@ -255,8 +254,8 @@ p.gam.2.2 <- ggplot(data = acc_gam_confound, aes(x = strength, y = duration, fil
 grid.arrange(p.gam.1.1, p.gam.1.2, ncol = 1)
 # grid.arrange(p.gam.2.1, p.gam.2.2, nrow = 1)
 
-rm(p.gam.1.1, p.gam.1.2, sens_pos, sens_pos_confound,
-   sens_neg, sens_neg_confound, spec, spec_confound, res_gam)
+rm(p.gam.1.1, p.gam.1.2, sens_pos, sens_pos_confound, sens_neg, sens_neg_confound,
+   spec, spec_confound, tp_confound, tn_confound, fp_confound, fn_confound, res_gam)
 # rm(p.gam.1.1, p.gam.1.2, p.gam.2.1, p.gam.2.2, res_gam, acc_gam, acc_gam_confound, assoc_gam, assoc_gam_confound)
 
 # ------------------------------------------------------------------------------
@@ -645,7 +644,7 @@ p.ccm.3.6 <- ggplot(data = acc_ccm_LIST[[6]], aes(x = strength, y = duration, fi
 # grid.arrange(p.ccm.3.1, p.ccm.3.4, p.ccm.3.2, p.ccm.3.5, p.ccm.3.3, p.ccm.3.6, ncol = 2)
 
 rm(p.ccm.1.1, p.ccm.1.2, p.ccm.1.3, p.ccm.1.4, p.ccm.1.5, p.ccm.1.6, res_ccm_LIST,
-   weight_pos, weight_neg, weight_null, res_ccm)
+   weight_pos, weight_neg, weight_null, tp, tn, fp, fn, res_ccm)
 # rm(p.ccm.1.1, p.ccm.1.2, p.ccm.1.3, p.ccm.1.4, p.ccm.1.5, p.ccm.1.6,
 #    p.ccm.3.1, p.ccm.3.2, p.ccm.3.3, p.ccm.3.4, p.ccm.3.5, p.ccm.3.6,
 #    res_ccm, res_ccm_LIST, acc_ccm_LIST, assoc_ccm_LIST_mean, assoc_ccm_LIST_max)
@@ -748,7 +747,7 @@ p.comb.3 <- ggplot(res_assoc, aes(x = x_use, y = rho, group = method, shape = me
   scale_color_manual(values = c('#ff7f00', '#e31a1c', '#fb9a99', '#1f78b4', '#a6cee3', '#6a3d9a', '#33a02c', '#b2df8a')) +
   labs(x = 'Interaction Duration', y = "Spearman's Rho", shape = 'Method', col = 'Method')
 print(p.comb.3)
-rm(assoc_corr, assoc_gam, assoc_gam_confound, assoc_granger_LIST, assoc_te_LIST, assoc_ccm_LIST_mean, assoc_ccm_LIST_max)
+rm(assoc_corr, assoc_gam, assoc_gam_confound, assoc_granger_LIST, assoc_te_LIST, assoc_ccm_LIST_max)
 
 # Calculate measure of overall accuracy, weighted by number of simulations per true parameter set:
 # Note that correlation, GAMs, and gradient boosting will have some disadvantage here, since it matters
