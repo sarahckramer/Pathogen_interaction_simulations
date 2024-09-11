@@ -40,10 +40,12 @@ print(detectCores())
 # Get cluster environmental variables:
 jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size
 run_local <- as.logical(Sys.getenv("RUNLOCAL")); print(run_local)
+sens <- as.character(Sys.getenv("SENS")); print(sens)
 
 #---- run local or on cluster? ----#
 if (is.na(run_local)) {
   run_local <- TRUE
+  sens <- 'main'
   
   if (exists('jobid_use')) {
     jobid <- jobid_use
@@ -55,7 +57,12 @@ if (is.na(run_local)) {
 }
 
 #---- set parameters and generate synthetic data ----#
-source('src/functions_etc/generate_data.R')
+if (sens == 'wide') {
+  source('src/classification/generate_new_test_data.R')
+  n_sim <- length(unique(dat$.id))
+} else {
+  source('src/functions_etc/generate_data.R')
+}
 
 #---- set up list to store all results ----#
 results <- vector(mode = 'list', length = 7)
