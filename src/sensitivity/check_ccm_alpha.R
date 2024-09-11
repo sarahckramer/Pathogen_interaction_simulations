@@ -227,33 +227,33 @@ dat_surr_LIST <- lapply(dat_LIST, function(ix) {
 # Visualize "observed" data and surrogates:
 p_obs_V1_1 <- ggplot() +
   geom_line(data = dat_LIST[[1]], aes(x = time - 104, y = V1_obs)) +
-  geom_point(data = dat_LIST[[1]], aes(x = time - 104, y = V1_obs)) +
+  geom_point(data = dat_LIST[[1]], aes(x = time - 104, y = V1_obs), size = 0.5) +
   theme_classic() +
   labs(x = 'Time (Weeks)', y = 'V1_obs')
 p_obs_V1_2 <- ggplot() +
   geom_line(data = dat_LIST[[2]], aes(x = time - 104, y = V1_obs)) +
-  geom_point(data = dat_LIST[[2]], aes(x = time - 104, y = V1_obs)) +
+  geom_point(data = dat_LIST[[2]], aes(x = time - 104, y = V1_obs), size = 0.5) +
   theme_classic() +
   labs(x = 'Time (Weeks)', y = 'V1_obs')
 p_obs_V1_3 <- ggplot() +
   geom_line(data = dat_LIST[[3]], aes(x = time - 104, y = V1_obs)) +
-  geom_point(data = dat_LIST[[3]], aes(x = time - 104, y = V1_obs)) +
+  geom_point(data = dat_LIST[[3]], aes(x = time - 104, y = V1_obs), size = 0.5) +
   theme_classic() +
   labs(x = 'Time (Weeks)', y = 'V1_obs')
 
 p_obs_V2_1 <- ggplot() +
   geom_line(data = dat_LIST[[1]], aes(x = time - 104, y = V2_obs)) +
-  geom_point(data = dat_LIST[[1]], aes(x = time - 104, y = V2_obs)) +
+  geom_point(data = dat_LIST[[1]], aes(x = time - 104, y = V2_obs), size = 0.5) +
   theme_classic() +
   labs(x = 'Time (Weeks)', y = 'V2_obs')
 p_obs_V2_2 <- ggplot() +
   geom_line(data = dat_LIST[[2]], aes(x = time - 104, y = V2_obs)) +
-  geom_point(data = dat_LIST[[2]], aes(x = time - 104, y = V2_obs)) +
+  geom_point(data = dat_LIST[[2]], aes(x = time - 104, y = V2_obs), size = 0.5) +
   theme_classic() +
   labs(x = 'Time (Weeks)', y = 'V2_obs')
 p_obs_V2_3 <- ggplot() +
   geom_line(data = dat_LIST[[3]], aes(x = time - 104, y = V2_obs)) +
-  geom_point(data = dat_LIST[[3]], aes(x = time - 104, y = V2_obs)) +
+  geom_point(data = dat_LIST[[3]], aes(x = time - 104, y = V2_obs), size = 0.5) +
   theme_classic() +
   labs(x = 'Time (Weeks)', y = 'V2_obs')
 
