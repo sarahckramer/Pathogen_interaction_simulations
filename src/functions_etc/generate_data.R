@@ -68,7 +68,7 @@ for (i in 1:n_sim) {
   
 }
 
-rm(mu_Imloss, sd_Imloss)
+rm(i, mu_Imloss, sd_Imloss, t_si, w_delta_i)
 
 #---- generate range of values for Ri1/Ri2/w2/R02 ----#
 r_eff_vals <- sobol_design(lower = setNames(c(1.05, 1.6, 1/(52.25 * 1.0)), c('Ri1', 'Ri2', 'w2')),
@@ -107,12 +107,15 @@ true_params['w2', ] <- r_eff_vals[, 3]
 true_params[str_detect(rownames(true_params), 't_si_'), ] <- t_si_mat
 true_params[str_detect(rownames(true_params), 'w_delta_i_'), ] <- w_delta_i_mat
 
+rm(int_params, r_eff_vals, t_si_mat, w_delta_i_mat, n_surge)
+
 # ---------------------------------------------------------------------------------------------------------------------
 
 # Create model and synthetic data
 
 #---- create pomp model object ----#
 resp_mod <- create_SEITRxSEITR_mod(tot_weeks, true_params_init, debug_bool = debug_bool)
+rm(tot_weeks, true_params_init)
 
 #---- test pomp model ----#
 check_transformations(resp_mod) # check parameter transformations
@@ -120,6 +123,7 @@ expect_true(all.equal(sum(rinit(resp_mod)), as.numeric(coef(resp_mod, 'N')))) # 
 check_correct_N_CONST(resp_mod, unname(coef(resp_mod, 'N'))) # check constant population size
 p_indep <- check_independent_dynamics(resp_mod) # check for independent dynamics
 if (debug_bool) print(p_indep)
+rm(p_indep)
 
 #---- simulate synthetic data ----#
 tic <- Sys.time()
@@ -128,6 +132,7 @@ toc <- Sys.time()
 etime <- toc - tic
 units(etime) <- 'secs'
 print(etime)
+rm(tic, toc, etime)
 
 if (debug_bool) {
   resp_mod@data <- dat %>%
@@ -136,6 +141,7 @@ if (debug_bool) {
     t()
   ll <- logLik(traj_objfun(data = resp_mod)) # check measurement density model
   print(ll)
+  rm(ll)
 }
 
 dat <- dat %>%
@@ -241,6 +247,7 @@ if (debug_bool) {
     facet_wrap(~ name, scales = 'free_x', nrow = 1) +
     theme_classic()
   grid.arrange(p_ar1, p_ar2, ncol = 1)
+  rm(attack_rates, p_ar1, p_ar2)
   
   #---- check relative peak timing of flu vs. rsv ----#
   rsv_first <- dat %>%
@@ -265,5 +272,9 @@ if (debug_bool) {
     geom_violin(fill = 'gray90') +
     facet_wrap(~ name, scales = 'free_y') +
     theme_classic()
+  rm(params_df, rsv_first, season_breaks)
   
 }
+
+# Clean up:
+rm(true_int_params, debug_bool)
