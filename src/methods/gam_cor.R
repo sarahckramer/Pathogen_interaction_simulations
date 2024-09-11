@@ -26,7 +26,7 @@ gam_cor <- function(data){
                  data = data)
   
   # extract model residuals
-  orig_resid <- residuals(mvn_mod)
+  orig_resid <- residuals(mvn_mod, type = 'response')
   
   # pull out the covariance matrix and then calculate the correlation matrix. 
   # output: 2 x 2 symmetric matrix
@@ -47,7 +47,7 @@ gam_cor <- function(data){
                           data = data)
   
   # extract model residuals
-  orig_resid_confound <- residuals(mvn_mod_confound)
+  orig_resid_confound <- residuals(mvn_mod_confound, type = 'response')
   
   # pull out the covariance matrix and then calculate the correlation matrix. 
   # output: 2 x 2 symmetric matrix
@@ -58,8 +58,7 @@ gam_cor <- function(data){
   
   # estimate confidence interval for elements of correlation matrix
   # using block bootstrapping of the residuals
-  R <- 100 # number of bootstrap replicates to do 
-  boot_res <- NULL # initialising vector to save results to
+  R <- 100 # number of bootstrap replicates to do
   
   # creating function to run in the tsboot function 
   boot_func <- function(tseries, orig_data, var_model, var_model_confound) {
@@ -67,26 +66,30 @@ gam_cor <- function(data){
     # generating new simulated data not accounting for confounding
     bootstrap_residuals <- data.frame(tseries[, c(1:2)])
     names(bootstrap_residuals) <- c("V1_obs", "V2_obs")
-    bootstrap_data_v1 <- as.vector(orig_data$V1_obs - residuals(var_model)[,1] + bootstrap_residuals$V1_obs)
-    bootstrap_data_v2 <- as.vector(orig_data$V2_obs - residuals(var_model)[,2] + bootstrap_residuals$V2_obs)
-
+    bootstrap_data_v1 <- as.vector(orig_data$V1_obs - residuals(var_model, type = 'response')[,1] + bootstrap_residuals$V1_obs)
+    bootstrap_data_v2 <- as.vector(orig_data$V2_obs - residuals(var_model, type = 'response')[,2] + bootstrap_residuals$V2_obs)
+    
     # generating new simulated data accounting for confounding
     bootstrap_residuals_confound <- data.frame(tseries[, c(3:4)])
     names(bootstrap_residuals_confound) <- c("V1_obs", "V2_obs")
-    bootstrap_data_v1_confound <- as.vector(orig_data$V1_obs - residuals(var_model_confound)[,1] + bootstrap_residuals_confound$V1_obs)
-    bootstrap_data_v2_confound <- as.vector(orig_data$V2_obs - residuals(var_model_confound)[,2] + bootstrap_residuals_confound$V2_obs)
+    bootstrap_data_v1_confound <- as.vector(orig_data$V1_obs - residuals(var_model_confound, type = 'response')[,1] + bootstrap_residuals_confound$V1_obs)
+    bootstrap_data_v2_confound <- as.vector(orig_data$V2_obs - residuals(var_model_confound, type = 'response')[,2] + bootstrap_residuals_confound$V2_obs)
     
     # making the dataframes
     boot_data <- orig_data %>%
       dplyr::select(time) %>%
       mutate(V1_obs = bootstrap_data_v1,
-             V2_obs = bootstrap_data_v2)
+             V2_obs = bootstrap_data_v2)# %>%
+      # mutate(V1_obs = if_else(V1_obs < 0, 0, V1_obs),
+      #        V2_obs = if_else(V2_obs < 0, 0, V2_obs))
     
     # confounding dataframe
     boot_data_confound <- orig_data %>%
       dplyr::select(time) %>%
       mutate(V1_obs = bootstrap_data_v1_confound,
-             V2_obs = bootstrap_data_v2_confound)
+             V2_obs = bootstrap_data_v2_confound)# %>%
+      # mutate(V1_obs = if_else(V1_obs < 0, 0, V1_obs),
+      #        V2_obs = if_else(V2_obs < 0, 0, V2_obs))
     
     # calculating seasonal component
     boot_data_confound <- boot_data_confound %>%
@@ -122,22 +125,21 @@ gam_cor <- function(data){
   
   # do the block resampling with 4 week size blocks
   boot_out <- tsboot(tseries = cbind(orig_resid, orig_resid_confound), statistic = boot_func, R = R, sim = "fixed",
-                     l = 4, orig_data = data, var_model = mvn_mod,  var_model_confound = mvn_mod_confound)
+                     l = 10, orig_data = data, var_model = mvn_mod, var_model_confound = mvn_mod_confound)
   
   # check out the correlation bootstrap distribution 
   boot_corr <- data.frame(boot_out$t)
   names(boot_corr) <- c("cor", "cor_confound")
   
   # get 95% CIs 
-  # standard approach assuming normality of the sampling dist
   
   # no confounding 
-  CI_lower95 <-  corr_mat[2, 1] - 1.96 * sd(boot_corr$cor)
-  CI_upper95 <-  corr_mat[2, 1] + 1.96 * sd(boot_corr$cor)
+  CI_lower95 <- quantile(boot_corr$cor, p = 0.025) %>% unname()
+  CI_upper95 <- quantile(boot_corr$cor, p = 0.975) %>% unname()
   
   # confounding
-  CI_lower95_confound <-  corr_mat_confound[2, 1] - 1.96 * sd(boot_corr$cor_confound)
-  CI_upper95_confound <-  corr_mat_confound[2, 1] + 1.96 * sd(boot_corr$cor_confound)
+  CI_lower95_confound <- quantile(boot_corr$cor_confound, p = 0.025) %>% unname()
+  CI_upper95_confound <- quantile(boot_corr$cor_confound, p = 0.975) %>% unname()
   
   # summarise results to output
   res <- data.frame(cbind(cor = corr_mat[2, 1], CI_lower95 = CI_lower95, CI_upper95 = CI_upper95,
