@@ -152,7 +152,7 @@ for (int_set in 1:16) {
   # Loop through synthetic datasets:
   for (i in seq_along(ids_to_fit)) {
     data_id <- ids_to_fit[i]
-    pat_temp <- paste(int_set, data_id, sep = '_')
+    pat_temp <- paste0('_', int_set, '_', data_id, '_')
     
     res_list_TEMP[[i]] <- load_and_format_results(list.files(path = res_dir, pattern = pat_temp, full.names = TRUE), get_top_5_perc = TRUE) %>%
       mutate(int_set = int_set, .id = data_id, .before = 'Ri1')
