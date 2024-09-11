@@ -140,7 +140,7 @@ rm(i, data_files, where_run)
 # Load and process results (round 1)
 
 # Read in results:
-res_dir <- 'results/trajectory_matching/round_1/'
+res_dir <- 'results/trajectory_matching/round1/'
 
 # Loop through interaction parameter sets:
 ids_to_fit <- ids_to_fit[1:5] # TEMPORARY

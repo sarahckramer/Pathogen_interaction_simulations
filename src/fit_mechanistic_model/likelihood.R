@@ -43,7 +43,7 @@ time_max <- 23.75 # Maximal execution time (in hours)
 # Get model and data
 
 # Create model and generate synthetic data:
-source('src/generate_data.R')
+source('src/functions_etc/generate_data.R')
 
 # Select a random subset of generated datasets:
 set.seed(93859)
