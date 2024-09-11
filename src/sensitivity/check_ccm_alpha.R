@@ -318,8 +318,6 @@ plot(p_surr_3)
 rm(dat_LIST, dat_surr_LIST, p_surr_1, p_surr_2, p_surr_3, p_obs_V1_1, p_obs_V1_2, p_obs_V1_3, p_obs_V2_1,
    p_obs_V2_2, p_obs_V2_3, p_surr_V1_1, p_surr_V1_2, p_surr_V1_3, p_surr_V2_1, p_surr_V2_2, p_surr_V2_3)
 
-# for flu,  smaller value (5-10) is probably fine, as this already adds quite a lot of noise; for RSV, there is a much stronger signal, so a higher value of alpha (~30) might be better
-
 # ------------------------------------------------------------------------------
 
 # Compare results using different values of alpha
@@ -344,9 +342,6 @@ p1_2 <- res_LIST %>%
 print(p1_1)
 print(p1_2)
 rm(p1_1, p1_2)
-
-# in general, p-values are lower for higher values of alpha - in other words, high alpha means more likely to be significant
-# additionally, there are some runs for which all p-values are pretty much the same - this happens more with positive or short-lived interactions
 
 # Calculate overall sensitivity, specificity, weighted accuracy, and MCC:
 res_acc <- lapply(1:length(res_LIST), function(ix) {
@@ -397,9 +392,6 @@ p2 <- ggplot(data = res_acc %>%
   labs(x = 'alpha', y = 'Value', col = '') +
   scale_color_brewer(palette = 'Set1')
 
-# higher alpha leads to better sens_neg, but worse spec and acc_weight; little impact on mcc or sens_pos; method_3 same for all since doesn't rely on surrogates
-# method_1 closest to method_3 when alpha = 0
-
 # Calculate accuracy by interaction parameter values:
 acc_by_param <- lapply(1:length(res_LIST), function(ix) {
   res_LIST[[ix]] %>%
@@ -416,8 +408,6 @@ p3 <- ggplot(data = acc_by_param, aes(x = strength, y = duration, fill = perc_co
   scale_fill_viridis(option = 'G', limits = c(0, 1))
 grid.arrange(p2, p3, ncol = 1)
 rm(p2, p3)
-
-# again, increased alpha leads to higher sensitivity but lower specificity
 
 dev.off()
 
