@@ -301,15 +301,6 @@ p_surr_V2_3 <- ggplot(data = dat_surr_LIST[[3]]) +
   labs(x = 'Time (Weeks)', y = 'V2_obs') +
   scale_color_viridis()
 
-# p_surr_1 <- arrangeGrob(arrangeGrob(p_obs_V1_1, p_surr_V1_1, ncol = 1, heights = c(1, 5)),
-#                         arrangeGrob(p_obs_V1_2, p_surr_V1_2, ncol = 1, heights = c(1, 5)),
-#                         arrangeGrob(p_obs_V1_3, p_surr_V1_3, ncol = 1, heights = c(1, 5)),
-#                         ncol = 3)
-# p_surr_2 <- arrangeGrob(arrangeGrob(p_obs_V2_1, p_surr_V2_1, ncol = 1, heights = c(1, 5)),
-#                         arrangeGrob(p_obs_V2_2, p_surr_V2_2, ncol = 1, heights = c(1, 5)),
-#                         arrangeGrob(p_obs_V2_3, p_surr_V2_3, ncol = 1, heights = c(1, 5)),
-#                         ncol = 3)
-
 p_surr_1 <- arrangeGrob(arrangeGrob(p_obs_V1_1, p_surr_V1_1, ncol = 1, heights = c(1, 5)),
                         arrangeGrob(p_obs_V2_1, p_surr_V2_1, ncol = 1, heights = c(1, 5)),
                         ncol = 2)
