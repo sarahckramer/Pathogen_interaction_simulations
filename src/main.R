@@ -55,7 +55,7 @@ if (is.na(run_local)) {
 }
 
 #---- set parameters and generate synthetic data ----#
-source('src/generate_data.R')
+source('src/functions_etc/generate_data.R')
 
 #---- set up list to store all results ----#
 results <- vector(mode = 'list', length = 7)
