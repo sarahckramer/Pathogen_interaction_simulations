@@ -14,6 +14,9 @@ library(viridis)
 # Read in functions:
 source('src/functions_etc/fxns_process_results.R')
 
+# Save plots:
+pdf('results/plots/sens_ccm_alpha.pdf', width = 15, height = 8)
+
 # ------------------------------------------------------------------------------
 
 # Read in all results
@@ -23,7 +26,7 @@ source('src/functions_etc/load_main_results.R')
 
 # Clean up unneeded results:
 rm(res_corr, res_gam, res_granger, res_granger_LIST, res_te, res_te_LIST,
-   acc_weighted_te, best_v1xv2, best_v2xv1, res_ccm_surr, res_ccm_LIST)
+   acc_weighted_te, best_v1xv2, best_v2xv1, res_ccm_LIST)
 
 # Read in results using various values for alpha (0, 10, 30, 50):
 res_filenames_alpha0 <- list.files(path = 'results/ccm_alpha_sens/', pattern = '_0.rds', full.names = TRUE)
@@ -72,6 +75,11 @@ sens_res_LIST <- lapply(sens_res_LIST, function(ix) {
   
 })
 
+# Get surrogate "data":
+sens_res_surr_LIST <- lapply(sens_res_LIST, function(ix) {
+  ix %>% filter(data == 'surr')
+})
+
 # Get only results using "observed" data:
 sens_res_LIST <- lapply(sens_res_LIST, function(ix) {
   ix %>% filter(data == 'obs')
@@ -99,6 +107,50 @@ sens_res_LIST <- lapply(sens_res_LIST, function(ix) {
            int_est_3 = if_else(MannK < 0.05 & max_cmc > 0 & tp_opt < 0, 'interaction', 'none')) # method 3: check convergence + ideal tp negative
   
 })
+
+# Compare plots of surrogate data:
+p.ccm.surr_1 <- res_ccm_surr %>%
+  filter(theta_lambda == 0.25) %>%
+  select(run:.id, direction:rho_ci_upper, theta_lambda:delta) %>%
+  inner_join(res_ccm %>% select(run:direction, rho_mean:rho_max, p_surr:int_est_1),
+             by = c('run', '.id', 'direction')) %>%
+  ggplot() +
+  geom_violin(aes(x = .id, y = rho, group = paste(.id, direction), fill = direction), alpha = 0.1) +
+  geom_point(aes(x = .id, y = rho_max, group = direction, color = direction)) +
+  theme_classic() +
+  theme(legend.position = 'none') +
+  facet_wrap(~ delta, scales = 'free', ncol = 1) +
+  labs(title = 'alpha = 20')
+
+p.ccm.surr_2 <- sens_res_surr_LIST[[1]] %>%
+  filter(theta_lambda == 0.25) %>%
+  select(run:.id, direction:rho_ci_upper, theta_lambda:delta) %>%
+  inner_join(sens_res_LIST[[1]] %>% select(run:direction, rho_mean:rho_max, p_surr:int_est_1),
+             by = c('run', '.id', 'direction')) %>%
+  ggplot() +
+  geom_violin(aes(x = .id, y = rho, group = paste(.id, direction), fill = direction), alpha = 0.1) +
+  geom_point(aes(x = .id, y = rho_max, group = direction, color = direction)) +
+  theme_classic() +
+  theme(legend.position = 'none') +
+  facet_wrap(~ delta, scales = 'free', ncol = 1) +
+  labs(title = 'alpha = 0')
+
+p.ccm.surr_3 <- sens_res_surr_LIST[[4]] %>%
+  filter(theta_lambda == 0.25) %>%
+  select(run:.id, direction:rho_ci_upper, theta_lambda:delta) %>%
+  inner_join(sens_res_LIST[[4]] %>% select(run:direction, rho_mean:rho_max, p_surr:int_est_1),
+             by = c('run', '.id', 'direction')) %>%
+  ggplot() +
+  geom_violin(aes(x = .id, y = rho, group = paste(.id, direction), fill = direction), alpha = 0.1) +
+  geom_point(aes(x = .id, y = rho_max, group = direction, color = direction)) +
+  theme_classic() +
+  theme(legend.position = 'none') +
+  facet_wrap(~ delta, scales = 'free', ncol = 1) +
+  labs(title = 'alpha = 50')
+
+grid.arrange(p.ccm.surr_1, p.ccm.surr_2, p.ccm.surr_3, nrow = 1)
+
+rm(res_ccm_surr, sens_res_surr_LIST, p.ccm.surr_1, p.ccm.surr_2, p.ccm.surr_3)
 
 # Keep only relevant columns:
 sens_res_LIST <- lapply(1:length(sens_res_LIST), function(ix) {
@@ -267,9 +319,6 @@ p_surr_2 <- arrangeGrob(arrangeGrob(p_obs_V1_2, p_surr_V1_2, ncol = 1, heights =
 p_surr_3 <- arrangeGrob(arrangeGrob(p_obs_V1_3, p_surr_V1_3, ncol = 1, heights = c(1, 5)),
                         arrangeGrob(p_obs_V2_3, p_surr_V2_3, ncol = 1, heights = c(1, 5)),
                         ncol = 2)
-
-# Save plots:
-pdf('results/plots/sens_ccm_alpha.pdf', width = 15, height = 8)
 
 plot(p_surr_1)
 plot(p_surr_2)
