@@ -148,7 +148,7 @@ p.ccm.surr_3 <- sens_res_surr_LIST[[4]] %>%
   facet_wrap(~ delta, scales = 'free', ncol = 1) +
   labs(title = 'alpha = 50')
 
-grid.arrange(p.ccm.surr_1, p.ccm.surr_2, p.ccm.surr_3, nrow = 1)
+grid.arrange(p.ccm.surr_2, p.ccm.surr_1, p.ccm.surr_3, nrow = 1)
 
 rm(res_ccm_surr, sens_res_surr_LIST, p.ccm.surr_1, p.ccm.surr_2, p.ccm.surr_3)
 

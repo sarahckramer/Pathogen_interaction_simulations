@@ -18,7 +18,7 @@ source('src/functions_etc/fxns_process_results.R')
 
 # Open pdf to save plots:
 date <- format(Sys.Date(), '%d%m%y')
-# pdf(file = paste0('results/plots/plot_accuracy_by_method_', date, '_UPDATED.pdf'),
+# pdf(file = paste0('results/plots/plot_accuracy_by_method_', date, '.pdf'),
 #     width = 16, height = 12)
 
 # ------------------------------------------------------------------------------
