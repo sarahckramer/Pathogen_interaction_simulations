@@ -344,28 +344,35 @@ print(p1_2)
 rm(p1_1, p1_2)
 
 # Calculate overall sensitivity, specificity, weighted accuracy, and MCC:
-res_acc <- lapply(1:length(res_LIST), function(ix) {
+res_v1xv2 <- lapply(res_LIST, function(ix) {
+  ix %>% filter(direction == 'v1 -> v2')
+})
+res_v2xv1 <- lapply(res_LIST, function(ix) {
+  ix %>% filter(direction == 'v2 -> v1')
+})
+
+res_acc_v1xv2 <- lapply(1:length(res_v1xv2), function(ix) {
   
-  sens_pos_1 <- (res_LIST[[ix]] %>% filter(int_true_dir == 'pos' & int_est_1 == 'interaction') %>% nrow()) / (res_LIST[[ix]] %>% filter(int_true_dir == 'pos') %>% nrow())
-  sens_neg_1 <- (res_LIST[[ix]] %>% filter(int_true_dir == 'neg' & int_est_1 == 'interaction') %>% nrow()) / (res_LIST[[ix]] %>% filter(int_true_dir == 'neg') %>% nrow())
-  spec_1 <- (res_LIST[[ix]] %>% filter(int_true == 'none' & int_est_1 == 'none') %>% nrow()) / (res_LIST[[ix]] %>% filter(int_true == 'none') %>% nrow())
+  sens_pos_1 <- (res_v1xv2[[ix]] %>% filter(int_true_dir == 'pos' & int_est_1 == 'interaction') %>% nrow()) / (res_v1xv2[[ix]] %>% filter(int_true_dir == 'pos') %>% nrow())
+  sens_neg_1 <- (res_v1xv2[[ix]] %>% filter(int_true_dir == 'neg' & int_est_1 == 'interaction') %>% nrow()) / (res_v1xv2[[ix]] %>% filter(int_true_dir == 'neg') %>% nrow())
+  spec_1 <- (res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_1 == 'none') %>% nrow()) / (res_v1xv2[[ix]] %>% filter(int_true == 'none') %>% nrow())
   
-  sens_pos_3 <- (res_LIST[[ix]] %>% filter(int_true_dir == 'pos' & int_est_3 == 'interaction') %>% nrow()) / (res_LIST[[ix]] %>% filter(int_true_dir == 'pos') %>% nrow())
-  sens_neg_3 <- (res_LIST[[ix]] %>% filter(int_true_dir == 'neg' & int_est_3 == 'interaction') %>% nrow()) / (res_LIST[[ix]] %>% filter(int_true_dir == 'neg') %>% nrow())
-  spec_3 <- (res_LIST[[ix]] %>% filter(int_true == 'none' & int_est_3 == 'none') %>% nrow()) / (res_LIST[[ix]] %>% filter(int_true == 'none') %>% nrow())
+  sens_pos_3 <- (res_v1xv2[[ix]] %>% filter(int_true_dir == 'pos' & int_est_3 == 'interaction') %>% nrow()) / (res_v1xv2[[ix]] %>% filter(int_true_dir == 'pos') %>% nrow())
+  sens_neg_3 <- (res_v1xv2[[ix]] %>% filter(int_true_dir == 'neg' & int_est_3 == 'interaction') %>% nrow()) / (res_v1xv2[[ix]] %>% filter(int_true_dir == 'neg') %>% nrow())
+  spec_3 <- (res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_3 == 'none') %>% nrow()) / (res_v1xv2[[ix]] %>% filter(int_true == 'none') %>% nrow())
   
   acc_weighted_1 <- (sens_pos_1 * weight_pos + sens_neg_1 * weight_neg + spec_1 * weight_null) / (weight_pos + weight_neg + weight_null)
   acc_weighted_3 <- (sens_pos_3 * weight_pos + sens_neg_3 * weight_neg + spec_3 * weight_null) / (weight_pos + weight_neg + weight_null)
   
-  tp1 <- res_LIST[[ix]] %>% filter(int_true != 'none' & int_est_1 != 'none') %>% nrow()
-  tn1 <- res_LIST[[ix]] %>% filter(int_true == 'none' & int_est_1 == 'none') %>% nrow()
-  fp1 <- res_LIST[[ix]] %>% filter(int_true == 'none' & int_est_1 != 'none') %>% nrow()
-  fn1 <- res_LIST[[ix]] %>% filter(int_true != 'none' & int_est_1 == 'none') %>% nrow()
+  tp1 <- res_v1xv2[[ix]] %>% filter(int_true != 'none' & int_est_1 != 'none') %>% nrow()
+  tn1 <- res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_1 == 'none') %>% nrow()
+  fp1 <- res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_1 != 'none') %>% nrow()
+  fn1 <- res_v1xv2[[ix]] %>% filter(int_true != 'none' & int_est_1 == 'none') %>% nrow()
   
-  tp3 <- res_LIST[[ix]] %>% filter(int_true != 'none' & int_est_3 != 'none') %>% nrow()
-  tn3 <- res_LIST[[ix]] %>% filter(int_true == 'none' & int_est_3 == 'none') %>% nrow()
-  fp3 <- res_LIST[[ix]] %>% filter(int_true == 'none' & int_est_3 != 'none') %>% nrow()
-  fn3 <- res_LIST[[ix]] %>% filter(int_true != 'none' & int_est_3 == 'none') %>% nrow()
+  tp3 <- res_v1xv2[[ix]] %>% filter(int_true != 'none' & int_est_3 != 'none') %>% nrow()
+  tn3 <- res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_3 == 'none') %>% nrow()
+  fp3 <- res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_3 != 'none') %>% nrow()
+  fn3 <- res_v1xv2[[ix]] %>% filter(int_true != 'none' & int_est_3 == 'none') %>% nrow()
   
   mcc_1 <- mcc(tp1, tn1, fp1, fn1)
   mcc_3 <- mcc(tp3, tn3, fp3, fn3)
@@ -373,10 +380,50 @@ res_acc <- lapply(1:length(res_LIST), function(ix) {
   bind_rows(setNames(c(acc_weighted_1, mcc_1, sens_pos_1, sens_neg_1, spec_1), nm = c('acc_weight', 'mcc', 'sens_pos', 'sens_neg', 'spec')),
             setNames(c(acc_weighted_3, mcc_3, sens_pos_3, sens_neg_3, spec_3), nm = c('acc_weight', 'mcc', 'sens_pos', 'sens_neg', 'spec'))) %>%
     mutate(method = c('method_1', 'method_3')) %>%
-    mutate(alpha = unique(res_LIST[[ix]]$alpha))
+    mutate(alpha = unique(res_v1xv2[[ix]]$alpha))
   
 }) %>%
-  bind_rows()
+  bind_rows() %>%
+  mutate(direction = 'v1 -> v2')
+
+res_acc_v2xv1 <- lapply(1:length(res_v2xv1), function(ix) {
+  
+  sens_pos_1 <- (res_v2xv1[[ix]] %>% filter(int_true_dir == 'pos' & int_est_1 == 'interaction') %>% nrow()) / (res_v2xv1[[ix]] %>% filter(int_true_dir == 'pos') %>% nrow())
+  sens_neg_1 <- (res_v2xv1[[ix]] %>% filter(int_true_dir == 'neg' & int_est_1 == 'interaction') %>% nrow()) / (res_v2xv1[[ix]] %>% filter(int_true_dir == 'neg') %>% nrow())
+  spec_1 <- (res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_1 == 'none') %>% nrow()) / (res_v2xv1[[ix]] %>% filter(int_true == 'none') %>% nrow())
+  
+  sens_pos_3 <- (res_v2xv1[[ix]] %>% filter(int_true_dir == 'pos' & int_est_3 == 'interaction') %>% nrow()) / (res_v2xv1[[ix]] %>% filter(int_true_dir == 'pos') %>% nrow())
+  sens_neg_3 <- (res_v2xv1[[ix]] %>% filter(int_true_dir == 'neg' & int_est_3 == 'interaction') %>% nrow()) / (res_v2xv1[[ix]] %>% filter(int_true_dir == 'neg') %>% nrow())
+  spec_3 <- (res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_3 == 'none') %>% nrow()) / (res_v2xv1[[ix]] %>% filter(int_true == 'none') %>% nrow())
+  
+  acc_weighted_1 <- (sens_pos_1 * weight_pos + sens_neg_1 * weight_neg + spec_1 * weight_null) / (weight_pos + weight_neg + weight_null)
+  acc_weighted_3 <- (sens_pos_3 * weight_pos + sens_neg_3 * weight_neg + spec_3 * weight_null) / (weight_pos + weight_neg + weight_null)
+  
+  tp1 <- res_v2xv1[[ix]] %>% filter(int_true != 'none' & int_est_1 != 'none') %>% nrow()
+  tn1 <- res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_1 == 'none') %>% nrow()
+  fp1 <- res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_1 != 'none') %>% nrow()
+  fn1 <- res_v2xv1[[ix]] %>% filter(int_true != 'none' & int_est_1 == 'none') %>% nrow()
+  
+  tp3 <- res_v2xv1[[ix]] %>% filter(int_true != 'none' & int_est_3 != 'none') %>% nrow()
+  tn3 <- res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_3 == 'none') %>% nrow()
+  fp3 <- res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_3 != 'none') %>% nrow()
+  fn3 <- res_v2xv1[[ix]] %>% filter(int_true != 'none' & int_est_3 == 'none') %>% nrow()
+  
+  mcc_1 <- mcc(tp1, tn1, fp1, fn1)
+  mcc_3 <- mcc(tp3, tn3, fp3, fn3)
+  
+  bind_rows(setNames(c(acc_weighted_1, mcc_1, sens_pos_1, sens_neg_1, spec_1), nm = c('acc_weight', 'mcc', 'sens_pos', 'sens_neg', 'spec')),
+            setNames(c(acc_weighted_3, mcc_3, sens_pos_3, sens_neg_3, spec_3), nm = c('acc_weight', 'mcc', 'sens_pos', 'sens_neg', 'spec'))) %>%
+    mutate(method = c('method_1', 'method_3')) %>%
+    mutate(alpha = unique(res_v2xv1[[ix]]$alpha))
+  
+}) %>%
+  bind_rows() %>%
+  mutate(direction = 'v2 -> v1')
+
+res_acc <- res_acc_v1xv2 %>%
+  bind_rows(res_acc_v2xv1)
+rm(res_acc_v1xv2, res_acc_v2xv1)
 
 p2 <- ggplot(data = res_acc %>%
                pivot_longer(acc_weight:spec,
@@ -386,28 +433,42 @@ p2 <- ggplot(data = res_acc %>%
              aes(x = alpha, y = value, group = method, col = method)) +
   geom_line() +
   geom_point() +
-  facet_wrap(~ metric, nrow = 1) +
+  facet_grid(direction ~ metric) +
   theme_classic() +
   theme(legend.position = 'right') +
   labs(x = 'alpha', y = 'Value', col = '') +
   scale_color_brewer(palette = 'Set1')
+print(p2)
+rm(p2)
 
 # Calculate accuracy by interaction parameter values:
-acc_by_param <- lapply(1:length(res_LIST), function(ix) {
-  res_LIST[[ix]] %>%
+acc_by_param_v1xv2 <- lapply(1:length(res_v1xv2), function(ix) {
+  res_v1xv2[[ix]] %>%
     mutate(int_est = int_est_1) %>%
     calculate_accuracy_matrix() %>%
-    mutate(alpha = as.numeric(str_remove(names(res_LIST)[ix], 'alpha_')))
+    mutate(alpha = as.numeric(str_remove(names(res_v1xv2)[ix], 'alpha_')))
+}) %>%
+  bind_rows()
+acc_by_param_v2xv1 <- lapply(1:length(res_v2xv1), function(ix) {
+  res_v2xv1[[ix]] %>%
+    mutate(int_est = int_est_1) %>%
+    calculate_accuracy_matrix() %>%
+    mutate(alpha = as.numeric(str_remove(names(res_v2xv1)[ix], 'alpha_')))
 }) %>%
   bind_rows()
 
-p3 <- ggplot(data = acc_by_param, aes(x = strength, y = duration, fill = perc_correct)) +
+p3.1 <- ggplot(data = acc_by_param_v1xv2, aes(x = strength, y = duration, fill = perc_correct)) +
   geom_tile() +
   facet_wrap(~ alpha, nrow = 1) +
   theme_classic() +
   scale_fill_viridis(option = 'G', limits = c(0, 1))
-grid.arrange(p2, p3, ncol = 1)
-rm(p2, p3)
+p3.2 <- ggplot(data = acc_by_param_v2xv1, aes(x = strength, y = duration, fill = perc_correct)) +
+  geom_tile() +
+  facet_wrap(~ alpha, nrow = 1) +
+  theme_classic() +
+  scale_fill_viridis(option = 'G', limits = c(0, 1))
+grid.arrange(p3.1, p3.2, ncol = 1)
+rm(p3.1, p3.2)
 
 dev.off()
 
