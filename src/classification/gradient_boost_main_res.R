@@ -81,7 +81,8 @@ res_v2tov1 <- res_corr %>%
   inner_join(res_te %>% filter(direction == 'v2 -> v1') %>% select(-direction), by = c('run', '.id')) %>%
   inner_join(res_ccm %>% filter(direction == 'v2 -> v1') %>% select(-direction), by = c('run', '.id'))
 
-rm(res_corr, res_gam, res_granger, res_te, res_ccm)
+rm(res_corr, res_gam, res_granger, res_granger_LIST, res_te, res_te_LIST, res_ccm,
+   res_ccm_surr, res_ccm_LIST, acc_weighted_te, weight_pos, weight_neg, weight_null)
 
 # Get also tibble including all results (so, for interactions in both directions):
 res_all <- res_v1tov2 %>%
@@ -91,7 +92,11 @@ res_all <- res_v1tov2 %>%
                rename_with(~ paste0(.x, '_v2xv1'), granger_val:ccm_sig),
              by = c('run', '.id'))
 
-# Split all tibbles into training and testing sets:
+# ------------------------------------------------------------------------------
+
+# Split all tibbles into training and testing sets
+
+# Choose training/test data:
 set.seed(3857)
 train_ind <- sample(nrow(res_all), size = round(0.7 * nrow(res_all)))
 
@@ -121,9 +126,12 @@ y_test <- res_all_test %>% select(int_true) %>% mutate(int_true = case_match(int
 # Weight training data to deal with unbalanced data:
 training_weights <- c(1.0, 0.1056662, 0.1733668)[y_train + 1]
 
-# Perform gradient boosting (first, on all metrics in both directions):
+# ------------------------------------------------------------------------------
+
+# Perform gradient boosting (first, on all metrics in both directions)
 # Source: https://www.r-bloggers.com/2021/02/machine-learning-with-r-a-complete-guide-to-gradient-boosting-and-xgboost/
 
+# Set up and fit:
 xgb_train <- xgb.DMatrix(data = as.matrix(x_all_train), label = y_train, weight = training_weights)
 xgb_test <- xgb.DMatrix(data = as.matrix(x_all_test), label = y_test)
 
@@ -170,6 +178,7 @@ res_all_pred <- res_all_test %>%
            apply(1, which.max),
          int_pred = int_pred - 1) %>%
   mutate(int_pred = case_match(int_pred, 0 ~ 'none', 1 ~ 'neg', 2 ~ 'pos'))
+rm(res_all, res_all_train, x_all_train, x_all_test)
 
 # Calculate overall accuracy:
 print('Overall accuracy:')
@@ -207,6 +216,8 @@ fn <- res_all_pred %>% filter(int_true != 'none' & int_pred == 'none') %>% nrow(
 
 print('MCC:')
 print(mcc(tp, tn, fp, fn))
+
+rm(sens_pos, sens_neg, spec, tp, tn, fp, fn)
 
 # Calculate accuracy by true param values:
 calculate_accuracy_matrix <- function(df) {
@@ -251,8 +262,13 @@ p.combine.metrics.all <- ggplot(data = acc_gb, aes(x = strength, y = duration, f
   theme_classic() +
   scale_fill_viridis(limits = c(0, 1), option = 'G') +
   labs(title = 'Combine Methods')
+rm(res_all_test, res_all_pred, acc_gb, xgb_train, xgb_test)
 
-# Perform gradient boosting (identify interactions in one direction):
+# ------------------------------------------------------------------------------
+
+# Perform gradient boosting (identify interactions in one direction)
+
+# Set up and fit:
 xgb_train <- xgb.DMatrix(data = as.matrix(x_v1tov2_train), label = y_train, weight = training_weights)
 xgb_test <- xgb.DMatrix(data = as.matrix(x_v1tov2_test), label = y_test)
 
@@ -279,6 +295,10 @@ res_v2tov1_pred <- res_v2tov1_test %>%
          int_pred = int_pred - 1) %>%
   mutate(int_pred = case_match(int_pred, 0 ~ 'none', 1 ~ 'neg', 2 ~ 'pos'))
 
+rm(res_v1tov2, res_v1tov2_train, res_v1tov2_test, res_v2tov1, res_v2tov1_train, res_v2tov1_test,
+   x_v1tov2_train, x_v1tov2_test, x_v2tov1_train, x_v2tov1_test, y_train, y_test,
+   xgb_train, xgb_test, xgb_params, training_weights)
+
 print('V1 -> V2')
 print('Sensitivity (Correct Direction) (Overall):')
 sens_pos <- (res_v1tov2_pred %>% filter(int_true == 'neg' & int_pred == 'neg') %>% nrow()) / (res_v1tov2_pred %>% filter(int_true == 'neg') %>% nrow())
@@ -302,6 +322,8 @@ fn <- res_v1tov2_pred %>% filter(int_true != 'none' & int_pred == 'none') %>% nr
 
 print('MCC:')
 print(mcc(tp, tn, fp, fn))
+
+rm(sens_pos, sens_neg, spec, tp, tn, fp, fn)
 
 print('V2 -> V1')
 print('Sensitivity (Correct Direction) (Overall):')
@@ -327,6 +349,8 @@ fn <- res_v2tov1_pred %>% filter(int_true != 'none' & int_pred == 'none') %>% nr
 print('MCC:')
 print(mcc(tp, tn, fp, fn))
 
+rm(sens_pos, sens_neg, spec, tp, tn, fp, fn, weight_pos, weight_neg, weight_null)
+
 acc_gb_v1tov2 <- calculate_accuracy_matrix(res_v1tov2_pred)
 acc_gb_v2tov1 <- calculate_accuracy_matrix(res_v2tov1_pred)
 
@@ -342,6 +366,10 @@ p.combine.metrics.v2tov1 <- ggplot(data = acc_gb_v2tov1, aes(x = strength, y = d
   labs(title = 'Combine Methods (V2 -> V1)')
 grid.arrange(p.combine.metrics.all, p.combine.metrics.v1tov2, p.combine.metrics.v2tov1, nrow = 1)
 
+rm(res_v1tov2_pred, res_v2tov1_pred, acc_gb_v1tov2, acc_gb_v2tov1)
+
+# ------------------------------------------------------------------------------
+
 # Explore which features most contribute to correct classification:
 # https://xgboost.readthedocs.io/en/stable/R-package/xgboostPresentation.html
 import_mat_v1tov2 <- xgb.importance(model = model_v1tov2)
@@ -350,11 +378,4 @@ import_mat_v2tov1 <- xgb.importance(model = model_v2tov1)
 xgb.plot.importance(importance_matrix = import_mat_v1tov2)
 xgb.plot.importance(importance_matrix = import_mat_v2tov1)
 
-# Clean up:
-rm(model_all, model_v1tov2, model_v2tov1, res_all, res_all_pred, res_all_train,
-   res_all_test, res_v1tov2, res_v1tov2_train, res_v1tov2_test, res_v2tov1,
-   res_v2tov1_train, res_v2tov1_test, res_v1tov2_pred, res_v2tov1_pred, x_all_train,
-   x_all_test, x_v1tov2_train, x_v1tov2_test, x_v2tov1_train, x_v2tov1_test,
-   xgb_params, training_weights, xgb_train, xgb_test, y_train, y_test,
-   weight_pos, weight_neg, weight_null, sens_pos, sens_neg, spec, fn, fp, tn, tp,
-   import_mat_v1tov2, import_mat_v2tov1)
+rm(import_mat_v1tov2, import_mat_v2tov1)
