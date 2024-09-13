@@ -133,7 +133,7 @@ true_params <- lapply(1:length(true_params_LIST), function(ix) {
   bind_rows()
 
 # Clean up:
-rm(i, data_files, where_run)
+rm(i, data_files, where_run, true_params_LIST)
 
 # ---------------------------------------------------------------------------------------------------------------------
 
@@ -352,8 +352,6 @@ for (int_set in 1:16) {
   rm(res_list_TEMP)
 }
 rm(int_set, i)
-# only one: 6 (90), 12 (46), 13 (90), 14 (46, 13)
-# less than 5: 4 (46), 6 (96), 7 (13), 8 (13), 10 (90, 96, 28, 13), 11 (90), 12 (90, 28, 13), 13 (28, 46, 13), 15 (90, 13) 
 
 # Compile all results:
 res <- bind_rows(res_LIST)
@@ -368,9 +366,6 @@ res$delta2[res$delta2 > 7.0] <- NA
 
 res$rho1[res$rho1 == 1.0] <- NA
 res$rho2[res$rho2 == 1.0] <- NA
-
-# res <- res %>%
-#   mutate(across(contains('w_delta'), ~ if_else(.x == 1.0, NA, .x)))
 
 # Since phi=0 is equivalent to phi=52.25, don't use full range; transform so that we can select from only best-supported range:
 phi_ranges_orig <- res %>%
