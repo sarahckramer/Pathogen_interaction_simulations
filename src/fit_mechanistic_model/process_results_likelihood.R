@@ -757,9 +757,12 @@ rm(ci_start)
 # TEMPORARY: Check round 3 accuracy
 
 # Join information on true parameter values:
-res <- res2 %>%
+res <- res3 %>%
+  mutate(R01_tot = R01 + R012, R02_tot = R02 + R012, .after = R012) %>%
   pivot_longer(Ri1:w_delta_i_10, names_to = 'param') %>%
-  inner_join(true_params %>% pivot_longer(Ri1:w_delta_i_10, names_to = 'param', values_to = 'truth'),
+  inner_join(true_params %>%
+               mutate(R01_tot = R01 + R012, R02_tot = R02 + R012, .after = R012) %>%
+               pivot_longer(Ri1:w_delta_i_10, names_to = 'param', values_to = 'truth'),
              by = c('int_set', '.id', 'param'))
 
 # And also get true interaction parameters for each run:
@@ -849,7 +852,9 @@ ggplot(res %>% filter(param %in% c('Ri1', 'Ri2'))) +
   facet_grid(.id ~ param, scales = 'free_y') +
   theme_classic()
 
-ggplot(res %>% filter(param %in% c('E01', 'E02', 'R01', 'R02', 'R012', 'A1', 'A2', 'phi1', 'phi2', 'rho1', 'rho2', 'k1', 'k2'))) +
+ggplot(res %>%
+         # filter(param %in% c('E01', 'E02', 'R01', 'R02', 'R012', 'A1', 'A2', 'phi1', 'phi2', 'rho1', 'rho2', 'k1', 'k2'))) +
+         filter(param %in% c('E01', 'E02', 'R01_tot', 'R02_tot', 'A1', 'A2', 'phi1', 'phi2', 'rho1', 'rho2', 'k1', 'k2'))) +
   geom_violin(aes(x = as.character(.id), y = value, group = paste(int_set, .id), fill = int_set)) +
   geom_hline(aes(yintercept = truth), lty = 2) +
   facet_wrap(~ param, scales = 'free_y', ncol = 2) +
