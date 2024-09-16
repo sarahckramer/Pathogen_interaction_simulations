@@ -684,13 +684,15 @@ p.combine.metrics.v2tov1.wide <- ggplot(data = acc_gb_v2tov1_wide, aes(x = stren
   theme_classic() +
   scale_fill_viridis(limits = c(0, 1), option = 'G') +
   labs(title = 'Combine Methods (V2 -> V1) (WIDE)')
-grid.arrange(p.combine.metrics.v1tov2, p.combine.metrics.v1tov2.wide, p.combine.metrics.v2tov1, p.combine.metrics.v2tov1.wide, ncol = 2)
 
+pdf(file = 'results/plots/results_gradientboosting.pdf', width = 12, height = 8)
+grid.arrange(p.combine.metrics.v1tov2, p.combine.metrics.v1tov2.wide, p.combine.metrics.v2tov1, p.combine.metrics.v2tov1.wide, ncol = 2)
 # p1 <- arrangeGrob(p.combine.metrics.all, p.combine.metrics.v1tov2, p.combine.metrics.v2tov1, p.combine.metrics.v1tov2.wide, p.combine.metrics.v2tov1.wide,
 #                   layout_matrix = rbind(c(NA, 1, 1, NA),
 #                                         c(2, 2, 4, 4),
 #                                         c(3, 3, 5, 5)))
 # plot(p1)
+dev.off()
 
 rm(res_v1tov2, res_v2tov1, acc_gb_v1tov2_wide, acc_gb_v2tov1_wide)
 

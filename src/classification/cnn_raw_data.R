@@ -381,10 +381,11 @@ rm(acc_by_param_LIST)
 p1 <- ggplot(data = acc_by_param, aes(x = strength, y = duration, fill = perc_correct_median)) +
   geom_tile() +
   theme_classic() +
+  theme(legend.position = 'bottom') +
   scale_fill_viridis(limits = c(0, 1), option = 'G') +
   labs(title = 'Convolutional Neural Network', x = 'True Strength',
        y = 'True Duration (Weeks)', fill = '% Correct (Median)')
-plot(p1)
+# plot(p1)
 rm(acc_by_param, datV1, datV1_train, datV1_test, datV2, datV2_train, datV2_test,
    x_train, x_test, y_test, y_train, train_ind)
 
@@ -562,8 +563,9 @@ rm(acc_by_param_LIST)
 p2 <- ggplot(data = acc_by_param, aes(x = strength, y = duration, fill = perc_correct_median)) +
   geom_tile() +
   theme_classic() +
+  theme(legend.position = 'bottom') +
   scale_fill_viridis(limits = c(0, 1), option = 'G') +
-  labs(title = 'Convolutional Neural Network', x = 'True Strength',
+  labs(title = 'Convolutional Neural Network (WIDE)', x = 'True Strength',
        y = 'True Duration (Weeks)', fill = '% Correct (Median)')
 grid.arrange(p1, p2, nrow = 1)
 rm(acc_by_param)
@@ -763,8 +765,14 @@ p_r02 <- ggplot(data = acc_by_R02, aes(x = value, y = 1, fill = perc_correct)) +
 
 p3 <- arrangeGrob(p_ri1, p_ri2, p_w2, p_A, p_phi, p_r01, p_r02,
                   ncol = 1,
-                  heights = c(1, 1, 1, 1, 1, 1, 1.54))
+                  heights = c(1, 1, 1, 1, 1, 1, 1.8))
 plot(p3)
+
+# Save plots:
+pdf(file = 'results/plots/resuts_CNN.pdf', width = 12, height = 7)
+grid.arrange(p1, p2, nrow = 1)
+plot(p3)
+dev.off()
 
 # ------------------------------------------------------------------------------
 
