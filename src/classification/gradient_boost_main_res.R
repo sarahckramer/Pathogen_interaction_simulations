@@ -63,8 +63,8 @@ res_te <- res_te %>%
 rm(best_v1xv2, best_v2xv1)
 
 res_ccm <- res_ccm %>%
-  select(run:direction, rho_mean, int_est_1) %>%
-  rename('ccm_val' = rho_mean, 'ccm_sig' = int_est_1) %>%
+  select(run:direction, rho_max, int_est_1) %>%
+  rename('ccm_val' = rho_max, 'ccm_sig' = int_est_1) %>%
   mutate(.id = as.integer(.id),
          ccm_sig = case_match(ccm_sig, 'none' ~ 0, 'interaction' ~ 1))
 
@@ -133,7 +133,6 @@ training_weights <- c(1.0, 0.1056662, 0.1733668)[y_train + 1]
 
 # Set up and fit:
 xgb_train <- xgb.DMatrix(data = as.matrix(x_all_train), label = y_train, weight = training_weights)
-xgb_test <- xgb.DMatrix(data = as.matrix(x_all_test), label = y_test)
 
 xgb_params <- list(
   booster = 'gbtree',
@@ -262,7 +261,7 @@ p.combine.metrics.all <- ggplot(data = acc_gb, aes(x = strength, y = duration, f
   theme_classic() +
   scale_fill_viridis(limits = c(0, 1), option = 'G') +
   labs(title = 'Combine Methods')
-rm(res_all_test, res_all_pred, acc_gb, xgb_train, xgb_test)
+rm(res_all_test, res_all_pred, acc_gb, xgb_train)
 
 # ------------------------------------------------------------------------------
 
@@ -270,13 +269,11 @@ rm(res_all_test, res_all_pred, acc_gb, xgb_train, xgb_test)
 
 # Set up and fit:
 xgb_train <- xgb.DMatrix(data = as.matrix(x_v1tov2_train), label = y_train, weight = training_weights)
-xgb_test <- xgb.DMatrix(data = as.matrix(x_v1tov2_test), label = y_test)
 
 set.seed(5829)
 model_v1tov2 <- xgb.train(params = xgb_params, data = xgb_train, nrounds = 2500, verbose = 1)
 
 xgb_train <- xgb.DMatrix(data = as.matrix(x_v2tov1_train), label = y_train, weight = training_weights)
-xgb_test <- xgb.DMatrix(data = as.matrix(x_v2tov1_test), label = y_test)
 
 set.seed(5829)
 model_v2tov1 <- xgb.train(params = xgb_params, data = xgb_train, nrounds = 2500, verbose = 1)
@@ -297,7 +294,7 @@ res_v2tov1_pred <- res_v2tov1_test %>%
 
 rm(res_v1tov2, res_v1tov2_train, res_v1tov2_test, res_v2tov1, res_v2tov1_train, res_v2tov1_test,
    x_v1tov2_train, x_v1tov2_test, x_v2tov1_train, x_v2tov1_test, y_train, y_test,
-   xgb_train, xgb_test, xgb_params, training_weights)
+   xgb_train, xgb_params, training_weights)
 
 print('V1 -> V2')
 print('Sensitivity (Correct Direction) (Overall):')
@@ -378,7 +375,8 @@ import_mat_v2tov1 <- xgb.importance(model = model_v2tov1)
 xgb.plot.importance(importance_matrix = import_mat_v1tov2)
 xgb.plot.importance(importance_matrix = import_mat_v2tov1)
 
-rm(import_mat_v1tov2, import_mat_v2tov1)
+rm(import_mat_v1tov2, import_mat_v2tov1, model_all)
+
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
