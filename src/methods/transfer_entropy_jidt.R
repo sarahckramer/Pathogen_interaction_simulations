@@ -54,19 +54,60 @@ te_jidt <- function(data, lag){
   sd_null_v1_x_v2 <- .jcall(nullDist_v1_x_v2, 'D', 'getStdOfDistribution')
   p_value_v1_x_v2 <- nullDist_v1_x_v2$pValue
   
+  #---- Analysis w/ confounding ----#
+  
+  # Calculate seasonal component:
+  data <- data %>%
+    mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (data$time - 26)))
+  condArray <- data$seasonal_component
+  
+  # Create a new TE calculator:
+  teCalc <- .jnew('infodynamics/measures/continuous/kraskov/ConditionalTransferEntropyCalculatorKraskov')
+  
+  .jcall(teCalc, 'V', 'setProperty', 'k', '4') # use Kraskov parameter k = 4 for nearest 4 points
+  .jcall(teCalc, 'V', 'setProperty', 'delay', lag) # lag between source and destination
+  .jcall(teCalc, 'V', 'setProperty', 'cond_embed_lengths', lag) # set embedding dimension for conditional variable to lag
+  
+  # TE calculation for V1 -> V2:
+  .jcall(teCalc, 'V', 'initialise', 1L)
+  .jcall(teCalc, 'V', 'setObservations', sourceArray, destArray, condArray)
+  
+  result_confound_v2_x_v1 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
+  
+  nullDist_confound_v2_x_v1 <- .jcall(teCalc, 'Linfodynamics/utils/EmpiricalMeasurementDistribution;',
+                                      'computeSignificance', 500L)
+  mean_null_confound_v2_x_v1 <- .jcall(nullDist_confound_v2_x_v1, 'D', 'getMeanOfDistribution')
+  sd_null_confound_v2_x_v1 <- .jcall(nullDist_confound_v2_x_v1, 'D', 'getStdOfDistribution')
+  p_value_confound_v2_x_v1 <- nullDist_confound_v2_x_v1$pValue
+  
+  # TE calculation for V2 -> V1:
+  .jcall(teCalc, 'V', 'initialise', 1L)
+  .jcall(teCalc, 'V', 'setObservations', destArray, sourceArray, condArray)
+  
+  result_confound_v1_x_v2 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
+  
+  nullDist_confound_v1_x_v2 <- .jcall(teCalc, 'Linfodynamics/utils/EmpiricalMeasurementDistribution;',
+                                      'computeSignificance', 500L)
+  mean_null_confound_v1_x_v2 <- .jcall(nullDist_confound_v1_x_v2, 'D', 'getMeanOfDistribution')
+  sd_null_confound_v1_x_v2 <- .jcall(nullDist_confound_v1_x_v2, 'D', 'getStdOfDistribution')
+  p_value_confound_v1_x_v2 <- nullDist_confound_v1_x_v2$pValue
+  
+  #---- Compile and return results ----#
   res <- data.frame(cbind(te = c(result_v1_x_v2, result_v2_x_v1),
+                          te_confound = c(result_confound_v1_x_v2, result_confound_v2_x_v1),
                           direction = c('v2 -> v1', 'v1 -> v2'),
                           sd_null = c(sd_null_v1_x_v2, sd_null_v2_x_v1),
+                          sd_null_confound = c(sd_null_confound_v1_x_v2, sd_null_confound_v2_x_v1),
                           p_value = c(p_value_v1_x_v2, p_value_v2_x_v1),
+                          p_value_confound = c(p_value_confound_v1_x_v2, p_value_confound_v2_x_v1),
                           lag = rep(lag))) %>%
     as_tibble() %>%
     mutate(te = as.numeric(te),
+           te_confound = as.numeric(te_confound),
            sd_null = as.numeric(sd_null),
-           p_value = as.numeric(p_value))
-  
-  #---- Analysis w/ confounding ----#
-  
-  # TO DO
+           sd_null_confound = as.numeric(sd_null_confound),
+           p_value = as.numeric(p_value),
+           p_value_confound = as.numeric(p_value_confound))
   
   return(res)
   
