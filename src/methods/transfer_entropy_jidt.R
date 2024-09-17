@@ -29,7 +29,7 @@ te_jidt <- function(data, lag){
   # Create a TE calculator:
   teCalc <- .jnew('infodynamics/measures/continuous/kraskov/TransferEntropyCalculatorKraskov')
   .jcall(teCalc, 'V', 'setProperty', 'k', '4') # use Kraskov parameter k = 4 for nearest 4 points
-  .jcall(teCalc, 'V', 'setProperty', 'k_tau', lag) # lag for destination
+  .jcall(teCalc, 'V', 'setProperty', 'delay', lag) # lag between source and destination
   
   # TE calculation for V1 -> V2:
   .jcall(teCalc, 'V', 'initialise', 1L) # use history length 1 (Schreiber k = 1)
