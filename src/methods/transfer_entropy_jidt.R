@@ -44,6 +44,7 @@ te_jidt <- function(data, lag){
   p_value_v2_x_v1 <- nullDist_v2_x_v1$pValue
   
   # TE calculation for V2 -> V1
+  .jcall(teCalc, 'V', 'initialise', 1L) # use history length 1 (Schreiber k = 1)
   .jcall(teCalc, 'V', 'setObservations', destArray, sourceArray)
   
   result_v1_x_v2 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
