@@ -32,7 +32,7 @@ te_jidt <- function(data, lag){
   .jcall(teCalc, 'V', 'setProperty', 'delay', lag) # lag between source and destination
   
   # TE calculation for V1 -> V2:
-  .jcall(teCalc, 'V', 'initialise', 1L) # use history length 1 (Schreiber k = 1)
+  .jcall(teCalc, 'V', 'initialise')
   .jcall(teCalc, 'V', 'setObservations', sourceArray, destArray)
   
   result_v2_x_v1 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
@@ -43,8 +43,8 @@ te_jidt <- function(data, lag){
   sd_null_v2_x_v1 <- .jcall(nullDist_v2_x_v1, 'D', 'getStdOfDistribution')
   p_value_v2_x_v1 <- nullDist_v2_x_v1$pValue
   
-  # TE calculation for V2 -> V1
-  .jcall(teCalc, 'V', 'initialise', 1L) # use history length 1 (Schreiber k = 1)
+  # TE calculation for V2 -> V1:
+  .jcall(teCalc, 'V', 'initialise')
   .jcall(teCalc, 'V', 'setObservations', destArray, sourceArray)
   
   result_v1_x_v2 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
@@ -67,10 +67,9 @@ te_jidt <- function(data, lag){
   
   .jcall(teCalc, 'V', 'setProperty', 'k', '4') # use Kraskov parameter k = 4 for nearest 4 points
   .jcall(teCalc, 'V', 'setProperty', 'delay', lag) # lag between source and destination
-  .jcall(teCalc, 'V', 'setProperty', 'cond_embed_lengths', lag) # set embedding dimension for conditional variable to lag
   
   # TE calculation for V1 -> V2:
-  .jcall(teCalc, 'V', 'initialise', 1L)
+  .jcall(teCalc, 'V', 'initialise')
   .jcall(teCalc, 'V', 'setObservations', sourceArray, destArray, condArray)
   
   result_confound_v2_x_v1 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
@@ -82,7 +81,7 @@ te_jidt <- function(data, lag){
   p_value_confound_v2_x_v1 <- nullDist_confound_v2_x_v1$pValue
   
   # TE calculation for V2 -> V1:
-  .jcall(teCalc, 'V', 'initialise', 1L)
+  .jcall(teCalc, 'V', 'initialise')
   .jcall(teCalc, 'V', 'setObservations', destArray, sourceArray, condArray)
   
   result_confound_v1_x_v2 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
@@ -103,12 +102,7 @@ te_jidt <- function(data, lag){
                           p_value_confound = c(p_value_confound_v1_x_v2, p_value_confound_v2_x_v1),
                           lag = rep(lag))) %>%
     as_tibble() %>%
-    mutate(te = as.numeric(te),
-           te_confound = as.numeric(te_confound),
-           sd_null = as.numeric(sd_null),
-           sd_null_confound = as.numeric(sd_null_confound),
-           p_value = as.numeric(p_value),
-           p_value_confound = as.numeric(p_value_confound))
+    mutate(across(-direction, as.numeric))
   
   return(res)
   
