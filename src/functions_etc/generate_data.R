@@ -83,7 +83,7 @@ true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       gamma1 = 7/5, gamma2 = 7/10,
                       w1 = 1/52.25, w2 = 1/52.25,
                       mu = 0.0002, nu = 0.0002,
-                      rho1 = 0.002, rho2 = 0.002,
+                      rho1 = 0.15, rho2 = 0.05,
                       theta_lambda1 = true_int_params$theta_lambda1,
                       theta_lambda2 = true_int_params$theta_lambda2,
                       delta1 = true_int_params$delta1,
@@ -92,7 +92,7 @@ true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       A2=0.20, phi2=26,
                       k1 = 0.04, k2 = 0.02,
                       beta_sd1 = 0.1 * 0.1, beta_sd2 = 0.05 * 0.1,
-                      N = 3700000,
+                      N = 5000000,
                       E01 = 0.001, E02 = 0.001,
                       R01 = 0.40, R02 = 0.25, R012 = 0.001,
                       nsurges = n_surge - 5,
@@ -202,7 +202,7 @@ if (debug_bool) {
     filter(.id %in% 1:12) %>%
     mutate(S1 = X_SS + X_SE + X_SI + X_ST + X_SR) %>%
     select(time:.id, S1) %>%
-    ggplot(aes(x = time, y = S1 / 3700000, group = .id)) + geom_line() + facet_wrap(~ .id) + theme_classic()
+    ggplot(aes(x = time, y = S1 / 5000000, group = .id)) + geom_line() + facet_wrap(~ .id) + theme_classic()
   
   #---- check seasonal attack rates ----#
   season_breaks <- dat %>% filter(str_detect(date, '07-0[1-7]')) %>% pull(date) %>% unique()
@@ -213,8 +213,8 @@ if (debug_bool) {
     group_by(season, .id) %>%
     summarise(V1 = sum(V1),
               V2 = sum(V2)) %>%
-    mutate(V1 = V1 / 3700000 * 100,
-           V2 = V2 / 3700000 * 100)
+    mutate(V1 = V1 / 5000000 * 100,
+           V2 = V2 / 5000000 * 100)
   print(summary(attack_rates))
   
   #---- check influence of parameter values on attack rates ----#
