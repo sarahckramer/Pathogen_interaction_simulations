@@ -20,7 +20,7 @@ source('src/seitr_x_seitr.R')
 
 #---- set global parameters ----#
 n_sim <- 100 # total number of simulated datasets
-tot_weeks <- 626 # number of weeks to simulate
+tot_weeks <- 783 # number of weeks to simulate
 debug_bool <- FALSE
 
 #---- get interaction parameter values ----#
@@ -47,8 +47,8 @@ n_surge <- round(tot_weeks / 52) # number of surges
 mu_Imloss <- 12 # average surge occurring 12 weeks into season
 sd_Imloss <- 4 # standard deviation of 4 weeks
 
-t_si_mat <- matrix(nrow = n_surge - 2, ncol = n_sim)
-w_delta_i_mat <- matrix(nrow = n_surge - 2, ncol = n_sim)
+t_si_mat <- matrix(nrow = n_surge - 5, ncol = n_sim)
+w_delta_i_mat <- matrix(nrow = n_surge - 5, ncol = n_sim)
 
 for (i in 1:n_sim) {
   
@@ -56,10 +56,10 @@ for (i in 1:n_sim) {
   t_si <- t_si + seq(0, 52 * (n_surge - 1), by = 52)
   t_si <- round(t_si) # make whole numbers
   
-  t_si[2:12] <- t_si[2:12] + 1 # account for years with 53 weeks
-  t_si[8:12] <- t_si[8:12] + 1
+  t_si[8:15] <- t_si[8:15] + 1 # account for years with 53 weeks
+  t_si[13:15] <- t_si[13:15] + 1
   
-  t_si <- t_si[-which(t_si <= 104)] # remove first two years to allow system to reach equilibrium
+  t_si <- t_si[-which(t_si <= 261)] # remove first five years to allow system to reach equilibrium
   w_delta_i <- runif(n = length(t_si), min = 0.005 * 7, max = 0.05 * 7) # yearly surge in rate of immunity loss
   # w_delta_i <- runif(n = length(t_si), min = 0.01 * 7, max = 0.1 * 7) # yearly surge in rate of immunity loss
   
@@ -95,7 +95,7 @@ true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       N = 3700000,
                       E01 = 0.001, E02 = 0.001,
                       R01 = 0.40, R02 = 0.25, R012 = 0.001,
-                      nsurges = n_surge - 2,
+                      nsurges = n_surge - 5,
                       t_si_ = t_si_mat[, 1], w_delta_i_ = w_delta_i_mat[, 1])
 
 true_params <- parmat(true_params_init, nrep = n_sim)
@@ -139,14 +139,14 @@ if (debug_bool) {
 }
 
 dat <- dat %>%
-  filter(time > 104) # remove first 2 years before simulation at equilibrium
+  filter(time > 260) # remove first 5 years before simulation at equilibrium
 
 dat <- dat %>%
   mutate(date = ymd('2012-July-01') + weeks(time)) # add dates
 
 #---- check for yearly outbreaks ----#
 season_breaks <- dat %>% filter(str_detect(date, '07-0[1-7]')) %>% pull(date) %>% unique()
-season_breaks <- c(season_breaks, '2024-07-01')
+# season_breaks <- c(season_breaks, '2024-07-01')
 
 dat_red <- dat %>%
   mutate(season = cut(date, breaks = season_breaks, labels = 1:10, include.lowest = TRUE)) %>%
@@ -206,7 +206,7 @@ if (debug_bool) {
   
   #---- check seasonal attack rates ----#
   season_breaks <- dat %>% filter(str_detect(date, '07-0[1-7]')) %>% pull(date) %>% unique()
-  season_breaks <- c(season_breaks, '2024-07-01')
+  # season_breaks <- c(season_breaks, '2024-07-01')
   
   attack_rates <- dat %>%
     mutate(season = cut(date, breaks = season_breaks, labels = 1:10, include.lowest = TRUE)) %>%
