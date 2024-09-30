@@ -628,6 +628,23 @@ for(int i = 0; i < nsurges; i++){
     i0 = 0;
   }
 }
+
+if(floor(t) == 12) {
+  i0 = nearbyint(10.0 * 7 * dt);
+}
+if(floor(t) == 64) {
+  i0 = nearbyint(10.0 * 7 * dt);
+}
+if(floor(t) == 116) {
+  i0 = nearbyint(10.0 * 7 * dt);
+}
+if(floor(t) == 168) {
+  i0 = nearbyint(10.0 * 7 * dt);
+}
+if(floor(t) == 220) {
+  i0 = nearbyint(10.0 * 7 * dt);
+}
+
 //Rprintf("i0=%.2f\n", i0);
 
 // row 1 of schematic
