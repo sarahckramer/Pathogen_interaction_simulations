@@ -2,7 +2,7 @@
 # Functions to assist with interaction model
 # ---------------------------------------------------------------------------------------------------------------------
 
-create_SEITRxSEITR_mod <- function(n_weeks, parms, debug_bool = FALSE) {
+create_SEITRxSEITR_mod <- function(n_weeks, start_time, parms, debug_bool = FALSE) {
   
   # Function to create pomp object
   # param n_weeks: Number of weeks to run model
@@ -32,9 +32,9 @@ create_SEITRxSEITR_mod <- function(n_weeks, parms, debug_bool = FALSE) {
   }
   
   # Create pomp object:
-  po <- pomp(data = data.frame(time = seq(from = 0, to = n_weeks, by = 1), V1_obs = NA, V2_obs = NA),
+  po <- pomp(data = data.frame(time = seq(from = start_time, to = n_weeks, by = 1), V1_obs = NA, V2_obs = NA),
              times = "time",
-             t0 = 0,
+             t0 = start_time,
              obsnames = c('V1_obs', 'V2_obs'),
              accumvars = c('V1', 'V2'),
              statenames = c('X_SS', 'X_ES' , 'X_IS', 'X_TS', 'X_RS', 

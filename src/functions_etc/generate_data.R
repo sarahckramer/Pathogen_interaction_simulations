@@ -112,7 +112,8 @@ true_params[str_detect(rownames(true_params), 'w_delta_i_'), ] <- w_delta_i_mat
 # Create model and synthetic data
 
 #---- create pomp model object ----#
-resp_mod <- create_SEITRxSEITR_mod(tot_weeks, true_params_init, debug_bool = debug_bool)
+resp_mod <- create_SEITRxSEITR_mod(tot_weeks, start_time = -2609, true_params_init, debug_bool = debug_bool)
+# 25 years burn-in: -1304; 50 years burn-in: -2609
 
 #---- test pomp model ----#
 check_transformations(resp_mod) # check parameter transformations
@@ -126,7 +127,7 @@ tic <- Sys.time()
 dat <- simulate(resp_mod, params = true_params, nsim = 1, format = 'data.frame')
 toc <- Sys.time()
 etime <- toc - tic
-units(etime) <- 'secs'
+units(etime) <- 'mins'
 print(etime)
 
 if (debug_bool) {

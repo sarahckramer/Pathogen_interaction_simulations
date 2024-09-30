@@ -316,6 +316,12 @@ double omega = (2 * M_PI) / 52.25;
 double s1 = 1 + A1 * cos(omega * (t - phi1));
 double s2 = 1 + A2 * cos(omega * (t - phi2));
 
+// allow for burn-in with no seasonality:
+if (t < 0) {
+  s1 = 1.0;
+  s2 = 1.0;
+}
+
 // calculate force of infection for each virus - note A = 0 means no seasonality component  
 double lambda1 = beta1 * (p1 / N) * s1; // virus 1
 double lambda2 = beta2 * (p2 / N) * s2; // virus 2
@@ -442,6 +448,12 @@ beta2 = R0_2 * gamma2 * dW2 / dt;
 double omega = (2 * M_PI)/52.25;
 double s1 = 1 + A1 * cos(omega * (t - phi1));
 double s2 = 1 + A2 * cos(omega * (t - phi2));
+
+// allow for burn-in with no seasonality:
+if (t < 0) {
+  s1 = 1.0;
+  s2 = 1.0;
+}
 
 // calculate force of infection for each virus 
 double lambda1 = beta1 * (p1 / N) * s1; // virus 1
