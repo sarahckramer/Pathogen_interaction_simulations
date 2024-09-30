@@ -137,6 +137,7 @@ if (debug_bool) {
     t()
   ll <- logLik(traj_objfun(data = resp_mod)) # check measurement density model
   print(ll)
+  rm(ll)
 }
 
 dat <- dat %>%
