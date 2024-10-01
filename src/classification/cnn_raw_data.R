@@ -91,8 +91,20 @@ dat <- dat %>%
 
 # Format data for input into model
 
-# Z-normalize data?:
-# For now, leave raw
+# # Z-normalize data?:
+# dat <- dat %>%
+#   group_by(.id, theta_lambda, delta) %>%
+#   mutate(V1_obs = scale(V1_obs)[, 1],
+#          V2_obs = scale(V2_obs)[, 1]) %>%
+#   ungroup()
+# 
+# dat %>%
+#   group_by(.id, theta_lambda, delta) %>%
+#   summarise(m1 = mean(V1_obs),
+#             m2 = mean(V2_obs),
+#             sd1 = sd(V1_obs),
+#             sd2 = sd(V2_obs)) %>%
+#   summary()
 
 # Set classes as integers:
 dat <- dat %>%
