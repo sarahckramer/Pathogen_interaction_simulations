@@ -94,7 +94,7 @@ true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       beta_sd1 = 0.1 * 0.1, beta_sd2 = 0.05 * 0.1,
                       N = 5000000,
                       E01 = 0.001, E02 = 0.001,
-                      R01 = 0.40, R02 = 0.25, R012 = 0.001,
+                      R01 = 0.30, R02 = 0.10, R012 = 0.001,
                       nsurges = n_surge - 5,
                       t_si_ = t_si_mat[, 1], w_delta_i_ = w_delta_i_mat[, 1])
 
