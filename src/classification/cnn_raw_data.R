@@ -769,7 +769,7 @@ p3 <- arrangeGrob(p_ri1, p_ri2, p_w2, p_A, p_phi, p_r01, p_r02,
 plot(p3)
 
 # Save plots:
-pdf(file = 'results/plots/resuts_CNN.pdf', width = 12, height = 7)
+pdf(file = 'results/plots/results_CNN.pdf', width = 12, height = 7)
 grid.arrange(p1, p2, nrow = 1)
 plot(p3)
 dev.off()
