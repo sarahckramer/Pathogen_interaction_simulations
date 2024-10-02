@@ -109,6 +109,7 @@ check_independent_dynamics <- function(pomp_object) {
   p_mat['theta_lambda2', ] <- c(1.0, 1.0, 1.0)
   
   sim_determ <- trajectory(object = pomp_object,
+                           t0 = 0, times = 0:522,
                            params = p_mat,
                            format = 'data.frame') %>%
     pivot_longer(cols = -c('time', '.id'), names_to = 'var_nm', values_to = 'val') %>%
