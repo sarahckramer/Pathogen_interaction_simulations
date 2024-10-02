@@ -59,7 +59,7 @@ for (i in 1:n_sim) {
   t_si[2:10] <- t_si[2:10] + 1 # account for years with 53 weeks
   t_si[8:10] <- t_si[8:10] + 1 # account for years with 53 weeks
   
-  w_delta_i <- runif(n = length(t_si), min = 0.005 * 7, max = 0.05 * 7) # yearly surge in rate of immunity loss
+  w_delta_i <- runif(n = length(t_si), min = 0.005 * 7, max = 0.075 * 7) # yearly surge in rate of immunity loss
   # w_delta_i <- runif(n = length(t_si), min = 0.01 * 7, max = 0.1 * 7) # yearly surge in rate of immunity loss
   
   t_si_mat[, i] <- t_si
@@ -93,7 +93,7 @@ true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       beta_sd1 = 0.1 * 0.1, beta_sd2 = 0.05 * 0.1,
                       N = 5000000,
                       E01 = 0.001, E02 = 0.001,
-                      R01 = 0.30, R02 = 0.10, R012 = 0.001,
+                      R01 = 0.30, R02 = 0.25, R012 = 0.001,
                       nsurges = n_surge,
                       t_si_ = t_si_mat[, 1], w_delta_i_ = w_delta_i_mat[, 1])
 
