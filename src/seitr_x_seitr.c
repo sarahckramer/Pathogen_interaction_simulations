@@ -91,19 +91,21 @@ T_nsurges = nsurges;
 double *t_vec = (double *) &t_si_1;
 double *T_t_vec = (double *) &T_t_si_1;
 
-//T_t_vec[0] = logitCons(t_vec[0], 105, 156);
-//T_t_vec[1] = logitCons(t_vec[1], 157, 208);
-//T_t_vec[2] = logitCons(t_vec[2], 209, 260);
-T_t_vec[0] = logitCons(t_vec[0], 261, 312);
-T_t_vec[1] = logitCons(t_vec[1], 313, 365);
-T_t_vec[2] = logitCons(t_vec[2], 366, 417);
-T_t_vec[3] = logitCons(t_vec[3], 418, 469);
-T_t_vec[4] = logitCons(t_vec[4], 470, 521);
-T_t_vec[5] = logitCons(t_vec[5], 522, 573);
-T_t_vec[6] = logitCons(t_vec[6], 574, 626);
-T_t_vec[7] = logitCons(t_vec[7], 627, 678);
-T_t_vec[8] = logitCons(t_vec[8], 679, 730);
-T_t_vec[9] = logitCons(t_vec[9], 731, 783);
+T_t_vec[0] = logitCons(t_vec[0], 1, 53);
+T_t_vec[1] = logitCons(t_vec[1], 54, 105);
+T_t_vec[2] = logitCons(t_vec[2], 106, 157);
+T_t_vec[3] = logitCons(t_vec[3], 158, 209);
+T_t_vec[4] = logitCons(t_vec[4], 210, 261);
+T_t_vec[5] = logitCons(t_vec[5], 262, 313);
+T_t_vec[6] = logitCons(t_vec[6], 314, 366);
+T_t_vec[7] = logitCons(t_vec[7], 367, 418);
+T_t_vec[8] = logitCons(t_vec[8], 419, 470);
+T_t_vec[9] = logitCons(t_vec[9], 471, 522);
+//T_t_vec[5] = logitCons(t_vec[5], 522, 573);
+//T_t_vec[6] = logitCons(t_vec[6], 574, 626);
+//T_t_vec[7] = logitCons(t_vec[7], 627, 678);
+//T_t_vec[8] = logitCons(t_vec[8], 679, 730);
+//T_t_vec[9] = logitCons(t_vec[9], 731, 783);
 
 // surge in loss immunity
 double *w_delta_vec = (double *) &w_delta_i_1; 
@@ -165,19 +167,21 @@ nsurges = T_nsurges;
 double *t_vec = (double *) &t_si_1;
 double *T_t_vec = (double *) &T_t_si_1;
 
-//t_vec[0] = expitCons(T_t_vec[0], 105, 156);
-//t_vec[1] = expitCons(T_t_vec[1], 157, 208);
-//t_vec[2] = expitCons(T_t_vec[2], 209, 260);
-t_vec[0] = expitCons(T_t_vec[0], 261, 312);
-t_vec[1] = expitCons(T_t_vec[1], 313, 365);
-t_vec[2] = expitCons(T_t_vec[2], 366, 417);
-t_vec[3] = expitCons(T_t_vec[3], 418, 469);
-t_vec[4] = expitCons(T_t_vec[4], 470, 521);
-t_vec[5] = expitCons(T_t_vec[5], 522, 573);
-t_vec[6] = expitCons(T_t_vec[6], 574, 626);
-t_vec[7] = expitCons(T_t_vec[7], 627, 678);
-t_vec[8] = expitCons(T_t_vec[8], 679, 730);
-t_vec[9] = expitCons(T_t_vec[9], 731, 783);
+t_vec[0] = expitCons(T_t_vec[0], 1, 53);
+t_vec[1] = expitCons(T_t_vec[1], 54, 105);
+t_vec[2] = expitCons(T_t_vec[2], 106, 157);
+t_vec[3] = expitCons(T_t_vec[3], 158, 209);
+t_vec[4] = expitCons(T_t_vec[4], 210, 261);
+t_vec[5] = expitCons(T_t_vec[5], 262, 313);
+t_vec[6] = expitCons(T_t_vec[6], 314, 366);
+t_vec[7] = expitCons(T_t_vec[7], 367, 418);
+t_vec[8] = expitCons(T_t_vec[8], 419, 470);
+t_vec[9] = expitCons(T_t_vec[9], 471, 522);
+//t_vec[5] = expitCons(T_t_vec[5], 522, 573);
+//t_vec[6] = expitCons(T_t_vec[6], 574, 626);
+//t_vec[7] = expitCons(T_t_vec[7], 627, 678);
+//t_vec[8] = expitCons(T_t_vec[8], 679, 730);
+//t_vec[9] = expitCons(T_t_vec[9], 731, 783);
 
 // surges in loss of immunity
 double *w_delta_vec = (double *) &w_delta_i_1;
@@ -316,12 +320,6 @@ double omega = (2 * M_PI) / 52.25;
 double s1 = 1 + A1 * cos(omega * (t - phi1));
 double s2 = 1 + A2 * cos(omega * (t - phi2));
 
-// allow for burn-in with no seasonality:
-if (t < 0) {
-  s1 = 1.0;
-  s2 = 1.0;
-}
-
 // calculate force of infection for each virus - note A = 0 means no seasonality component  
 double lambda1 = beta1 * (p1 / N) * s1; // virus 1
 double lambda2 = beta2 * (p2 / N) * s2; // virus 2
@@ -448,12 +446,6 @@ beta2 = R0_2 * gamma2 * dW2 / dt;
 double omega = (2 * M_PI)/52.25;
 double s1 = 1 + A1 * cos(omega * (t - phi1));
 double s2 = 1 + A2 * cos(omega * (t - phi2));
-
-// allow for burn-in with no seasonality:
-if (t < 0) {
-  s1 = 1.0;
-  s2 = 1.0;
-}
 
 // calculate force of infection for each virus 
 double lambda1 = beta1 * (p1 / N) * s1; // virus 1
@@ -641,19 +633,9 @@ for(int i = 0; i < nsurges; i++){
   }
 }
 
-if(floor(t) == 12) {
-  i0 = nearbyint(10.0 * 7 * dt);
-}
-if(floor(t) == 64) {
-  i0 = nearbyint(10.0 * 7 * dt);
-}
-if(floor(t) == 116) {
-  i0 = nearbyint(10.0 * 7 * dt);
-}
-if(floor(t) == 168) {
-  i0 = nearbyint(10.0 * 7 * dt);
-}
-if(floor(t) == 220) {
+if(floor(t) == -1030 || floor(t) == -978 || floor(t) == -926 || floor(t) == -874 || floor(t) == -821 || floor(t) == -769 || floor(t) == -717 ||
+   floor(t) == -665 || floor(t) == -613 || floor(t) == -561 || floor(t) == -508 || floor(t) == -456 || floor(t) == -404 || floor(t) == -352 ||
+   floor(t) == -300 || floor(t) == -248 || floor(t) == -195 || floor(t) == -143 || floor(t) == -91 || floor(t) == -39) {
   i0 = nearbyint(10.0 * 7 * dt);
 }
 
