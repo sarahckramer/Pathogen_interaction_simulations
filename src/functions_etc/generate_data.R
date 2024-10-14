@@ -155,7 +155,7 @@ if (debug_bool) {
 # write_csv(t, file = 'data/dates_and_seasons_UPDATE.csv')
 
 dat <- dat %>%
-  filter(time > 0) # remove first 5 years before simulation at equilibrium
+  filter(time > 0) # remove burn-in period
 
 dat <- dat %>%
   mutate(date = ymd('2012-June-24') + weeks(time)) # add dates
