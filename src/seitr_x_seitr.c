@@ -91,16 +91,21 @@ T_nsurges = nsurges;
 double *t_vec = (double *) &t_si_1;
 double *T_t_vec = (double *) &T_t_si_1;
 
-T_t_vec[0] = logitCons(t_vec[0], 105, 156);
-T_t_vec[1] = logitCons(t_vec[1], 157, 208);
-T_t_vec[2] = logitCons(t_vec[2], 209, 260);
-T_t_vec[3] = logitCons(t_vec[3], 261, 312);
-T_t_vec[4] = logitCons(t_vec[4], 313, 365);
-T_t_vec[5] = logitCons(t_vec[5], 366, 417);
-T_t_vec[6] = logitCons(t_vec[6], 418, 469);
-T_t_vec[7] = logitCons(t_vec[7], 470, 521);
-T_t_vec[8] = logitCons(t_vec[8], 522, 573);
-T_t_vec[9] = logitCons(t_vec[9], 574, 626);
+T_t_vec[0] = logitCons(t_vec[0], 1, 53);
+T_t_vec[1] = logitCons(t_vec[1], 54, 105);
+T_t_vec[2] = logitCons(t_vec[2], 106, 157);
+T_t_vec[3] = logitCons(t_vec[3], 158, 209);
+T_t_vec[4] = logitCons(t_vec[4], 210, 261);
+T_t_vec[5] = logitCons(t_vec[5], 262, 313);
+T_t_vec[6] = logitCons(t_vec[6], 314, 366);
+T_t_vec[7] = logitCons(t_vec[7], 367, 418);
+T_t_vec[8] = logitCons(t_vec[8], 419, 470);
+T_t_vec[9] = logitCons(t_vec[9], 471, 522);
+//T_t_vec[5] = logitCons(t_vec[5], 522, 573);
+//T_t_vec[6] = logitCons(t_vec[6], 574, 626);
+//T_t_vec[7] = logitCons(t_vec[7], 627, 678);
+//T_t_vec[8] = logitCons(t_vec[8], 679, 730);
+//T_t_vec[9] = logitCons(t_vec[9], 731, 783);
 
 // surge in loss immunity
 double *w_delta_vec = (double *) &w_delta_i_1; 
@@ -162,16 +167,21 @@ nsurges = T_nsurges;
 double *t_vec = (double *) &t_si_1;
 double *T_t_vec = (double *) &T_t_si_1;
 
-t_vec[0] = expitCons(T_t_vec[0], 105, 156);
-t_vec[1] = expitCons(T_t_vec[1], 157, 208);
-t_vec[2] = expitCons(T_t_vec[2], 209, 260);
-t_vec[3] = expitCons(T_t_vec[3], 261, 312);
-t_vec[4] = expitCons(T_t_vec[4], 313, 365);
-t_vec[5] = expitCons(T_t_vec[5], 366, 417);
-t_vec[6] = expitCons(T_t_vec[6], 418, 469);
-t_vec[7] = expitCons(T_t_vec[7], 470, 521);
-t_vec[8] = expitCons(T_t_vec[8], 522, 573);
-t_vec[9] = expitCons(T_t_vec[9], 574, 626);
+t_vec[0] = expitCons(T_t_vec[0], 1, 53);
+t_vec[1] = expitCons(T_t_vec[1], 54, 105);
+t_vec[2] = expitCons(T_t_vec[2], 106, 157);
+t_vec[3] = expitCons(T_t_vec[3], 158, 209);
+t_vec[4] = expitCons(T_t_vec[4], 210, 261);
+t_vec[5] = expitCons(T_t_vec[5], 262, 313);
+t_vec[6] = expitCons(T_t_vec[6], 314, 366);
+t_vec[7] = expitCons(T_t_vec[7], 367, 418);
+t_vec[8] = expitCons(T_t_vec[8], 419, 470);
+t_vec[9] = expitCons(T_t_vec[9], 471, 522);
+//t_vec[5] = expitCons(T_t_vec[5], 522, 573);
+//t_vec[6] = expitCons(T_t_vec[6], 574, 626);
+//t_vec[7] = expitCons(T_t_vec[7], 627, 678);
+//t_vec[8] = expitCons(T_t_vec[8], 679, 730);
+//t_vec[9] = expitCons(T_t_vec[9], 731, 783);
 
 // surges in loss of immunity
 double *w_delta_vec = (double *) &w_delta_i_1;
@@ -622,6 +632,13 @@ for(int i = 0; i < nsurges; i++){
     i0 = 0;
   }
 }
+
+if(floor(t) == -1030 || floor(t) == -978 || floor(t) == -926 || floor(t) == -874 || floor(t) == -821 || floor(t) == -769 || floor(t) == -717 ||
+   floor(t) == -665 || floor(t) == -613 || floor(t) == -561 || floor(t) == -508 || floor(t) == -456 || floor(t) == -404 || floor(t) == -352 ||
+   floor(t) == -300 || floor(t) == -248 || floor(t) == -195 || floor(t) == -143 || floor(t) == -91 || floor(t) == -39) {
+  i0 = nearbyint(10.0 * 7 * dt);
+}
+
 //Rprintf("i0=%.2f\n", i0);
 
 // row 1 of schematic

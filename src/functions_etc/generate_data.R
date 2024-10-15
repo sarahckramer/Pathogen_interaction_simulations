@@ -20,7 +20,7 @@ source('src/seitr_x_seitr.R')
 
 #---- set global parameters ----#
 n_sim <- 100 # total number of simulated datasets
-tot_weeks <- 626 # number of weeks to simulate
+tot_weeks <- 522 # number of weeks to simulate
 debug_bool <- FALSE
 
 #---- get interaction parameter values ----#
@@ -47,20 +47,19 @@ n_surge <- round(tot_weeks / 52) # number of surges
 mu_Imloss <- 12 # average surge occurring 12 weeks into season
 sd_Imloss <- 4 # standard deviation of 4 weeks
 
-t_si_mat <- matrix(nrow = n_surge - 2, ncol = n_sim)
-w_delta_i_mat <- matrix(nrow = n_surge - 2, ncol = n_sim)
+t_si_mat <- matrix(nrow = n_surge, ncol = n_sim)
+w_delta_i_mat <- matrix(nrow = n_surge, ncol = n_sim)
 
 for (i in 1:n_sim) {
   
   t_si <- rnorm(n = n_surge, mean = mu_Imloss, sd = sd_Imloss) # draw from normal dist
-  t_si <- t_si + seq(0, 52 * (n_surge - 1), by = 52)
+  t_si <- t_si + seq(1, 53 * (n_surge - 1), by = 52)
   t_si <- round(t_si) # make whole numbers
   
-  t_si[2:12] <- t_si[2:12] + 1 # account for years with 53 weeks
-  t_si[8:12] <- t_si[8:12] + 1
+  t_si[2:10] <- t_si[2:10] + 1 # account for years with 53 weeks
+  t_si[8:10] <- t_si[8:10] + 1 # account for years with 53 weeks
   
-  t_si <- t_si[-which(t_si <= 104)] # remove first two years to allow system to reach equilibrium
-  w_delta_i <- runif(n = length(t_si), min = 0.005 * 7, max = 0.05 * 7) # yearly surge in rate of immunity loss
+  w_delta_i <- runif(n = length(t_si), min = 0.005 * 7, max = 0.075 * 7) # yearly surge in rate of immunity loss
   # w_delta_i <- runif(n = length(t_si), min = 0.01 * 7, max = 0.1 * 7) # yearly surge in rate of immunity loss
   
   t_si_mat[, i] <- t_si
@@ -83,7 +82,7 @@ true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       gamma1 = 7/5, gamma2 = 7/10,
                       w1 = 1/52.25, w2 = 1/52.25,
                       mu = 0.0002, nu = 0.0002,
-                      rho1 = 0.002, rho2 = 0.002,
+                      rho1 = 0.15, rho2 = 0.05,
                       theta_lambda1 = true_int_params$theta_lambda1,
                       theta_lambda2 = true_int_params$theta_lambda2,
                       delta1 = true_int_params$delta1,
@@ -92,10 +91,10 @@ true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       A2=0.20, phi2=26,
                       k1 = 0.04, k2 = 0.02,
                       beta_sd1 = 0.1 * 0.1, beta_sd2 = 0.05 * 0.1,
-                      N = 3700000,
+                      N = 5000000,
                       E01 = 0.001, E02 = 0.001,
-                      R01 = 0.40, R02 = 0.25, R012 = 0.001,
-                      nsurges = n_surge - 2,
+                      R01 = 0.30, R02 = 0.25, R012 = 0.001,
+                      nsurges = n_surge,
                       t_si_ = t_si_mat[, 1], w_delta_i_ = w_delta_i_mat[, 1])
 
 true_params <- parmat(true_params_init, nrep = n_sim)
@@ -112,7 +111,8 @@ true_params[str_detect(rownames(true_params), 'w_delta_i_'), ] <- w_delta_i_mat
 # Create model and synthetic data
 
 #---- create pomp model object ----#
-resp_mod <- create_SEITRxSEITR_mod(tot_weeks, true_params_init, debug_bool = debug_bool)
+resp_mod <- create_SEITRxSEITR_mod(tot_weeks, start_time = -1043, true_params_init, debug_bool = debug_bool)
+# 25 years burn-in: -1304; 50 years burn-in: -2609
 
 #---- test pomp model ----#
 check_transformations(resp_mod) # check parameter transformations
@@ -126,7 +126,7 @@ tic <- Sys.time()
 dat <- simulate(resp_mod, params = true_params, nsim = 1, format = 'data.frame')
 toc <- Sys.time()
 etime <- toc - tic
-units(etime) <- 'secs'
+units(etime) <- 'mins'
 print(etime)
 
 if (debug_bool) {
@@ -136,17 +136,33 @@ if (debug_bool) {
     t()
   ll <- logLik(traj_objfun(data = resp_mod)) # check measurement density model
   print(ll)
+  rm(ll)
 }
 
-dat <- dat %>%
-  filter(time > 104) # remove first 2 years before simulation at equilibrium
+# # Get weeks included in each season:
+# dat <- dat %>%
+#   mutate(date = ymd('2012-June-24') + weeks(time)) # add dates
+# 
+# season_breaks <- dat %>% filter(str_detect(date, '-07-0[1-7]')) %>% pull(date) %>% unique()
+# season_breaks <- c(season_breaks, '2022-07-03')
+# 
+# dat <- dat %>%
+#   as_tibble() %>%
+#   mutate(season = cut(date, breaks = season_breaks, labels = 1:30, include.lowest = TRUE)) %>%
+#   filter(!is.na(season))
+# 
+# t <- dat %>% group_by(season) %>% summarise(min_t = min(time), max_t = max(time)) %>% mutate(n = max_t - min_t, wk_12 = min_t + 12)
+# write_csv(t, file = 'data/dates_and_seasons_UPDATE.csv')
 
 dat <- dat %>%
-  mutate(date = ymd('2012-July-01') + weeks(time)) # add dates
+  filter(time > 0) # remove burn-in period
+
+dat <- dat %>%
+  mutate(date = ymd('2012-June-24') + weeks(time)) # add dates
 
 #---- check for yearly outbreaks ----#
-season_breaks <- dat %>% filter(str_detect(date, '07-0[1-7]')) %>% pull(date) %>% unique()
-season_breaks <- c(season_breaks, '2024-07-01')
+season_breaks <- dat %>% filter(str_detect(date, '-07-0[1-7]')) %>% pull(date) %>% unique()
+season_breaks <- c(season_breaks, '2022-07-03')
 
 dat_red <- dat %>%
   mutate(season = cut(date, breaks = season_breaks, labels = 1:10, include.lowest = TRUE)) %>%
@@ -202,19 +218,19 @@ if (debug_bool) {
     filter(.id %in% 1:12) %>%
     mutate(S1 = X_SS + X_SE + X_SI + X_ST + X_SR) %>%
     select(time:.id, S1) %>%
-    ggplot(aes(x = time, y = S1 / 3700000, group = .id)) + geom_line() + facet_wrap(~ .id) + theme_classic()
+    ggplot(aes(x = time, y = S1 / 5000000, group = .id)) + geom_line() + facet_wrap(~ .id) + theme_classic()
   
   #---- check seasonal attack rates ----#
-  season_breaks <- dat %>% filter(str_detect(date, '07-0[1-7]')) %>% pull(date) %>% unique()
-  season_breaks <- c(season_breaks, '2024-07-01')
+  season_breaks <- dat %>% filter(str_detect(date, '-07-0[1-7]')) %>% pull(date) %>% unique()
+  season_breaks <- c(season_breaks, '2022-07-03')
   
   attack_rates <- dat %>%
     mutate(season = cut(date, breaks = season_breaks, labels = 1:10, include.lowest = TRUE)) %>%
     group_by(season, .id) %>%
     summarise(V1 = sum(V1),
               V2 = sum(V2)) %>%
-    mutate(V1 = V1 / 3700000 * 100,
-           V2 = V2 / 3700000 * 100)
+    mutate(V1 = V1 / 5000000 * 100,
+           V2 = V2 / 5000000 * 100)
   print(summary(attack_rates))
   
   #---- check influence of parameter values on attack rates ----#
