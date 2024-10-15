@@ -43,7 +43,7 @@ time_max <- 23.75 # Maximal execution time (in hours)
 # Get model and data
 
 # Create model and generate synthetic data:
-source('src/generate_data.R')
+source('src/functions_etc/generate_data.R')
 
 # Select a random subset of generated datasets:
 set.seed(93859)
@@ -147,12 +147,42 @@ if (search_type == 'round1_CIs') {
   expect_true(all(estpars %in% names(start_range)))
   expect_true(all(names(start_range) %in% estpars))
   
+} else if (search_type == 'round2_CIs') {
+  
+  start_range <- read_rds('results/trajectory_matching/round3CI_startvals.rds') %>%
+    filter(int_set == jobid, .id == data_id) %>%
+    ungroup() %>%
+    select(-c(int_set, .id, minmax)) %>%
+    as.data.frame()
+  
+  expect_true(all(estpars %in% names(start_range)))
+  expect_true(all(names(start_range) %in% estpars))
+  
+} else if (search_type == 'round3_CIs') {
+  
+  start_range <- read_rds('results/trajectory_matching/round4CI_startvals.rds') %>%
+    filter(int_set == jobid, .id == data_id) %>%
+    ungroup() %>%
+    select(-c(int_set, .id, minmax)) %>%
+    as.data.frame()
+  
+  expect_true(all(estpars %in% names(start_range)))
+  expect_true(all(names(start_range) %in% estpars))
+  
 }
 
 set.seed(38564478)
 start_values <- sobol_design(lower = setNames(as.numeric(start_range[1, ]), names(start_range[1, ])),
                              upper = setNames(as.numeric(start_range[2, ]), names(start_range[2, ])),
                              nseq = sobol_size)
+
+if (search_type %in% c('round1_CIs', 'round2_CIs', 'round3_CIs')) {
+  
+  start_values <- start_values %>%
+    mutate(phi1 = if_else(phi1 > 52.25, phi1 - 52.25, phi1),
+           phi2 = if_else(phi2 > 52.25, phi2 - 52.25, phi2))
+  
+}
 
 print(estpars)
 print(start_range)
