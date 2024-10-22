@@ -21,7 +21,7 @@ gam_cor <- function(data){
   # GAM w/o confounding:
   
   # run gam model
-  mvn_mod <- gam(formula = list(V1_obs ~ s(time, k = 100), V2_obs ~ s(time, k = 100)),
+  mvn_mod <- gam(formula = list(V1_obs ~ s(time, k = 200), V2_obs ~ s(time, k = 200)),
                  family = mvn(d = 2), # multivariate normal distribution of dimension 2
                  data = data)
   
@@ -42,7 +42,7 @@ gam_cor <- function(data){
     mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (data$time - 26)))
   
   # run gam model
-  mvn_mod_confound <- gam(formula = list(V1_obs ~ s(time, k = 100) + s(seasonal_component, k = 25), V2_obs ~ s(time, k = 100) +s(seasonal_component, k = 25)),
+  mvn_mod_confound <- gam(formula = list(V1_obs ~ s(time, k = 200) + s(seasonal_component, k = 25), V2_obs ~ s(time, k = 200) + s(seasonal_component, k = 25)),
                           family = mvn(d = 2), # multivariate normal distribution of dimension 2
                           data = data)
   
