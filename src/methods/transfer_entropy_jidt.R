@@ -29,11 +29,15 @@ te_jidt <- function(data, lag){
   # Create a TE calculator:
   teCalc <- .jnew('infodynamics/measures/continuous/kraskov/TransferEntropyCalculatorKraskov')
   .jcall(teCalc, 'V', 'setProperty', 'k', '4') # use Kraskov parameter k = 4 for nearest 4 points
-  .jcall(teCalc, 'V', 'setProperty', 'k_tau', lag) # lag for destination
+  .jcall(teCalc, 'V', 'setProperty', 'delay', lag) # lag between source and destination
   
   # TE calculation for V1 -> V2:
-  .jcall(teCalc, 'V', 'initialise', 1L) # use history length 1 (Schreiber k = 1)
+  .jcall(teCalc, 'V', 'initialise')
   .jcall(teCalc, 'V', 'setObservations', sourceArray, destArray)
+  
+  # SET EMBEDDING DIMENSIONS (source: 20, dest: 5)
+  .jcall(teCalc, 'V', 'setProperty', 'k_history', '5') # set destination embedding
+  .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
   
   result_v2_x_v1 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
   
@@ -43,8 +47,13 @@ te_jidt <- function(data, lag){
   sd_null_v2_x_v1 <- .jcall(nullDist_v2_x_v1, 'D', 'getStdOfDistribution')
   p_value_v2_x_v1 <- nullDist_v2_x_v1$pValue
   
-  # TE calculation for V2 -> V1
+  # TE calculation for V2 -> V1:
+  .jcall(teCalc, 'V', 'initialise')
   .jcall(teCalc, 'V', 'setObservations', destArray, sourceArray)
+  
+  # SET EMBEDDING DIMENSIONS (source: 20, dest: 2)
+  .jcall(teCalc, 'V', 'setProperty', 'k_history', '2') # set destination embedding
+  .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
   
   result_v1_x_v2 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
   
@@ -54,19 +63,103 @@ te_jidt <- function(data, lag){
   sd_null_v1_x_v2 <- .jcall(nullDist_v1_x_v2, 'D', 'getStdOfDistribution')
   p_value_v1_x_v2 <- nullDist_v1_x_v2$pValue
   
-  res <- data.frame(cbind(te = c(result_v1_x_v2, result_v2_x_v1),
-                          direction = c('v2 -> v1', 'v1 -> v2'),
-                          sd_null = c(sd_null_v1_x_v2, sd_null_v2_x_v1),
-                          p_value = c(p_value_v1_x_v2, p_value_v2_x_v1),
-                          lag = rep(lag))) %>%
-    as_tibble() %>%
-    mutate(te = as.numeric(te),
-           sd_null = as.numeric(sd_null),
-           p_value = as.numeric(p_value))
-  
   #---- Analysis w/ confounding ----#
   
-  # TO DO
+  # Calculate seasonal component:
+  data <- data %>%
+    mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26)))
+  condArray <- data$seasonal_component
+  
+  # Create a new TE calculator:
+  teCalc <- .jnew('infodynamics/measures/continuous/kraskov/ConditionalTransferEntropyCalculatorKraskov')
+  
+  .jcall(teCalc, 'V', 'setProperty', 'k', '4') # use Kraskov parameter k = 4 for nearest 4 points
+  .jcall(teCalc, 'V', 'setProperty', 'delay', lag) # lag between source and destination
+  
+  # First, use embedding dimension 1 for seasonal component:
+  
+  # TE calculation for V1 -> V2:
+  .jcall(teCalc, 'V', 'initialise')
+  .jcall(teCalc, 'V', 'setObservations', sourceArray, destArray, condArray)
+  
+  # SET EMBEDDING DIMENSIONS (source: 20, dest: 5)
+  .jcall(teCalc, 'V', 'setProperty', 'k_history', '5') # set destination embedding
+  .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
+  
+  result_confound_v2_x_v1 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
+  
+  nullDist_confound_v2_x_v1 <- .jcall(teCalc, 'Linfodynamics/utils/EmpiricalMeasurementDistribution;',
+                                      'computeSignificance', 500L)
+  mean_null_confound_v2_x_v1 <- .jcall(nullDist_confound_v2_x_v1, 'D', 'getMeanOfDistribution')
+  sd_null_confound_v2_x_v1 <- .jcall(nullDist_confound_v2_x_v1, 'D', 'getStdOfDistribution')
+  p_value_confound_v2_x_v1 <- nullDist_confound_v2_x_v1$pValue
+  
+  # TE calculation for V2 -> V1:
+  .jcall(teCalc, 'V', 'initialise')
+  .jcall(teCalc, 'V', 'setObservations', destArray, sourceArray, condArray)
+  
+  # SET EMBEDDING DIMENSIONS (source: 20, dest: 2)
+  .jcall(teCalc, 'V', 'setProperty', 'k_history', '2') # set destination embedding
+  .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
+  
+  result_confound_v1_x_v2 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
+  
+  nullDist_confound_v1_x_v2 <- .jcall(teCalc, 'Linfodynamics/utils/EmpiricalMeasurementDistribution;',
+                                      'computeSignificance', 500L)
+  mean_null_confound_v1_x_v2 <- .jcall(nullDist_confound_v1_x_v2, 'D', 'getMeanOfDistribution')
+  sd_null_confound_v1_x_v2 <- .jcall(nullDist_confound_v1_x_v2, 'D', 'getStdOfDistribution')
+  p_value_confound_v1_x_v2 <- nullDist_confound_v1_x_v2$pValue
+  
+  # Also try embedding dimension equal to embedding dimension for destination:
+  
+  # TE calculation for V1 -> V2:
+  .jcall(teCalc, 'V', 'initialise')
+  .jcall(teCalc, 'V', 'setObservations', sourceArray, destArray, condArray)
+  
+  # SET EMBEDDING DIMENSIONS (source: 20, dest: 5)
+  .jcall(teCalc, 'V', 'setProperty', 'k_history', '5') # set destination embedding
+  .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
+  .jcall(teCalc, 'V', 'setProperty', 'cond_embed_lengths', '5') # set conditional variable embedding
+  
+  result_confound2_v2_x_v1 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
+  
+  nullDist_confound2_v2_x_v1 <- .jcall(teCalc, 'Linfodynamics/utils/EmpiricalMeasurementDistribution;',
+                                      'computeSignificance', 500L)
+  mean_null_confound2_v2_x_v1 <- .jcall(nullDist_confound2_v2_x_v1, 'D', 'getMeanOfDistribution')
+  sd_null_confound2_v2_x_v1 <- .jcall(nullDist_confound2_v2_x_v1, 'D', 'getStdOfDistribution')
+  p_value_confound2_v2_x_v1 <- nullDist_confound2_v2_x_v1$pValue
+  
+  # TE calculation for V2 -> V1:
+  .jcall(teCalc, 'V', 'initialise')
+  .jcall(teCalc, 'V', 'setObservations', destArray, sourceArray, condArray)
+  
+  # SET EMBEDDING DIMENSIONS (source: 20, dest: 2)
+  .jcall(teCalc, 'V', 'setProperty', 'k_history', '2') # set destination embedding
+  .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
+  .jcall(teCalc, 'V', 'setProperty', 'cond_embed_lengths', '2') # set conditional variable embedding
+  
+  result_confound2_v1_x_v2 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
+  
+  nullDist_confound2_v1_x_v2 <- .jcall(teCalc, 'Linfodynamics/utils/EmpiricalMeasurementDistribution;',
+                                      'computeSignificance', 500L)
+  mean_null_confound2_v1_x_v2 <- .jcall(nullDist_confound2_v1_x_v2, 'D', 'getMeanOfDistribution')
+  sd_null_confound2_v1_x_v2 <- .jcall(nullDist_confound2_v1_x_v2, 'D', 'getStdOfDistribution')
+  p_value_confound2_v1_x_v2 <- nullDist_confound2_v1_x_v2$pValue
+  
+  #---- Compile and return results ----#
+  res <- data.frame(cbind(te = c(result_v1_x_v2, result_v2_x_v1),
+                          te_confound = c(result_confound_v1_x_v2, result_confound_v2_x_v1),
+                          te_confound2 = c(result_confound2_v1_x_v2, result_confound2_v2_x_v1),
+                          direction = c('v2 -> v1', 'v1 -> v2'),
+                          sd_null = c(sd_null_v1_x_v2, sd_null_v2_x_v1),
+                          sd_null_confound = c(sd_null_confound_v1_x_v2, sd_null_confound_v2_x_v1),
+                          sd_null_confound2 = c(sd_null_confound2_v1_x_v2, sd_null_confound2_v2_x_v1),
+                          p_value = c(p_value_v1_x_v2, p_value_v2_x_v1),
+                          p_value_confound = c(p_value_confound_v1_x_v2, p_value_confound_v2_x_v1),
+                          p_value_confound2 = c(p_value_confound2_v1_x_v2, p_value_confound2_v2_x_v1),
+                          lag = rep(lag))) %>%
+    as_tibble() %>%
+    mutate(across(-direction, as.numeric))
   
   return(res)
   

@@ -155,8 +155,8 @@ if (run_local) {
   res_te_2 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '2'))
   # lag = 4
   res_te_4 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '4'))
-  # lag = 6
-  res_te_6 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '6'))
+  # lag = 13
+  res_te_13 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '13'))
 
   toc <- Sys.time()
   etime <- toc - tic
@@ -164,8 +164,8 @@ if (run_local) {
   print(etime)
 
   # combine results and store
-  results$transfer_entropy <- bind_rows(res_te_1, res_te_2, res_te_4, res_te_6)
-  rm(res_te_1, res_te_2, res_te_4, res_te_6)
+  results$transfer_entropy <- bind_rows(res_te_1, res_te_2, res_te_4, res_te_13)
+  rm(res_te_1, res_te_2, res_te_4, res_te_13)
 
 }
 

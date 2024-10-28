@@ -33,12 +33,12 @@ ccm_func <- function(data){
   # get E (embedding dimension - the number nearest neighbours to use for prediction) for v1 
   # EmbedDimension is a wrapper around the simplex function to get out E only  
   E_v1 <- EmbedDimension(dataFrame = data, columns = 'V1_obs', target = 'V1_obs',
-                         lib = lib, pred = pred, maxE = 20, showPlot = FALSE)
+                         lib = lib, pred = pred, maxE = 2, showPlot = FALSE)
   E_v1 <- E_v1 %>% slice_max(rho) %>% pull(E) # keep the row with max prediction skill
   
   # get E for v2
   E_v2 <- EmbedDimension(dataFrame = data, columns = "V2_obs", target = "V2_obs",
-                         lib = lib, pred = pred, maxE = 20, showPlot = FALSE)
+                         lib = lib, pred = pred, maxE = 5, showPlot = FALSE)
   E_v2 <- E_v2 %>% slice_max(rho) %>% pull(E)
   
   #---- check whether highest cross-map correlation is positive and for a negative lag ----#
@@ -66,7 +66,7 @@ ccm_func <- function(data){
 
   #---- determine if any time delay needs considering: i.e. tp parameter ----#
   # generate all combinations of lib_column, target_column, tp
-  params <- expand.grid(lib_column = vars, target_column = vars, tp = -52:0) %>% # alternatively, -20:5
+  params <- expand.grid(lib_column = vars, target_column = vars, tp = -20:0) %>%
     filter(lib_column != target_column) # remove cases where lib == target
   
   # want E to be that corresponding to the lib column variable (i.e. the names

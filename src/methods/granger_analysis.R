@@ -25,7 +25,7 @@ granger_func <- function(data){
   # determine the number of lags for each simulated dataset
   df <- data %>% dplyr::select(V1_obs, V2_obs)
   
-  lags <- lapply(df, VARselect, lag.max = 15) # lag of approx 3 month
+  lags <- lapply(df, VARselect, lag.max = 20) # lag of approx 3 month
   rm(df)
   
   # pull out the lag with lowest BIC
