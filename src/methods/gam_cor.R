@@ -120,7 +120,8 @@ gam_cor <- function(data){
   # run gam model
   mvn_mod <- gam(formula = list(V1_obs ~ s(time, k = 200), V2_obs ~ s(time, k = 200)),
                  family = mvn(d = 2), # multivariate normal distribution of dimension 2
-                 data = data)
+                 data = data,
+                 method = 'REML')
   
   # pull out the covariance matrix and then calculate the correlation matrix
   # output: 2 x 2 symmetric matrix
