@@ -96,7 +96,8 @@ gam_cor <- function(data){
     boot_mod <- lapply(boot_dat, function(ix) {
       gam(formula = list(V1 ~ s(time, k = 200), V2 ~ s(time, k = 200)),
           family = mvn(d = 2),
-          data = ix)
+          data = ix,
+          method = 'REML')
     })
     
     # pull out the covariance matrix and calculate the correlation matrix:
