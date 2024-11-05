@@ -93,23 +93,11 @@ gam_cor <- function(data){
       mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26))) %>%
       split(.$.draw)
     
-    if (any(str_detect(as.character(mod$pred.formula), 'seasonal'))) {
-      
-      boot_mod <- lapply(boot_dat, function(ix) {
-        gam(formula = list(V1 ~ s(time, k = 200) + s(seasonal_component, k = 25), V2 ~ s(time, k = 200) + s(seasonal_component, k = 25)),
-            family = mvn(d = 2),
-            data = ix)
-      })
-      
-    } else {
-      
-      boot_mod <- lapply(boot_dat, function(ix) {
-        gam(formula = list(V1 ~ s(time, k = 200), V2 ~ s(time, k = 200)),
-            family = mvn(d = 2),
-            data = ix)
-      })
-      
-    }
+    boot_mod <- lapply(boot_dat, function(ix) {
+      gam(formula = list(V1 ~ s(time, k = 200), V2 ~ s(time, k = 200)),
+          family = mvn(d = 2),
+          data = ix)
+    })
     
     # pull out the covariance matrix and calculate the correlation matrix:
     cors <- lapply(boot_mod, function(ix) {
@@ -146,35 +134,8 @@ gam_cor <- function(data){
   # estimate confidence interval for elements of correlation matrix
   boot_corr <- boot_func(sim_dat, mvn_mod)
   
-  # GAM w/ seasonal confounding:
-  
-  # calculate the shared seasonal component 
-  data <- data %>%
-    mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26)))
-  
-  # run gam model
-  mvn_mod_confound <- gam(formula = list(V1_obs ~ s(time, k = 200) + s(seasonal_component, k = 25), V2_obs ~ s(time, k = 200) + s(seasonal_component, k = 25)),
-                          family = mvn(d = 2), # multivariate normal distribution of dimension 2
-                          data = data)
-  
-  # pull out the covariance matrix and then calculate the correlation matrix.
-  # output: 2 x 2 symmetric matrix
-  corr_mat_confound <- mvn_mod_confound$family$data$R %>%
-    crossprod() %>%
-    solve() %>%
-    cov2cor()
-  
-  # simulate "data" from fit models to perform parametric bootstrap
-  sim_dat_confound <- posterior_samples_ADAPT(mvn_mod_confound, n = 100)
-  
-  # estimate confidence interval for elements of correlation matrix
-  boot_corr_confound <- boot_func(sim_dat_confound, mvn_mod_confound)
-  
   # get results and 95% CIs
-  # res <- data.frame(cbind(cor = corr_mat[2, 1], CI_lower95 = quantile(boot_corr, p = 0.025), CI_upper95 = quantile(boot_corr, p = 0.975)), row.names = '')
-  res <- data.frame(cbind(cor = corr_mat[2, 1], CI_lower95 = quantile(boot_corr, p = 0.025), CI_upper95 = quantile(boot_corr, p = 0.975),
-                          cor_confound = corr_mat_confound[2, 1], CI_lower95_confound = quantile(boot_corr_confound, p = 0.025), 
-                          CI_upper95_confound = quantile(boot_corr_confound, p = 0.975)), row.names = '')
+  res <- data.frame(cbind(cor = corr_mat[2, 1], CI_lower95 = quantile(boot_corr, p = 0.025), CI_upper95 = quantile(boot_corr, p = 0.975)), row.names = '')
   
   # return all results
   return(res)
