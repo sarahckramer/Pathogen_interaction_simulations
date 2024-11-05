@@ -14,9 +14,117 @@
 
 # load packages
 library(mgcv)
-library(boot)
+library(gratia)
 
 gam_cor <- function(data){ 
+  
+  # functions
+  posterior_samples_ADAPT <- function(mod, n) {
+    # adapated from "posterior_samples" function in package "gratia," which doesn't seem to support multivariate normal distributions yet...
+    # https://github.com/gavinsimpson/gratia/blob/main/R/posterior-samples.R
+    # ...in combination with "simulate_gam" from the package "mgcvUtils"
+    # https://github.com/dill/mgcvUtils/blob/master/R/simulate_gam.R
+    # param mod: model fitted using mgcv, from which posterior samples should be drawn
+    # param n: number of draws to take from the posterior
+    # returns: list of simulated values of V1_obs and V2_obs
+    
+    # set seed:
+    set.seed(8401590)
+    
+    # get posterior draws of coefficients:
+    betas <- post_draws(mod, n, method = 'gaussian', frequentist = FALSE, unconditional = TRUE)
+    
+    # get indices of necessary parameters for each virus:
+    lss_idx <- attr(formula(mod), "lpi")
+    lss_loc <- lss_idx[1:2]
+    
+    # get linear prediction matrix:
+    Xp <- predict(mod, newdata = data, type = 'lpmatrix', unconditional = TRUE)
+    
+    # get simulated means for each virus:
+    mu_1 <- Xp[, lss_loc[[1]], drop = FALSE] %*% t(betas[, lss_loc[[1]], drop = FALSE])
+    mu_2 <- Xp[, lss_loc[[2]], drop = FALSE] %*% t(betas[, lss_loc[[2]], drop = FALSE])
+    
+    # reformat as list:
+    mu_list <- vector('list', length = n)
+    for (i in 1:n) {
+      mu_list[[i]] <- cbind(mu_1[, i], mu_2[, i])
+    }
+    
+    # draw from posteriors:
+    sims <- lapply(mu_list, function(ix) {
+      rmvn(nrow(ix), mu = ix, V = solve(crossprod(mod$family$data$R)))
+    })
+    
+    # format and collapse:
+    sims <- lapply(1:length(sims), function(ix) {
+      sims[[ix]] %>%
+        as_tibble() %>%
+        rownames_to_column(var = '.row') %>%
+        mutate(.draw = ix, .before = V1)
+    }) %>%
+      bind_rows()
+    
+    # # plot simulated "data":
+    # par(mfrow = c(2, 1))
+    # plot(data$V1_obs, pch = 20)
+    # for (i in 1:n) {
+    #   lines(sims$V1[sims$.draw == i], col = 'lightblue')
+    # }
+    # plot(data$V2_obs, pch = 20)
+    # for (i in 1:n) {
+    #   lines(sims$V2[sims$.draw == i], col = 'lightblue')
+    # }
+    
+    # return formatted posterior samples:
+    return(sims)
+    
+  }
+  
+  boot_func <- function(boot_dat, mod) {
+    
+    # how many draws from posterior?:
+    n <- boot_dat %>% pull(.draw) %>% unique() %>% length()
+    
+    # get tibbles of simulated data:
+    boot_dat <- boot_dat %>%
+      rename('time' = '.row') %>%
+      mutate(time = as.numeric(time)) %>%
+      mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26))) %>%
+      split(.$.draw)
+    
+    if (any(str_detect(as.character(mod$pred.formula), 'seasonal'))) {
+      
+      boot_mod <- lapply(boot_dat, function(ix) {
+        gam(formula = list(V1 ~ s(time, k = 200) + s(seasonal_component, k = 25), V2 ~ s(time, k = 200) + s(seasonal_component, k = 25)),
+            family = mvn(d = 2),
+            data = ix)
+      })
+      
+    } else {
+      
+      boot_mod <- lapply(boot_dat, function(ix) {
+        gam(formula = list(V1 ~ s(time, k = 200), V2 ~ s(time, k = 200)),
+            family = mvn(d = 2),
+            data = ix)
+      })
+      
+    }
+    
+    # pull out the covariance matrix and calculate the correlation matrix:
+    cors <- lapply(boot_mod, function(ix) {
+      ix <- ix$family$data$R %>%
+        crossprod() %>%
+        solve() %>%
+        cov2cor()
+      return(ix[2, 1])
+    })
+    cors <- cors %>% unlist() %>% unname()
+    
+    # return bootstrapped correlations:
+    return(cors)
+    
+  }
   
   # GAM w/o confounding:
   
@@ -34,6 +142,12 @@ gam_cor <- function(data){
     crossprod() %>%
     solve() %>%
     cov2cor()
+  
+  # simulate "data" from fit models to perform parametric bootstrap
+  sim_dat <- posterior_samples_ADAPT(mvn_mod, n = 100)
+  
+  # estimate confidence interval for elements of correlation matrix
+  boot_corr <- boot_func(sim_dat, mvn_mod)
   
   # GAM w/ seasonal confounding:
   
@@ -54,97 +168,21 @@ gam_cor <- function(data){
   corr_mat_confound <- mvn_mod_confound$family$data$R %>%
     crossprod() %>%
     solve() %>%
-    cov2cor() 
+    cov2cor()
+  
+  # simulate "data" from fit models to perform parametric bootstrap
+  sim_dat_confound <- posterior_samples_ADAPT(mvn_mod_confound, n = 100)
   
   # estimate confidence interval for elements of correlation matrix
-  # using block bootstrapping of the residuals
-  R <- 100 # number of bootstrap replicates to do
+  boot_corr_confound <- boot_func(sim_dat_confound, mvn_mod_confound)
   
-  # creating function to run in the tsboot function 
-  boot_func <- function(tseries, orig_data, var_model, var_model_confound) {
-    
-    # generating new simulated data not accounting for confounding
-    bootstrap_residuals <- data.frame(tseries[, c(1:2)])
-    names(bootstrap_residuals) <- c("V1_obs", "V2_obs")
-    bootstrap_data_v1 <- as.vector(orig_data$V1_obs - residuals(var_model, type = 'response')[,1] + bootstrap_residuals$V1_obs)
-    bootstrap_data_v2 <- as.vector(orig_data$V2_obs - residuals(var_model, type = 'response')[,2] + bootstrap_residuals$V2_obs)
-    
-    # generating new simulated data accounting for confounding
-    bootstrap_residuals_confound <- data.frame(tseries[, c(3:4)])
-    names(bootstrap_residuals_confound) <- c("V1_obs", "V2_obs")
-    bootstrap_data_v1_confound <- as.vector(orig_data$V1_obs - residuals(var_model_confound, type = 'response')[,1] + bootstrap_residuals_confound$V1_obs)
-    bootstrap_data_v2_confound <- as.vector(orig_data$V2_obs - residuals(var_model_confound, type = 'response')[,2] + bootstrap_residuals_confound$V2_obs)
-    
-    # making the dataframes
-    boot_data <- orig_data %>%
-      dplyr::select(time) %>%
-      mutate(V1_obs = bootstrap_data_v1,
-             V2_obs = bootstrap_data_v2)# %>%
-      # mutate(V1_obs = if_else(V1_obs < 0, 0, V1_obs),
-      #        V2_obs = if_else(V2_obs < 0, 0, V2_obs))
-    
-    # confounding dataframe
-    boot_data_confound <- orig_data %>%
-      dplyr::select(time) %>%
-      mutate(V1_obs = bootstrap_data_v1_confound,
-             V2_obs = bootstrap_data_v2_confound)# %>%
-      # mutate(V1_obs = if_else(V1_obs < 0, 0, V1_obs),
-      #        V2_obs = if_else(V2_obs < 0, 0, V2_obs))
-    
-    # calculating seasonal component
-    boot_data_confound <- boot_data_confound %>%
-      mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (data$time - 26)))
-    
-    # model not accounting for seasonal confounding
-    boot_mvn_mod <- gam(formula = list(V1_obs ~ s(time, k = 100), V2_obs ~ s(time, k = 100)),
-                        family = mvn(d = 2), # multivariate normal distribution of dimension 2
-                        data = boot_data)
-    
-    boot_corr_mat <- boot_mvn_mod$family$data$R %>%
-      crossprod() %>%
-      solve() %>%
-      cov2cor() 
-    
-    # model accounting for seasonal confounding
-    boot_mvn_mod_confound <- gam(formula = list(V1_obs ~ s(time, k = 100) + s(seasonal_component, k = 25), V2_obs ~ s(time, k = 100) + s(seasonal_component, k = 25)),
-                                 family = mvn(d = 2), # multivariate normal distribution of dimension 2
-                                 data = boot_data_confound)
-    
-    boot_corr_mat_confound <- boot_mvn_mod_confound$family$data$R %>%
-      crossprod() %>%
-      solve() %>%
-      cov2cor()
-    
-    cor <- boot_corr_mat[2,1]
-    cor_confound <- boot_corr_mat_confound[2,1]
-    #cor_both <- data.frame(cor = cor, cor_confound = cor_confound)
-    #boot_res <- rbind(boot_res, cor_both)  
-    boot_res <- c(cor, cor_confound)
-    return(boot_res)
-  }
+  # get results and 95% CIs
+  # res <- data.frame(cbind(cor = corr_mat[2, 1], CI_lower95 = quantile(boot_corr, p = 0.025), CI_upper95 = quantile(boot_corr, p = 0.975)), row.names = '')
+  res <- data.frame(cbind(cor = corr_mat[2, 1], CI_lower95 = quantile(boot_corr, p = 0.025), CI_upper95 = quantile(boot_corr, p = 0.975),
+                          cor_confound = corr_mat_confound[2, 1], CI_lower95_confound = quantile(boot_corr_confound, p = 0.025), 
+                          CI_upper95_confound = quantile(boot_corr_confound, p = 0.975)), row.names = '')
   
-  # do the block resampling with 4 week size blocks
-  boot_out <- tsboot(tseries = cbind(orig_resid, orig_resid_confound), statistic = boot_func, R = R, sim = "fixed",
-                     l = 10, orig_data = data, var_model = mvn_mod, var_model_confound = mvn_mod_confound)
-  
-  # check out the correlation bootstrap distribution 
-  boot_corr <- data.frame(boot_out$t)
-  names(boot_corr) <- c("cor", "cor_confound")
-  
-  # get 95% CIs 
-  
-  # no confounding 
-  CI_lower95 <- quantile(boot_corr$cor, p = 0.025) %>% unname()
-  CI_upper95 <- quantile(boot_corr$cor, p = 0.975) %>% unname()
-  
-  # confounding
-  CI_lower95_confound <- quantile(boot_corr$cor_confound, p = 0.025) %>% unname()
-  CI_upper95_confound <- quantile(boot_corr$cor_confound, p = 0.975) %>% unname()
-  
-  # summarise results to output
-  res <- data.frame(cbind(cor = corr_mat[2, 1], CI_lower95 = CI_lower95, CI_upper95 = CI_upper95,
-                          cor_confound = corr_mat_confound[2, 1], CI_lower95_confound = CI_lower95_confound, 
-                          CI_upper95_confound = CI_upper95_confound), row.names = '')
+  # return all results
   return(res)
   
 }
