@@ -144,25 +144,46 @@ if (run_local) {
 
 #---- Transfer entropy analysis ----#
 if (run_local) {
-
-  source('src/methods/transfer_entropy_jidt.R')
-
+  
   tic <- Sys.time()
-
-  # lag = 1
-  res_te_1 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '1'))
-  # lag = 2
-  res_te_2 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '2'))
-  # lag = 4
-  res_te_4 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '4'))
-  # lag = 13
-  res_te_13 <- dat %>% group_by(.id) %>% do(te_jidt(., lag = '13'))
+  
+  cl <- makeCluster(4, type = 'SOCK')
+  registerDoSNOW(cl)
+  res_te_1 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
+    source('src/methods/transfer_entropy_jidt.R')
+    dat %>% filter(.id == i) %>% te_jidt(., lag = '1') %>% mutate(.id = i)
+  }
+  stopCluster(cl)
+  
+  cl <- makeCluster(4, type = 'SOCK')
+  registerDoSNOW(cl)
+  res_te_2 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
+    source('src/methods/transfer_entropy_jidt.R')
+    dat %>% filter(.id == i) %>% te_jidt(., lag = '2') %>% mutate(.id = i)
+  }
+  stopCluster(cl)
+  
+  cl <- makeCluster(4, type = 'SOCK')
+  registerDoSNOW(cl)
+  res_te_4 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
+    source('src/methods/transfer_entropy_jidt.R')
+    dat %>% filter(.id == i) %>% te_jidt(., lag = '4') %>% mutate(.id = i)
+  }
+  stopCluster(cl)
+  
+  cl <- makeCluster(4, type = 'SOCK')
+  registerDoSNOW(cl)
+  res_te_13 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
+    source('src/methods/transfer_entropy_jidt.R')
+    dat %>% filter(.id == i) %>% te_jidt(., lag = '13') %>% mutate(.id = i)
+  }
+  stopCluster(cl)
 
   toc <- Sys.time()
   etime <- toc - tic
   units(etime) <- 'mins'
   print(etime)
-
+  
   # combine results and store
   results$transfer_entropy <- bind_rows(res_te_1, res_te_2, res_te_4, res_te_13)
   rm(res_te_1, res_te_2, res_te_4, res_te_13)
