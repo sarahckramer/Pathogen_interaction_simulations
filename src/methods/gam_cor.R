@@ -60,7 +60,7 @@ gam_cor <- function(data){
     sims <- lapply(1:length(sims), function(ix) {
       sims[[ix]] %>%
         as_tibble() %>%
-        rownames_to_column(var = '.row') %>%
+        rownames_to_column(var = 'time') %>%
         mutate(.draw = ix, .before = V1)
     }) %>%
       bind_rows()
@@ -86,15 +86,12 @@ gam_cor <- function(data){
     # how many draws from posterior?:
     n <- boot_dat %>% pull(.draw) %>% unique() %>% length()
     
-    # get tibbles of simulated data:
+    # split simulated data into list:
     boot_dat <- boot_dat %>%
-      rename('time' = '.row') %>%
-      mutate(time = as.numeric(time)) %>%
-      mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26))) %>%
       split(.$.draw)
     
     boot_mod <- lapply(boot_dat, function(ix) {
-      gam(formula = list(V1 ~ s(time, k = 200), V2 ~ s(time, k = 200)),
+      gam(formula = list(V1 ~ s(week, bs = 'cc', k = 53) + s(time, k = 150), V2 ~ s(week, bs = 'cc', k = 53) + s(time, k = 100)),
           family = mvn(d = 2),
           data = ix,
           method = 'REML')
@@ -117,8 +114,12 @@ gam_cor <- function(data){
   
   # GAM w/o confounding:
   
+  # calculate time of year:
+  data <- data %>%
+    mutate(week = week(date))
+  
   # run gam model
-  mvn_mod <- gam(formula = list(V1_obs ~ s(time, k = 200), V2_obs ~ s(time, k = 200)),
+  mvn_mod <- gam(formula = list(V1_obs ~ s(week, bs = 'cc', k = 53) + s(time, k = 150), V2_obs ~ s(week, bs = 'cc', k = 53) + s(time, k = 100)),
                  family = mvn(d = 2), # multivariate normal distribution of dimension 2
                  data = data,
                  method = 'REML')
@@ -131,7 +132,10 @@ gam_cor <- function(data){
     cov2cor()
   
   # simulate "data" from fit models to perform parametric bootstrap
-  sim_dat <- posterior_samples_ADAPT(mvn_mod, n = 100)
+  sim_dat <- posterior_samples_ADAPT(mvn_mod, n = 100) %>%
+    mutate(time = as.numeric(time)) %>%
+    left_join(data %>% dplyr::select(time, week),
+              by = 'time')
   
   # estimate confidence interval for elements of correlation matrix
   boot_corr <- boot_func(sim_dat, mvn_mod)
