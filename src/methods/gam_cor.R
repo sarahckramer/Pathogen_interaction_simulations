@@ -40,7 +40,7 @@ gam_cor <- function(data){
   
   # run gam model (brms - Bayesian)
   mvn_mod_form <- bf(mvbind(V1_obs, V2_obs) ~ s(week, bs = 'cc', k = 53) + s(time, bs = 'cr', k = 150)) + set_rescor(TRUE)
-  mvn_mod <- brm(mvn_mod_form, data = data, chains = 4, cores = 4, warmup = 2500, iter = 5000, control = list(max_treedepth = 15, adapt_delta = 0.95))
+  mvn_mod <- brm(mvn_mod_form, data = data, chains = 4, cores = 4, warmup = 2000, iter = 3000, control = list(max_treedepth = 15, adapt_delta = 0.95))
   corrs_alt <- as_draws_df(mvn_mod, variable = 'rescor__V1obs__V2obs')$rescor__V1obs__V2obs
   
   # check for divergent transitions
