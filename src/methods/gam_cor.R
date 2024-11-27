@@ -25,19 +25,6 @@ gam_cor <- function(data){
   data <- data %>%
     mutate(week = week(date))
   
-  # # run gam model (mgcv)
-  # mvn_mod <- gam(formula = list(V1_obs ~ s(week, bs = 'cc', k = 53) + s(time, k = 150), V2_obs ~ s(week, bs = 'cc', k = 53) + s(time, k = 100)),
-  #                family = mvn(d = 2), # multivariate normal distribution of dimension 2
-  #                data = data,
-  #                method = 'REML')
-  # 
-  # # pull out the covariance matrix and then calculate the correlation matrix
-  # # output: 2 x 2 symmetric matrix
-  # corr_mat <- mvn_mod$family$data$R %>%
-  #   crossprod() %>%
-  #   solve() %>%
-  #   cov2cor()
-  
   # run gam model (brms - Bayesian)
   mvn_mod_form <- bf(mvbind(V1_obs, V2_obs) ~ s(week, bs = 'cc', k = 53) + s(time, bs = 'cr', k = 150)) + set_rescor(TRUE)
   mvn_mod <- brm(mvn_mod_form, data = data, chains = 4, cores = 4, warmup = 2000, iter = 3000, control = list(max_treedepth = 15, adapt_delta = 0.95))
