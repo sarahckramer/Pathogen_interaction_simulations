@@ -46,11 +46,11 @@ gam_cor <- function(data){
   # check for divergent transitions
   # https://github.com/paul-buerkner/brms/issues/97
   n_divergent <- lapply(mvn_mod$fit@sim$samples, function(ix) {
-    sum(attr(ix, 'sampler_params')[['divergent__']])
+    sum(attr(ix, 'sampler_params')[['divergent__']][2001:3000])
   }) %>% unlist() %>% sum()
   
   # get results and 95% CIs
-  res <- data.frame(cbind(cor = mean(corrs_alt), cor_median = median(corrs_alt), CI_lower95 = quantile(corrs_alt, p = 0.025), CI_upper95 = quantile(corrs_alt, p = 0.975), t(rhat(mvn_mod_alt)[1:13]), n_div = n_divergent), row.names = '')
+  res <- data.frame(cbind(cor = mean(corrs_alt), cor_median = median(corrs_alt), CI_lower95 = quantile(corrs_alt, p = 0.025), CI_upper95 = quantile(corrs_alt, p = 0.975), t(rhat(mvn_mod)[1:13]), n_div = n_divergent), row.names = '')
   
   # return all results
   return(res)
