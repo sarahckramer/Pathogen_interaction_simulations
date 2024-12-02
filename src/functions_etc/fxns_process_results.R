@@ -38,7 +38,7 @@ calculate_accuracy_matrix <- function(df) {
   
 }
 
-# Function to assess whether higher values of a method's metric are associated with stronger true interaction strenghts:
+# Function to assess whether higher values of a method's metric are associated with stronger true interaction strengths:
 calculate_assoc_true_strength <- function(df, method, met) {
   
   df <- df %>%
