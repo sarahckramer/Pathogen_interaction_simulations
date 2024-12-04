@@ -46,7 +46,7 @@ dat_plot <- dat %>%
 year_breaks <- dat_plot %>% filter(str_detect(date, '-07-0[1-7]')) %>% pull(date) %>% unique()
 year_breaks <- c(year_breaks, '2022-07-03')
 
-for (i in 1:c(1, 2, 8, 12, 17, 24)) {
+for (i in c(1, 2, 8, 12, 17, 24)) {
   
   p.data <- ggplot(data = dat_plot %>%
                      filter(.id == ids_to_plot[[i]]) %>%
