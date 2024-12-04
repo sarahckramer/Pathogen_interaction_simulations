@@ -21,7 +21,7 @@ date <- format(Sys.Date(), '%d%m%y')
 # pdf(file = paste0('results/plots/plot_accuracy_by_method_', date, '.pdf'),
 #     width = 16, height = 12)
 
-# ------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------ 
 
 # Read in all results
 source('src/functions_etc/load_main_results.R')
@@ -32,105 +32,62 @@ source('src/functions_etc/load_main_results.R')
 
 # Choose five random simulations to plot:
 set.seed(490275)
-ids_to_plot <- sample(1:100, size = 5)
+ids_to_plot <- sample(1:100, size = 25)
 
 # Format data for plotting:
 dat_plot <- dat %>%
   filter(.id %in% ids_to_plot) %>%
   # filter((theta_lambda == 0 & delta == 0.25) | (theta_lambda == 4 & delta == 0.25) | theta_lambda == 1) %>%
   pivot_longer(V1_obs:V2_obs, names_to = 'virus', values_to = 'obs') %>%
-  mutate(virus = if_else(virus == 'V1_obs', 'Influenza', 'RSV'))
+  mutate(virus = if_else(virus == 'V1_obs', 'Influenza', 'RSV')) %>%
+  mutate(obs = obs / 5000000 * 1000)
 
 # Plot:
-p1.1 <- ggplot(data = dat_plot %>%
-                 filter((theta_lambda == 0 & delta == 1) | (theta_lambda == 4 & delta == 1) | theta_lambda == 1),
-               aes(x = date, y = obs, group = paste(virus, .id), color = virus)) +
-  geom_line() +
-  facet_wrap(~ theta_lambda, ncol = 1) +
-  theme_classic() +
-  labs(title = 'Duration 1 Week')
-p1.2 <- ggplot(data = dat_plot %>%
-                 filter((theta_lambda == 0 & delta == 0.25) | (theta_lambda == 4 & delta == 0.25) | theta_lambda == 1),
-               aes(x = date, y = obs, group = paste(virus, .id), color = virus)) +
-  geom_line() +
-  facet_wrap(~ theta_lambda, ncol = 1) +
-  theme_classic() +
-  labs(title = 'Duration 4 Weeks')
-p1.3 <- ggplot(data = dat_plot %>%
-                 filter((theta_lambda == 0 & delta == 1/13) | (theta_lambda == 4 & delta == 1/13) | theta_lambda == 1),
-               aes(x = date, y = obs, group = paste(virus, .id), color = virus)) +
-  geom_line() +
-  facet_wrap(~ theta_lambda, ncol = 1) +
-  theme_classic() +
-  labs(title = 'Duration 13 Weeks')
+year_breaks <- dat_plot %>% filter(str_detect(date, '-07-0[1-7]')) %>% pull(date) %>% unique()
+year_breaks <- c(year_breaks, '2022-07-03')
 
-p2 <- ggplot(data = dat_plot %>%
-               filter((theta_lambda == 0 & delta == 0.25) | (theta_lambda == 0.25 & delta == 0.25) | (theta_lambda == 0.5 & delta == 0.25) | (theta_lambda == 2 & delta == 0.25) | (theta_lambda == 4 & delta == 0.25) | theta_lambda == 1),
-             aes(x = date, y = obs, group = paste(virus, .id), color = virus)) +
-  geom_line() +
-  facet_wrap(~ theta_lambda, ncol = 1) +
-  theme_classic() +
-  labs(title = 'Duration 4 Weeks')
+for (i in c(1, 2, 8, 12, 17, 24)) {
+  
+  p.data <- ggplot(data = dat_plot %>%
+                     filter(.id == ids_to_plot[[i]]) %>%
+                     mutate(theta_lambda = as.character(theta_lambda),
+                            delta = as.character(7 / delta)) %>%
+                     filter((theta_lambda %in% c(0, 0.5, 2, 4) & delta %in% c(28, 91)) |
+                              theta_lambda == 1) %>%
+                     mutate(delta = if_else(theta_lambda == '1', '28', delta),
+                            theta_lambda = paste0('Interaction Strength: ', theta_lambda)),
+                   aes(x = date, y = obs, group = paste(virus, delta), color = paste(virus, delta))) +
+    geom_line(linewidth = 0.75) +
+    geom_vline(xintercept = year_breaks, lty = 2, col = 'gray60') +
+    facet_wrap(~ theta_lambda, ncol = 1) +
+    theme_classic() +
+    theme(legend.position = 'none',
+          axis.title = element_text(size = 13.5),
+          axis.text = element_text(size = 11),
+          strip.text = element_text(size = 12)) +
+    scale_x_continuous(breaks = NULL) +
+    scale_color_manual(values = c('#e31a1c', '#fb9a99', '#1f78b4', '#a6cee3')) +
+    labs(x = '', y = 'Incidence (per 1000)', col = '', title = i)
+  print(p.data)
+  
+}
+# ggsave(filename = 'results/plots/supp_plot1.svg', p.data, width = 11, height = 7)
 
-p3.1 <- ggplot(data = dat_plot %>%
-                 filter(theta_lambda == 0),
-               aes(x = date, y = obs, group = paste(virus, .id), color = virus)) +
-  geom_line() +
-  facet_wrap(~ delta, ncol = 1) +
-  theme_classic() +
-  labs(title = 'theta_lambda = 0')
-p3.2 <- ggplot(data = dat_plot %>%
-                 filter(theta_lambda == 4),
-               aes(x = date, y = obs, group = paste(virus, .id), color = virus)) +
-  geom_line() +
-  facet_wrap(~ delta, ncol = 1) +
-  theme_classic() +
-  labs(title = 'theta_lambda = 4')
-
-print(p1.1)
-print(p1.2)
-print(p1.3)
-
-# print(p2)
-
-# print(p3.1)
-# print(p3.2)
-
-rm(p1.1, p1.2, p1.3, p2, p3.1, p3.2, dat_plot, ids_to_plot)
+rm(dat_plot, ids_to_plot)
 
 # ------------------------------------------------------------------------------
 
 # Process accuracy of results (correlation coefficients)
 
-# Calculate sensitivity/specificity (overall):
-sens_pos <- (res_corr %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow()) / (res_corr %>% filter(int_true == 'pos') %>% nrow())
-sens_neg <- (res_corr %>% filter(int_true == 'neg' & int_est == 'neg') %>% nrow()) / (res_corr %>% filter(int_true == 'neg') %>% nrow())
-spec <- (res_corr %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_corr %>% filter(int_true == 'none') %>% nrow())
-
-print('Sensitivity (Any Interaction) (Overall):')
-print((res_corr %>% filter(int_true != 'none' & int_est != 'none') %>% nrow()) / (res_corr %>% filter(int_true != 'none') %>% nrow()))
-
-print('Sensitivity (Correct Direction) (Overall):')
-print(sens_pos)
-print(sens_neg)
-
-print('Specificity (Overall):')
-print(spec)
-
-# Calculate overall accuracy (weighted):
-acc_weighted_corr <- (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null)
-
-print('Overall accuracy (weighted):')
-print(acc_weighted_corr)
-
-# Calculate Matthews correlation coefficient (MCC):
-tp <- res_corr %>% filter(int_true != 'none' & int_est != 'none') %>% nrow()
-tn <- res_corr %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()
-fp <- res_corr %>% filter(int_true == 'none' & int_est != 'none') %>% nrow()
-fn <- res_corr %>% filter(int_true != 'none' & int_est == 'none') %>% nrow()
-
-print('MCC:')
-print(mcc(tp, tn, fp, fn))
+# Calculate sensitivity/specificity:
+df_acc <- as_tibble(data.frame(method = 'Corr. Coef.',
+                               sens_pos = (res_corr %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow()) / (res_corr %>% filter(int_true == 'pos') %>% nrow()),
+                               sens_neg = (res_corr %>% filter(int_true == 'neg' & int_est == 'neg') %>% nrow()) / (res_corr %>% filter(int_true == 'neg') %>% nrow()),
+                               spec = (res_corr %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_corr %>% filter(int_true == 'none') %>% nrow()),
+                               mcc = mcc(res_corr %>% filter(int_true != 'none' & int_est != 'none') %>% nrow(),
+                                         res_corr %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(),
+                                         res_corr %>% filter(int_true == 'none' & int_est != 'none') %>% nrow(),
+                                         res_corr %>% filter(int_true != 'none' & int_est == 'none') %>% nrow())))
 
 # Calculate sensitivity/specificity (by true params):
 acc_corr <- calculate_accuracy_matrix(res_corr)
@@ -140,123 +97,151 @@ assoc_corr <- calculate_assoc_true_strength(res_corr %>% mutate(sig = if_else(in
                                             method = 'corr', met = 'cor')
 
 # Plot:
-p.corr.1 <- ggplot(res_corr %>% mutate(sig = if_else(int_est == 'none', 'no', 'yes'))) +
-  geom_violin(aes(x = as.character(theta_lambda), y = cor, group = theta_lambda)) +
-  geom_jitter(aes(x = as.character(theta_lambda), y = cor, col = sig)) +
-  facet_wrap(~ delta, ncol = 1) +
+p.corr.1 <- ggplot(data = acc_corr %>%
+                     mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3.5) +
   theme_classic() +
-  labs(title = 'Correlation Coefficients')
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.995),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'A', x = 'Strength', y = '% Correct   ')
 
-p.corr.2 <- ggplot(res_corr %>% mutate(sig = if_else(int_est == 'none', 'no', 'yes')),
-                   aes(x = theta_lambda, y = cor, ymin = CI_lower_95, ymax = CI_upper_95, col = sig)) +
-  geom_pointrange(position = 'jitter') +
+p.legend.1 <- ggplot(data = acc_corr %>%
+                       mutate(duration = paste0(duration, ' week'),
+                              duration = if_else(str_detect(duration, '1 '), duration, paste0(duration, 's'))) %>%
+                       mutate(duration = factor(duration, levels = c('1 week', '4 weeks', '13 weeks'))),
+                     aes(x = as.numeric(strength), y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3.5) +
   theme_classic() +
-  labs(title = 'Correlation Coefficients')
+  theme(legend.title = element_text(size = 13),
+        legend.text = element_text(size = 12),
+        legend.position = 'bottom') +
+  scale_color_brewer(palette = 'Set1') +
+  labs(shape = 'Duration', color = 'Duration', lty = 'Duration')
+p.legend.1 <- ggplotGrob(p.legend.1)$grobs[[which(sapply(ggplotGrob(p.legend.1)$grobs, function(x) x$name) == 'guide-box')]]
 
-p.corr.3 <- ggplot(data = acc_corr, aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
+res_corr_sum <- res_corr %>%
+  group_by(theta_lambda, delta) %>%
+  summarise(median = median(cor),
+            lower = quantile(cor, p = 0.1),
+            upper = quantile(cor, p = 0.9)) %>%
+  ungroup()
+
+p.corr.2 <- ggplot(res_corr_sum %>%
+                     mutate(delta = factor(7 / delta)) %>%
+                     mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
+                     mutate(strength_proxy = if_else(delta == 7, strength_proxy - 0.25, strength_proxy),
+                            strength_proxy = if_else(delta == 91, strength_proxy + 0.25, strength_proxy),
+                            strength_proxy = if_else(theta_lambda > 1, strength_proxy + 1.5, strength_proxy))) +
+  geom_pointrange(size = 0.75, linewidth = 1.0, aes(x = strength_proxy, y = median, ymin = lower, ymax = upper, col = delta)) +
+  geom_pointrange(data = res_corr_sum %>% filter(theta_lambda == 1),
+                  size = 0.75, linewidth = 1.0, x = 9.75, aes(y = median, ymin = lower, ymax = upper)) +
+  # geom_line(aes(x = strength_proxy, y = median, group = delta, col = delta)) +
+  geom_hline(yintercept = 0, lty = 2, linewidth = 1.0, col = 'gray70') +
   theme_classic() +
-  scale_fill_viridis(limits = c(0, 1), option = 'G') +
-  labs(title = 'Correlation Coefficients')
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'A', x = 'True Interaction Strength', y = expression(paste("Pearson's  ", rho)))
 
-print(p.corr.1)
-# print(p.corr.2)
-# print(p.corr.3)
-rm(p.corr.1, p.corr.2, sens_pos, sens_neg, spec, res_corr)
+p.legend.2 <- ggplot(res_corr_sum %>%
+                       mutate(delta = factor(1 / delta)) %>%
+                       mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
+                       mutate(delta = paste0(delta, ' week'),
+                              delta = if_else(str_detect(delta, '1 '), delta, paste0(delta, 's'))) %>%
+                       mutate(delta = factor(delta, levels = c('1 week', '4 weeks', '13 weeks')))) +
+  geom_pointrange(size = 0.75, linewidth = 1.0, aes(x = strength_proxy, y = median, ymin = lower, ymax = upper, col = delta)) +
+  theme_classic() +
+  theme(legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        legend.position = 'bottom') +
+  scale_color_brewer(palette = 'Set1') +
+  labs(col = 'True Interaction Duration')
+p.legend.2 <- ggplotGrob(p.legend.2)$grobs[[which(sapply(ggplotGrob(p.legend.2)$grobs, function(x) x$name) == 'guide-box')]]
+
+rm(res_corr, res_corr_sum, acc_corr)
 
 # ------------------------------------------------------------------------------
 
 # Process accuracy of results (GAMs)
 
-# Calculate sensitivity/specificity (overall):
-sens_pos <- (res_gam %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow()) / (res_gam %>% filter(int_true == 'pos') %>% nrow())
-sens_neg <- (res_gam %>% filter(int_true == 'neg' & int_est == 'neg') %>% nrow()) / (res_gam %>% filter(int_true == 'neg') %>% nrow())
-sens_pos_confound <- (res_gam %>% filter(int_true == 'pos' & int_est_confound == 'pos') %>% nrow()) / (res_gam %>% filter(int_true == 'pos') %>% nrow())
-sens_neg_confound <- (res_gam %>% filter(int_true == 'neg' & int_est_confound == 'neg') %>% nrow()) / (res_gam %>% filter(int_true == 'neg') %>% nrow())
-spec <- (res_gam %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_gam %>% filter(int_true == 'none') %>% nrow())
-spec_confound <- (res_gam %>% filter(int_true == 'none' & int_est_confound == 'none') %>% nrow()) / (res_gam %>% filter(int_true == 'none') %>% nrow())
-
-print('Sensitivity (Any Interaction) (Overall):')
-print((res_gam %>% filter(int_true != 'none' & int_est != 'none') %>% nrow()) / (res_gam %>% filter(int_true != 'none') %>% nrow()))
-print((res_gam %>% filter(int_true != 'none' & int_est_confound != 'none') %>% nrow()) / (res_gam %>% filter(int_true != 'none') %>% nrow()))
-
-print('Sensitivity (Correct Direction) (Overall):')
-print(sens_pos)
-print(sens_neg)
-print(sens_pos_confound)
-print(sens_neg_confound)
-
-print('Specificity (Overall):')
-print(spec)
-print(spec_confound)
-
-# Calculate overall accuracy (weighted):
-acc_weighted_gam <- (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null)
-acc_weighted_gam_confound <- (sens_pos_confound * weight_pos + sens_neg_confound * weight_neg + spec_confound * weight_null) / (weight_pos + weight_neg + weight_null)
-
-print('Overall accuracy (weighted):')
-print(acc_weighted_gam)
-print(acc_weighted_gam_confound)
-
-# Calculate Matthews correlation coefficient (MCC):
-tp <- res_gam %>% filter(int_true != 'none' & int_est != 'none') %>% nrow()
-tn <- res_gam %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()
-fp <- res_gam %>% filter(int_true == 'none' & int_est != 'none') %>% nrow()
-fn <- res_gam %>% filter(int_true != 'none' & int_est == 'none') %>% nrow()
-
-tp_confound <- res_gam %>% filter(int_true != 'none' & int_est_confound != 'none') %>% nrow()
-tn_confound <- res_gam %>% filter(int_true == 'none' & int_est_confound == 'none') %>% nrow()
-fp_confound <- res_gam %>% filter(int_true == 'none' & int_est_confound != 'none') %>% nrow()
-fn_confound <- res_gam %>% filter(int_true != 'none' & int_est_confound == 'none') %>% nrow()
-
-print('MCC:')
-print(mcc(tp, tn, fp, fn))
-print(mcc(tp_confound, tn_confound, fp_confound, fn_confound))
+# Calculate sensitivity/specificity:
+df_acc <- bind_rows(df_acc, data.frame(method = 'GAMs',
+                                       sens_pos = (res_gam %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow()) / (res_gam %>% filter(int_true == 'pos') %>% nrow()),
+                                       sens_neg = (res_gam %>% filter(int_true == 'neg' & int_est == 'neg') %>% nrow()) / (res_gam %>% filter(int_true == 'neg') %>% nrow()),
+                                       spec = (res_gam %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_gam %>% filter(int_true == 'none') %>% nrow()),
+                                       mcc = mcc(res_gam %>% filter(int_true != 'none' & int_est != 'none') %>% nrow(),
+                                                 res_gam %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(),
+                                                 res_gam %>% filter(int_true == 'none' & int_est != 'none') %>% nrow(),
+                                                 res_gam %>% filter(int_true != 'none' & int_est == 'none') %>% nrow())))
 
 # Calculate sensitivity/specificity (by true params):
 acc_gam <- calculate_accuracy_matrix(res_gam)
-acc_gam_confound <- calculate_accuracy_matrix(res_gam %>%
-                                                mutate(int_est = int_est_confound))
 
 # Are correlation coefficient magnitudes associated with true interaction strength?:
 assoc_gam <- calculate_assoc_true_strength(res_gam %>%
                                              mutate(sig = if_else(int_est == 'none', 'no', 'yes')),
-                                           method = 'gam', met = 'cor')
-assoc_gam_confound <- calculate_assoc_true_strength(res_gam %>%
-                                                      mutate(sig = if_else(int_est_confound == 'none', 'no', 'yes')),
-                                                    method = 'gam', met = 'cor_confound')
+                                           method = 'gam', met = 'cor_median')
 
 # Plot:
-p.gam.1.1 <- ggplot(res_gam %>% mutate(sig = if_else(int_est == 'none', 'no', 'yes'))) +
-  geom_violin(aes(x = as.character(theta_lambda), y = cor, group = theta_lambda)) +
-  geom_jitter(aes(x = as.character(theta_lambda), y = cor, col = sig)) +
-  facet_wrap(~ delta, nrow = 1) +
+p.gam.1 <- ggplot(data = acc_gam %>%
+                    mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                  aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
   theme_classic() +
-  labs(title = 'GAMs')
-p.gam.1.2 <- ggplot(res_gam %>% mutate(sig = if_else(int_est_confound == 'none', 'no', 'yes'))) +
-  geom_violin(aes(x = as.character(theta_lambda), y = cor_confound, group = theta_lambda)) +
-  geom_jitter(aes(x = as.character(theta_lambda), y = cor_confound, col = sig)) +
-  facet_wrap(~ delta, nrow = 1) +
-  theme_classic() +
-  labs(title = 'GAMs (Seasonality Controlled)')
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.995),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'B', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
 
-p.gam.2.1 <- ggplot(data = acc_gam, aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
-  theme_classic() +
-  scale_fill_viridis(option = 'G', limits = c(0, 1)) +
-  labs(title = 'GAMs')
-p.gam.2.2 <- ggplot(data = acc_gam_confound, aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
-  theme_classic() +
-  scale_fill_viridis(option = 'G', limits = c(0, 1)) +
-  labs(title = 'GAMs (Seasonality Controlled)')
+res_gam_sum <- res_gam %>%
+  group_by(theta_lambda, delta) %>%
+  summarise(median = median(cor_median),
+            lower = quantile(cor_median, p = 0.1),
+            upper = quantile(cor_median, p = 0.9)) %>%
+  ungroup()
 
-grid.arrange(p.gam.1.1, p.gam.1.2, ncol = 1)
-# grid.arrange(p.gam.2.1, p.gam.2.2, nrow = 1)
+p.gam.2 <- ggplot(res_gam_sum %>%
+                    mutate(delta = factor(7 / delta)) %>%
+                    mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
+                    mutate(strength_proxy = if_else(delta == 7, strength_proxy - 0.25, strength_proxy),
+                           strength_proxy = if_else(delta == 91, strength_proxy + 0.25, strength_proxy),
+                           strength_proxy = if_else(theta_lambda > 1, strength_proxy + 1.5, strength_proxy))) +
+  geom_pointrange(size = 0.75, linewidth = 1.0, aes(x = strength_proxy, y = median, ymin = lower, ymax = upper, col = delta)) +
+  geom_pointrange(data = res_gam_sum %>% filter(theta_lambda == 1),
+                  size = 0.75, linewidth = 1.0, x = 9.75, aes(y = median, ymin = lower, ymax = upper)) +
+  geom_hline(yintercept = 0, lty = 2, linewidth = 1.0, col = 'gray70') +
+  theme_classic() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'B', x = 'True Interaction Strength', y = 'Residual Correlation')
 
-rm(p.gam.1.1, p.gam.1.2, sens_pos, sens_pos_confound, sens_neg, sens_neg_confound,
-   spec, spec_confound, tp_confound, tn_confound, fp_confound, fn_confound, res_gam)
-# rm(p.gam.1.1, p.gam.1.2, p.gam.2.1, p.gam.2.2, res_gam, acc_gam, acc_gam_confound, assoc_gam, assoc_gam_confound)
+rm(res_gam, res_gam_sum, acc_gam)
 
 # ------------------------------------------------------------------------------
 
@@ -266,42 +251,17 @@ rm(p.gam.1.1, p.gam.1.2, sens_pos, sens_pos_confound, sens_neg, sens_neg_confoun
 res_granger %>% filter(adf_p >= 0.05) %>% nrow() %>% print()
 res_granger %>% filter(kpss_p < 0.05) %>% nrow() %>% print()
 
-# Calculate sensitivity/specificity (overall):
-acc_weighted_granger <- vector('list', length = length(res_granger_LIST))
-names(acc_weighted_granger) <- names(res_granger_LIST)
+# Calculate sensitivity/specificity:
 for (i in 1:length(res_granger_LIST)) {
   
-  print(names(res_granger_LIST)[i])
-  
-  sens_pos <- (res_granger_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow())
-  sens_neg <- (res_granger_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow())
-  spec <- (res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
-  
-  print('Sensitivity:')
-  print(sens_pos)
-  print(sens_neg)
-  
-  print('Specificity:')
-  print(spec)
-  
-  acc_weighted_temp <- (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null)
-  
-  print('Overall accuracy (weighted):')
-  print(acc_weighted_temp)
-  
-  acc_weighted_granger[[i]] <- acc_weighted_temp
-  rm(acc_weighted_temp, sens_pos, sens_neg, spec)
-  
-  # Calculate Matthews correlation coefficient (MCC):
-  tp <- res_granger_LIST[[i]] %>% filter(int_true != 'none' & int_est != 'none') %>% nrow()
-  tn <- res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()
-  fp <- res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est != 'none') %>% nrow()
-  fn <- res_granger_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'none') %>% nrow()
-  
-  print('MCC:')
-  print(mcc(tp, tn, fp, fn))
-  
-  print('-----------')
+  df_acc <- bind_rows(df_acc, data.frame(method = paste0('GC ', names(res_granger_LIST)[i]),
+                                         sens_pos = (res_granger_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow()),
+                                         sens_neg = (res_granger_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow()),
+                                         spec = (res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true == 'none') %>% nrow()),
+                                         mcc = mcc(res_granger_LIST[[i]] %>% filter(int_true != 'none' & int_est != 'none') %>% nrow(),
+                                                   res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(),
+                                                   res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est != 'none') %>% nrow(),
+                                                   res_granger_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'none') %>% nrow())))
   
 }
 rm(i)
@@ -325,204 +285,294 @@ for (i in 1:length(assoc_granger_LIST)) {
 rm(i)
 
 # Plot:
-p.granger.1.1 <- res_granger_LIST[[1]] %>%
-  mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')) %>%
-  ggplot(aes(x = as.character(theta_lambda), y = logRSS, group = theta_lambda)) +
-  geom_violin() +
-  geom_jitter(aes(col = sig)) +
+p.granger.1.1 <- ggplot(data = acc_granger_LIST[[1]] %>%
+                          mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
   theme_classic() +
-  facet_wrap(~ 1 / delta, nrow = 1) +
-  labs(title = paste0('Granger Causality (', names(res_granger_LIST)[1], ')'))
-p.granger.1.2 <- res_granger_LIST[[2]] %>%
-  mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')) %>%
-  ggplot(aes(x = as.character(theta_lambda), y = logRSS, group = theta_lambda)) +
-  geom_violin() +
-  geom_jitter(aes(col = sig)) +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.995),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'C', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+p.granger.1.2 <- ggplot(data = acc_granger_LIST[[2]] %>%
+                          mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
   theme_classic() +
-  facet_wrap(~ 1 / delta, nrow = 1) +
-  labs(title = paste0('Granger Causality (', names(res_granger_LIST)[2], ')'))
-p.granger.2.1 <- res_granger_LIST[[3]] %>%
-  mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')) %>%
-  ggplot(aes(x = as.character(theta_lambda), y = logRSS, group = theta_lambda)) +
-  geom_violin() +
-  geom_jitter(aes(col = sig)) +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+p.granger.1.3 <- ggplot(data = acc_granger_LIST[[3]] %>%
+                          mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
   theme_classic() +
-  facet_wrap(~ 1 / delta, nrow = 1) +
-  labs(title = paste0('Granger Causality (', names(res_granger_LIST)[3], ')'))
-p.granger.2.2 <- res_granger_LIST[[4]] %>%
-  mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')) %>%
-  ggplot(aes(x = as.character(theta_lambda), y = logRSS, group = theta_lambda)) +
-  geom_violin() +
-  geom_jitter(aes(col = sig)) +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.995),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'C', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+p.granger.1.4 <- ggplot(data = acc_granger_LIST[[4]] %>%
+                          mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
   theme_classic() +
-  facet_wrap(~ 1 / delta, nrow = 1) +
-  labs(title = paste0('Granger Causality (', names(res_granger_LIST)[4], ')'))
-grid.arrange(p.granger.1.1, p.granger.1.2, p.granger.2.1, p.granger.2.2, ncol = 1)
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
 
-p.granger.3.1 <- ggplot(data = acc_granger_LIST[[1]], aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
-  theme_classic() +
-  scale_fill_viridis(option = 'G', limits = c(0, 1)) +
-  labs(title = paste0('Granger Causality (', names(acc_granger_LIST)[1], ')'))
-p.granger.3.2 <- ggplot(data = acc_granger_LIST[[2]], aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
-  theme_classic() +
-  scale_fill_viridis(option = 'G', limits = c(0, 1)) +
-  labs(title = paste0('Granger Causality (', names(acc_granger_LIST)[2], ')'))
-p.granger.3.3 <- ggplot(data = acc_granger_LIST[[3]], aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
-  theme_classic() +
-  scale_fill_viridis(option = 'G', limits = c(0, 1)) +
-  labs(title = paste0('Granger Causality (', names(acc_granger_LIST)[3], ')'))
-p.granger.3.4 <- ggplot(data = acc_granger_LIST[[4]], aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
-  theme_classic() +
-  scale_fill_viridis(option = 'G', limits = c(0, 1)) +
-  labs(title = paste0('Granger Causality (', names(acc_granger_LIST)[4], ')'))
-# grid.arrange(p.granger.3.1, p.granger.3.2, p.granger.3.3, p.granger.3.4, ncol = 2)
+res_granger_sum <- lapply(res_granger_LIST, function(ix) {
+  ix %>% group_by(theta_lambda, delta) %>%
+    summarise(median = median(logRSS),
+              lower = quantile(logRSS, p = 0.1),
+              upper = quantile(logRSS, p = 0.9)) %>%
+    ungroup()
+})
 
-rm(p.granger.1.1, p.granger.1.2, p.granger.2.1, p.granger.2.2, res_granger, res_granger_LIST)
-# rm(p.granger.1.1, p.granger.1.2, p.granger.2.1, p.granger.2.2, p.granger.3.1, p.granger.3.2, p.granger.3.3, p.granger.3.4,
-#    res_granger, res_granger_LIST, acc_granger_LIST, assoc_granger_LIST)
+p.granger.2.1 <- ggplot(res_granger_sum[[1]] %>%
+                          mutate(delta = factor(7 / delta)) %>%
+                          mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
+                          mutate(strength_proxy = if_else(delta == 7, strength_proxy - 0.25, strength_proxy),
+                                 strength_proxy = if_else(delta == 91, strength_proxy + 0.25, strength_proxy),
+                                 strength_proxy = if_else(theta_lambda > 1, strength_proxy + 1.5, strength_proxy))) +
+  geom_pointrange(size = 0.75, linewidth = 1.0, aes(x = strength_proxy, y = median, ymin = lower, ymax = upper, col = delta)) +
+  geom_pointrange(data = res_granger_sum[[1]] %>% filter(theta_lambda == 1),
+                  size = 0.75, linewidth = 1.0, x = 9.75, aes(y = median, ymin = lower, ymax = upper)) +
+  geom_hline(yintercept = 0, lty = 2, linewidth = 1.0, col = 'gray70') +
+  theme_classic() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'C', x = 'True Interaction Strength', y = expression(G[x %->% y]))
+p.granger.2.2 <- ggplot(res_granger_sum[[2]] %>%
+                          mutate(delta = factor(7 / delta)) %>%
+                          mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
+                          mutate(strength_proxy = if_else(delta == 7, strength_proxy - 0.25, strength_proxy),
+                                 strength_proxy = if_else(delta == 91, strength_proxy + 0.25, strength_proxy),
+                                 strength_proxy = if_else(theta_lambda > 1, strength_proxy + 1.5, strength_proxy))) +
+  geom_pointrange(size = 0.75, linewidth = 1.0, aes(x = strength_proxy, y = median, ymin = lower, ymax = upper, col = delta)) +
+  geom_pointrange(data = res_granger_sum[[2]] %>% filter(theta_lambda == 1),
+                  size = 0.75, linewidth = 1.0, x = 9.75, aes(y = median, ymin = lower, ymax = upper)) +
+  geom_hline(yintercept = 0, lty = 2, linewidth = 1.0, col = 'gray70') +
+  theme_classic() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(x = 'True Interaction Strength', y = expression(G[y %->% x]))
+
+rm(res_granger, res_granger_LIST, res_granger_sum, acc_granger_LIST)
 
 # ------------------------------------------------------------------------------
 
 # Process accuracy of results (transfer entropy)
 
-# Calculate sensitivity/specificity (overall):
-acc_weighted_te <- vector('list', length = length(res_te_LIST))
-names(acc_weighted_te) <- names(res_te_LIST)
-
+# Calculate sensitivity/specificity:
 for (i in 1:length(res_te_LIST)) {
   
-  print(names(res_te_LIST)[i])
+  df_acc <- bind_rows(df_acc, data.frame(method = paste0('TE ', names(res_te_LIST)[i]),
+                                         sens_pos = (res_te_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow()),
+                                         sens_neg = (res_te_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow()),
+                                         spec = (res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true == 'none') %>% nrow()),
+                                         mcc = mcc(res_te_LIST[[i]] %>% filter(int_true != 'none' & int_est != 'none') %>% nrow(),
+                                                   res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(),
+                                                   res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est != 'none') %>% nrow(),
+                                                   res_te_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'none') %>% nrow())))
   
-  sens_pos <- (res_te_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow())
-  sens_neg <- (res_te_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow())
-  spec <- (res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
+}
+for (i in 1:length(res_te_LIST)) {
   
-  print('Sensitivity:')
-  print(sens_pos)
-  print(sens_neg)
-  
-  print('Specificity:')
-  print(spec)
-  
-  acc_weighted_temp <- (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null)
-  
-  print('Overall accuracy (weighted):')
-  print(acc_weighted_temp)
-  
-  acc_weighted_te[[i]] <- acc_weighted_temp
-  rm(acc_weighted_temp, sens_pos, sens_neg, spec)
-  
-  # Calculate Matthews correlation coefficient (MCC):
-  tp <- res_te_LIST[[i]] %>% filter(int_true != 'none' & int_est != 'none') %>% nrow()
-  tn <- res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()
-  fp <- res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est != 'none') %>% nrow()
-  fn <- res_te_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'none') %>% nrow()
-  
-  print('MCC:')
-  print(mcc(tp, tn, fp, fn))
-  
-  print('-----------')
+  df_acc <- bind_rows(df_acc, data.frame(method = paste0('TE ', names(res_te_LIST_confound)[i]),
+                                         sens_pos = (res_te_LIST_confound[[i]] %>% filter(int_true_dir == 'pos' & int_est_confound2 == 'interaction') %>% nrow()) / (res_te_LIST_confound[[i]] %>% filter(int_true_dir == 'pos') %>% nrow()),
+                                         sens_neg = (res_te_LIST_confound[[i]] %>% filter(int_true_dir == 'neg' & int_est_confound2 == 'interaction') %>% nrow()) / (res_te_LIST_confound[[i]] %>% filter(int_true_dir == 'neg') %>% nrow()),
+                                         spec = (res_te_LIST_confound[[i]] %>% filter(int_true == 'none' & int_est_confound2 == 'none') %>% nrow()) / (res_te_LIST_confound[[i]] %>% filter(int_true == 'none') %>% nrow()),
+                                         mcc = mcc(res_te_LIST_confound[[i]] %>% filter(int_true != 'none' & int_est_confound2 != 'none') %>% nrow(),
+                                                   res_te_LIST_confound[[i]] %>% filter(int_true == 'none' & int_est_confound2 == 'none') %>% nrow(),
+                                                   res_te_LIST_confound[[i]] %>% filter(int_true == 'none' & int_est_confound2 != 'none') %>% nrow(),
+                                                   res_te_LIST_confound[[i]] %>% filter(int_true != 'none' & int_est_confound2 == 'none') %>% nrow())))
   
 }
 rm(i)
 
 # Calculate accuracy by true parameter values:
-acc_te_LIST <- vector('list', length = 2)
-names(acc_te_LIST) <- names(res_te_LIST)
+acc_te_LIST <- vector('list', length = 4)
+names(acc_te_LIST) <- c(names(res_te_LIST), names(res_te_LIST_confound))
 
-for (i in 1:length(acc_te_LIST)) {
+for (i in 1:length(res_te_LIST)) {
   acc_te_LIST[[i]] <- calculate_accuracy_matrix(res_te_LIST[[i]])
 }
+acc_te_LIST[[3]] <- calculate_accuracy_matrix(res_te_LIST_confound[[1]] %>% rename('int_est' = 'int_est_confound2'))
+acc_te_LIST[[4]] <- calculate_accuracy_matrix(res_te_LIST_confound[[2]] %>% rename('int_est' = 'int_est_confound2'))
 
 # Are higher values of te associated with higher true interaction strength?:
-assoc_te_LIST <- vector('list', length = 2)
-names(assoc_te_LIST) <- names(res_te_LIST)
+assoc_te_LIST <- vector('list', length = 4)
+names(assoc_te_LIST) <- c(names(res_te_LIST), names(res_te_LIST_confound))
 
-for (i in 1:length(assoc_te_LIST)) {
+for (i in 1:length(res_te_LIST)) {
   assoc_te_LIST[[i]] <- calculate_assoc_true_strength(res_te_LIST[[i]] %>% mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')),
                                                       method = 'te', met = 'te')
 }
+assoc_te_LIST[[3]] <- calculate_assoc_true_strength(res_te_LIST_confound[[1]] %>% mutate(sig = if_else(int_est_confound2 == 'interaction', 'yes', 'no')),
+                                                    method = 'te', met = 'te_confound2')
+assoc_te_LIST[[4]] <- calculate_assoc_true_strength(res_te_LIST_confound[[2]] %>% mutate(sig = if_else(int_est_confound2 == 'interaction', 'yes', 'no')),
+                                                    method = 'te', met = 'te_confound2')
 rm(i)
 
 # Plot:
-p.te.1.1 <- res_te_LIST[[1]] %>%
-  mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')) %>%
-  ggplot(aes(x = as.character(theta_lambda), y = te, group = theta_lambda)) +
-  geom_violin() +
-  geom_jitter(aes(col = sig)) +
+p.te.1.1 <- ggplot(data = acc_te_LIST[[1]] %>%
+                     mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
   theme_classic() +
-  facet_wrap(~ 1 / delta, nrow = 1) +
-  labs(title = paste0('Transfer Entropy (', names(res_te_LIST)[1], ')'))
-p.te.1.2 <- res_te_LIST[[2]] %>%
-  mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')) %>%
-  ggplot(aes(x = as.character(theta_lambda), y = te, group = theta_lambda)) +
-  geom_violin() +
-  geom_jitter(aes(col = sig)) +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.995),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'D', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+p.te.1.2 <- ggplot(data = acc_te_LIST[[2]] %>%
+                     mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
   theme_classic() +
-  facet_wrap(~ 1 / delta, nrow = 1) +
-  labs(title = paste0('Transfer Entropy (', names(res_te_LIST)[2], ')'))
-grid.arrange(p.te.1.1, p.te.1.2,  ncol = 1)
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+p.te.1.3 <- ggplot(data = acc_te_LIST[[3]] %>%
+                     mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
+  theme_classic() +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.995),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'D', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+p.te.1.4 <- ggplot(data = acc_te_LIST[[4]] %>%
+                     mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
+  theme_classic() +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
 
-p.te.2.1 <- ggplot(data = acc_te_LIST[[1]], aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
-  theme_classic() +
-  scale_fill_viridis(option = 'G', limits = c(0, 1)) +
-  labs(title = paste0('Transfer Entropy (', names(acc_te_LIST)[1], ')'))
-p.te.2.2 <- ggplot(data = acc_te_LIST[[2]], aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
-  theme_classic() +
-  scale_fill_viridis(option = 'G', limits = c(0, 1)) +
-  labs(title = paste0('Transfer Entropy (', names(acc_te_LIST)[2], ')'))
-# grid.arrange(p.te.2.1, p.te.2.2, ncol = 2)
+res_te_sum <- lapply(res_te_LIST_confound, function(ix) {
+  ix %>%
+    group_by(theta_lambda, delta) %>%
+    summarise(median = median(te_confound2),
+              lower = quantile(te_confound2, p = 0.1),
+              upper = quantile(te_confound2, p = 0.9)) %>%
+    ungroup()
+})
 
-rm(p.te.1.1, p.te.1.2, res_te_LIST, res_te, best_v1xv2, best_v2xv1)
-# rm(p.te.1.1, p.te.1.2, p.te.2.1, p.te.2.2, res_te, res_te_LIST, acc_te_LIST, assoc_te_LIST)
+p.te.2.1 <- ggplot(res_te_sum[[1]] %>%
+                     mutate(delta = factor(7 / delta)) %>%
+                     mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
+                     mutate(strength_proxy = if_else(delta == 7, strength_proxy - 0.25, strength_proxy),
+                            strength_proxy = if_else(delta == 91, strength_proxy + 0.25, strength_proxy),
+                            strength_proxy = if_else(theta_lambda > 1, strength_proxy + 1.5, strength_proxy))) +
+  geom_pointrange(size = 0.75, linewidth = 1.0, aes(x = strength_proxy, y = median, ymin = lower, ymax = upper, col = delta)) +
+  geom_pointrange(data = res_te_sum[[1]] %>% filter(theta_lambda == 1),
+                  size = 0.75, linewidth = 1.0, x = 9.75, aes(y = median, ymin = lower, ymax = upper)) +
+  geom_hline(yintercept = 0, lty = 2, linewidth = 1.0, col = 'gray70') +
+  theme_classic() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'D', x = 'True Interaction Strength', y = expression(T[x %->% y]))
+p.te.2.2 <- ggplot(res_te_sum[[2]] %>%
+                     mutate(delta = factor(7 / delta)) %>%
+                     mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
+                     mutate(strength_proxy = if_else(delta == 7, strength_proxy - 0.25, strength_proxy),
+                            strength_proxy = if_else(delta == 91, strength_proxy + 0.25, strength_proxy),
+                            strength_proxy = if_else(theta_lambda > 1, strength_proxy + 1.5, strength_proxy))) +
+  geom_pointrange(size = 0.75, linewidth = 1.0, aes(x = strength_proxy, y = median, ymin = lower, ymax = upper, col = delta)) +
+  geom_pointrange(data = res_te_sum[[2]] %>% filter(theta_lambda == 1),
+                  size = 0.75, linewidth = 1.0, x = 9.75, aes(y = median, ymin = lower, ymax = upper)) +
+  geom_hline(yintercept = 0, lty = 2, linewidth = 1.0, col = 'gray70') +
+  theme_classic() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(x = 'True Interaction Strength', y = expression(T[y %->% x]))
+
+rm(res_te_LIST, res_te_LIST_confound, res_te_sum, acc_te_LIST, best_v1xv2, best_v2xv1, best_v1xv2_confound, best_v2xv1_confound)
 
 # ------------------------------------------------------------------------------
 
 # Process accuracy of results (CCM)
 
-# Calculate sensitivity/specificity (overall):
-acc_weighted_ccm <- vector('list', length = length(res_ccm_LIST))
-names(acc_weighted_ccm) <- names(res_ccm_LIST)
-
+# Calculate sensitivity/specificity:
 for (i in 1:length(res_ccm_LIST)) {
   
-  print(names(res_ccm_LIST)[i])
-  
-  sens_pos <- (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow())
-  sens_neg <- (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow())
-  spec <- (res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
-  
-  print('Sensitivity:')
-  print(sens_pos)
-  print(sens_neg)
-  
-  print('Specificity:')
-  print(spec)
-  
-  acc_weighted_temp <- (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null)
-  
-  print('Overall accuracy (weighted):')
-  print(acc_weighted_temp)
-  
-  acc_weighted_ccm[[i]] <- acc_weighted_temp
-  rm(acc_weighted_temp, sens_pos, sens_neg, spec)
-  
-  # Calculate Matthews correlation coefficient (MCC):
-  tp <- res_ccm_LIST[[i]] %>% filter(int_true != 'none' & int_est != 'none') %>% nrow()
-  tn <- res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()
-  fp <- res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est != 'none') %>% nrow()
-  fn <- res_ccm_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'none') %>% nrow()
-  
-  print('MCC:')
-  print(mcc(tp, tn, fp, fn))
-  
-  print('-----------')
+  df_acc <- bind_rows(df_acc, data.frame(method = paste0('CCM ', names(res_ccm_LIST)[i]),
+                                         sens_pos = (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow()),
+                                         sens_neg = (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow()),
+                                         spec = (res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true == 'none') %>% nrow()),
+                                         mcc = mcc(res_ccm_LIST[[i]] %>% filter(int_true != 'none' & int_est != 'none') %>% nrow(),
+                                                   res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(),
+                                                   res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est != 'none') %>% nrow(),
+                                                   res_ccm_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'none') %>% nrow())))
   
 }
 rm(i)
@@ -564,235 +614,289 @@ p.ccm.surr <- res_ccm_surr %>%
 rm(res_ccm_surr, p.ccm.surr)
 
 # Plot:
-p.ccm.1.1 <- res_ccm_LIST[[1]] %>%
-  ggplot(aes(x = as.character(theta_lambda), y = rho_mean, group = theta_lambda)) +
-  geom_violin() +
-  geom_jitter(aes(col = factor(int_est, levels = c('none', 'interaction')))) +
+p.ccm.1.1 <- ggplot(data = acc_ccm_LIST[[1]] %>%
+                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
   theme_classic() +
-  facet_wrap(~ 1 / delta, nrow = 1) +
-  labs(title = paste0('CCM (', names(res_ccm_LIST)[1], ')'), col = '')
-p.ccm.1.2 <- res_ccm_LIST[[2]] %>%
-  ggplot(aes(x = as.character(theta_lambda), y = rho_mean, group = theta_lambda)) +
-  geom_violin() +
-  geom_jitter(aes(col = factor(int_est, levels = c('none', 'interaction')))) +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.995),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'E', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+p.ccm.1.2 <- ggplot(data = acc_ccm_LIST[[2]] %>%
+                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
   theme_classic() +
-  facet_wrap(~ 1 / delta, nrow = 1) +
-  labs(title = paste0('CCM (', names(res_ccm_LIST)[2], ')'), col = '')
-p.ccm.1.3 <- res_ccm_LIST[[3]] %>%
-  ggplot(aes(x = as.character(theta_lambda), y = rho_mean, group = theta_lambda)) +
-  geom_violin() +
-  geom_jitter(aes(col = factor(int_est, levels = c('none', 'interaction')))) +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.995),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'F', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+p.ccm.1.3 <- ggplot(data = acc_ccm_LIST[[3]] %>%
+                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
   theme_classic() +
-  facet_wrap(~ 1 / delta, nrow = 1) +
-  labs(title = paste0('CCM (', names(res_ccm_LIST)[3], ')'), col = '')
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.995),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+p.ccm.1.4 <- ggplot(data = acc_ccm_LIST[[4]] %>%
+                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
+  theme_classic() +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+p.ccm.1.5 <- ggplot(data = acc_ccm_LIST[[5]] %>%
+                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
+  theme_classic() +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+p.ccm.1.6 <- ggplot(data = acc_ccm_LIST[[6]] %>%
+                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
+                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+  geom_line() +
+  geom_point(size = 3) +
+  theme_classic() +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
 
-p.ccm.1.4 <- res_ccm_LIST[[4]] %>%
-  ggplot(aes(x = as.character(theta_lambda), y = rho_mean, group = theta_lambda)) +
-  geom_violin() +
-  geom_jitter(aes(col = factor(int_est, levels = c('none', 'interaction')))) +
-  theme_classic() +
-  facet_wrap(~ 1 / delta, nrow = 1) +
-  labs(title = paste0('CCM (', names(res_ccm_LIST)[4], ')'), col = '')
-p.ccm.1.5 <- res_ccm_LIST[[5]] %>%
-  ggplot(aes(x = as.character(theta_lambda), y = rho_mean, group = theta_lambda)) +
-  geom_violin() +
-  geom_jitter(aes(col = factor(int_est, levels = c('none', 'interaction')))) +
-  theme_classic() +
-  facet_wrap(~ 1 / delta, nrow = 1) +
-  labs(title = paste0('CCM (', names(res_ccm_LIST)[5], ')'), col = '')
-p.ccm.1.6 <- res_ccm_LIST[[6]] %>%
-  ggplot(aes(x = as.character(theta_lambda), y = rho_mean, group = theta_lambda)) +
-  geom_violin() +
-  geom_jitter(aes(col = factor(int_est, levels = c('none', 'interaction')))) +
-  theme_classic() +
-  facet_wrap(~ 1 / delta, nrow = 1) +
-  labs(title = paste0('CCM (', names(res_ccm_LIST)[6], ')'), col = '')
+res_ccm_sum <- lapply(res_ccm_LIST, function(ix) {
+  ix %>%
+    group_by(theta_lambda, delta) %>%
+    summarise(median = median(rho_max),
+              lower = quantile(rho_max, p = 0.1),
+              upper = quantile(rho_max, p = 0.9)) %>%
+    ungroup()
+})
 
-grid.arrange(p.ccm.1.1, p.ccm.1.2, p.ccm.1.3, ncol = 1)
-grid.arrange(p.ccm.1.4, p.ccm.1.5, p.ccm.1.6, ncol = 1)
+p.ccm.2.1 <- ggplot(res_ccm_sum[[1]] %>%
+                      mutate(delta = factor(7 / delta)) %>%
+                      mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
+                      mutate(strength_proxy = if_else(delta == 7, strength_proxy - 0.25, strength_proxy),
+                             strength_proxy = if_else(delta == 91, strength_proxy + 0.25, strength_proxy),
+                             strength_proxy = if_else(theta_lambda > 1, strength_proxy + 1.5, strength_proxy))) +
+  geom_pointrange(size = 0.75, linewidth = 1.0, aes(x = strength_proxy, y = median, ymin = lower, ymax = upper, col = delta)) +
+  geom_pointrange(data = res_ccm_sum[[1]] %>% filter(theta_lambda == 1),
+                  size = 0.75, linewidth = 1.0, x = 9.75, aes(y = median, ymin = lower, ymax = upper)) +
+  geom_hline(yintercept = 0, lty = 2, linewidth = 1.0, col = 'gray70') +
+  theme_classic() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'E', x = 'True Interaction Strength', y = 'Cross-Map Skill')
+p.ccm.2.2 <- ggplot(res_ccm_sum[[4]] %>%
+                      mutate(delta = factor(7 / delta)) %>%
+                      mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
+                      mutate(strength_proxy = if_else(delta == 7, strength_proxy - 0.25, strength_proxy),
+                             strength_proxy = if_else(delta == 91, strength_proxy + 0.25, strength_proxy),
+                             strength_proxy = if_else(theta_lambda > 1, strength_proxy + 1.5, strength_proxy))) +
+  geom_pointrange(size = 0.75, linewidth = 1.0, aes(x = strength_proxy, y = median, ymin = lower, ymax = upper, col = delta)) +
+  geom_pointrange(data = res_ccm_sum[[4]] %>% filter(theta_lambda == 1),
+                  size = 0.75, linewidth = 1.0, x = 9.75, aes(y = median, ymin = lower, ymax = upper)) +
+  geom_hline(yintercept = 0, lty = 2, linewidth = 1.0, col = 'gray70') +
+  theme_classic() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 16),
+        plot.tag.position = c(0.0075, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(x = 'True Interaction Strength', y = 'Cross-Map Skill')
 
-p.ccm.3.1 <- ggplot(data = acc_ccm_LIST[[1]], aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
-  theme_classic() +
-  scale_fill_viridis(option = 'G', limits = c(0, 1)) +
-  labs(title = paste0('CCM (', names(acc_ccm_LIST)[1], ')'))
-p.ccm.3.2 <- ggplot(data = acc_ccm_LIST[[2]], aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
-  theme_classic() +
-  scale_fill_viridis(option = 'G', limits = c(0, 1)) +
-  labs(title = paste0('CCM (', names(acc_ccm_LIST)[2], ')'))
-p.ccm.3.3 <- ggplot(data = acc_ccm_LIST[[3]], aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
-  theme_classic() +
-  scale_fill_viridis(option = 'G', limits = c(0, 1)) +
-  labs(title = paste0('CCM (', names(acc_ccm_LIST)[3], ')'))
-p.ccm.3.4 <- ggplot(data = acc_ccm_LIST[[4]], aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
-  theme_classic() +
-  scale_fill_viridis(option = 'G', limits = c(0, 1)) +
-  labs(title = paste0('CCM (', names(acc_ccm_LIST)[4], ')'))
-p.ccm.3.5 <- ggplot(data = acc_ccm_LIST[[5]], aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
-  theme_classic() +
-  scale_fill_viridis(option = 'G', limits = c(0, 1)) +
-  labs(title = paste0('CCM (', names(acc_ccm_LIST)[5], ')'))
-p.ccm.3.6 <- ggplot(data = acc_ccm_LIST[[6]], aes(x = strength, y = duration, fill = perc_correct)) +
-  geom_tile() +
-  theme_classic() +
-  scale_fill_viridis(option = 'G', limits = c(0, 1)) +
-  labs(title = paste0('CCM (', names(acc_ccm_LIST)[6], ')'))
-# grid.arrange(p.ccm.3.1, p.ccm.3.4, p.ccm.3.2, p.ccm.3.5, p.ccm.3.3, p.ccm.3.6, ncol = 2)
-
-rm(p.ccm.1.1, p.ccm.1.2, p.ccm.1.3, p.ccm.1.4, p.ccm.1.5, p.ccm.1.6, res_ccm_LIST,
-   weight_pos, weight_neg, weight_null, tp, tn, fp, fn, res_ccm)
-# rm(p.ccm.1.1, p.ccm.1.2, p.ccm.1.3, p.ccm.1.4, p.ccm.1.5, p.ccm.1.6,
-#    p.ccm.3.1, p.ccm.3.2, p.ccm.3.3, p.ccm.3.4, p.ccm.3.5, p.ccm.3.6,
-#    res_ccm, res_ccm_LIST, acc_ccm_LIST, assoc_ccm_LIST_mean, assoc_ccm_LIST_max)
+rm(res_ccm_LIST, res_ccm_sum, res_ccm, acc_ccm_LIST)
 
 # ------------------------------------------------------------------------------
 
 # Compile/plot results of all methods
 
-# Heatmaps:
-p.comb.1 <- arrangeGrob(p.corr.3, p.gam.2.1, p.gam.2.2, p.granger.3.1, p.granger.3.2, p.granger.3.3, p.granger.3.4, p.te.2.1, p.te.2.2, p.ccm.3.1, p.ccm.3.4, p.ccm.3.3, p.ccm.3.6,
-                        layout_matrix = rbind(c(NA, NA, 1, 1, NA, NA),
-                                              c(NA, 2, 2, 3, 3, NA),
-                                              c(NA, 4, 4, 5, 5, NA),
-                                              c(NA, 6, 6, 7, 7, NA),
-                                              c(NA, 8, 8, 9, 9, NA),
-                                              c(NA, 10, 10, 11, 11, NA),
-                                              c(NA, 12, 12, 13, 13, NA)))
-plot(p.comb.1)
-ggsave(filename = 'results/plots/heatmaps.svg', p.comb.1, width = 13, height = 18)
-rm(p.corr.3,p.gam.2.1, p.gam.2.2, p.granger.3.1, p.granger.3.2, p.granger.3.3, p.granger.3.4,
-   p.te.2.1, p.te.2.2, p.ccm.3.1, p.ccm.3.4, p.ccm.3.2, p.ccm.3.5, p.ccm.3.3, p.ccm.3.6)
+# Calculate measure of overall accuracy, weighted by number of simulations per true parameter set:
+# Note that correlation, GAMs, and gradient boosting will have some disadvantage here, since it matters
+# for them whether the predicted interaction is positive or negative
+df_acc <- df_acc %>%
+  mutate(weighted_acc = (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null))
 
-# Plot percent accurate for all methods:
-res_acc <- acc_corr %>% mutate(method = 'Corr. Coef.', direction = 'v1 -> v2') %>%
-  bind_rows(acc_corr %>% mutate(method = 'Corr. Coef.', direction = 'v2 -> v1')) %>%
-  bind_rows(acc_gam %>% mutate(method = 'GAMs', direction = 'v1 -> v2')) %>%
-  bind_rows(acc_gam %>% mutate(method = 'GAMs', direction = 'v2 -> v1')) %>%
-  bind_rows(acc_gam_confound %>% mutate(method = 'GAMs (w/ Seas.)', direction = 'v1 -> v2')) %>%
-  bind_rows(acc_gam_confound %>% mutate(method = 'GAMs (w/ Seas.)', direction = 'v2 -> v1')) %>%
-  bind_rows(acc_granger_LIST[[1]] %>% mutate(method = 'GC', direction = 'v1 -> v2')) %>%
-  bind_rows(acc_granger_LIST[[2]] %>% mutate(method = 'GC', direction = 'v2 -> v1')) %>%
-  bind_rows(acc_granger_LIST[[3]] %>% mutate(method = 'GC (w/ Seas.)', direction = 'v1 -> v2')) %>%
-  bind_rows(acc_granger_LIST[[4]] %>% mutate(method = 'GC (w/ Seas.)', direction = 'v2 -> v1')) %>%
-  bind_rows(acc_te_LIST[[1]] %>% mutate(method = 'TE', direction = 'v1 -> v2')) %>%
-  bind_rows(acc_te_LIST[[2]] %>% mutate(method = 'TE', direction = 'v2 -> v1')) %>%
-  bind_rows(acc_ccm_LIST[[1]] %>% mutate(method = 'CCM (Method 1)', direction = 'v1 -> v2')) %>%
-  bind_rows(acc_ccm_LIST[[2]] %>% mutate(method = 'CCM (Method 1)', direction = 'v2 -> v1')) %>%
-  bind_rows(acc_ccm_LIST[[5]] %>% mutate(method = 'CCM (Method 3)', direction = 'v1 -> v2')) %>%
-  bind_rows(acc_ccm_LIST[[6]] %>% mutate(method = 'CCM (Method 3)', direction = 'v2 -> v1')) %>%
-  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GAMs (w/ Seas.)', 'GC', 'GC (w/ Seas.)', 'TE', 'CCM (Method 1)', 'CCM (Method 3)'))) %>%
-  mutate(s_proxy = case_match(strength, '0' ~ -2, '0.25' ~ -1, '0.5' ~ 0, '4' ~ 3, .default = as.numeric(strength)),
-         method_num = as.numeric(method),
-         x_use = s_proxy + 0.1 * (method_num - 5))
+df_acc <- df_acc %>%
+  mutate(direction = if_else(str_detect(method, 'v1 -> v2'), 'v1 -> v2', 'v2 -> v1')) %>%
+  mutate(method = str_remove(method, 'v1 -> v2 ')) %>% mutate(method = str_remove(method, 'v2 -> v1 ')) %>%
+  mutate(confounding = if_else(str_detect(method, 'Seasonality') | str_detect(method, 'lag 13'), ' (w/ Seas)', '')) %>%
+  mutate(method = if_else(!(method %in% c('Corr. Coef.', 'GAMs') | str_detect(method, 'CCM')), str_sub(method, 1, 3), method),
+         method = if_else(str_detect(method, 'CCM') | str_detect(method, 'Corr. Coef.'), method, str_remove(method, ' ')),
+         method = paste0(method, confounding)) %>%
+  select(-confounding)
 
-p.comb.2 <- ggplot(res_acc, aes(x = x_use, y = perc_correct, group = method, shape = method, col = method)) +
-  geom_rect(aes(xmin = -Inf, xmax = -1.5, ymin = -Inf, ymax = Inf), fill = 'white', col = 'white') +
-  geom_rect(aes(xmin = -1.5, xmax = -0.5, ymin = -Inf, ymax = Inf), fill = 'gray95', col = 'gray95') +
-  geom_rect(aes(xmin = -0.5, xmax = 0.5, ymin = -Inf, ymax = Inf), fill = 'white', col = 'white') +
-  geom_rect(aes(xmin = 0.5, xmax = 1.5, ymin = -Inf, ymax = Inf), fill = 'gray95', col = 'gray95') +
-  geom_rect(aes(xmin = 1.5, xmax = 2.5, ymin = -Inf, ymax = Inf), fill = 'white', col = 'white') +
-  geom_rect(aes(xmin = 2.5, xmax = Inf, ymin = -Inf, ymax = Inf), fill = 'gray95', col = 'gray95') +
-  geom_point(size = 2.5) + #geom_line() +
-  facet_grid(duration ~ direction) +
+df_acc <- df_acc %>%
+  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC', 'TE (w/ Seas)', 'CCM (Method 1)', 'CCM (Method 2)')))
+
+df_acc <- df_acc %>% bind_rows(df_acc[1:2, ] %>%
+                                 mutate(direction = 'v1 -> v2'))
+
+df_acc %>%
+  filter(!is.na(method)) %>%
+  select(method, direction, weighted_acc, mcc, sens_pos:spec) %>%
+  print()
+
+p.comb.1a <- ggplot(df_acc %>% filter(!is.na(method)), aes(x = direction, y = weighted_acc, shape = method, col = method)) +
+  geom_point(size = 3) +
   theme_bw() +
-  scale_x_continuous(limits = c(-2.4, 3.3), breaks = -2:3, labels = c('0', '0.25', '0.5', '1', '2', '4')) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_shape_manual(values = c(18, 17, 17, 15, 15, 3, 8, 8)) +
-  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#fb9a99', '#1f78b4', '#a6cee3', '#6a3d9a', '#33a02c', '#b2df8a')) +
-  labs(x = 'Interaction Strength', y = '% Correct', shape = 'Method', col = 'Method')
-print(p.comb.2)
-rm(acc_corr, acc_gam, acc_gam_confound, acc_granger_LIST, acc_te_LIST, acc_ccm_LIST)
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        legend.position = 'none') +
+  scale_y_continuous(limits = c(0, 0.75), n.breaks = 20) +
+  scale_shape_manual(values = c(18, 17, 15, 3, 8, 8)) +
+  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
+  labs(x = 'Direction', y = 'Accuracy (Weighted)', shape = 'Method', col = 'Method')
+p.comb.1b <- ggplot(df_acc %>% filter(!is.na(method)), aes(x = direction, y = mcc, shape = method, col = method)) +
+  geom_point(size = 3) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        legend.position = 'none') +
+  scale_y_continuous(limits = c(-0.15, 0.20), n.breaks = 15) +
+  scale_shape_manual(values = c(18, 17, 15, 3, 8, 8)) +
+  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
+  labs(x = 'Direction', y = 'Matthews correlation coefficient', shape = 'Method', col = 'Method')
+
+p.comb.1.legend <- ggplot(df_acc %>% filter(!is.na(method)), aes(x = direction, y = weighted_acc, shape = method, col = method)) +
+  geom_point(size = 3) +
+  theme_bw() +
+  theme(legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        legend.position = 'right') +
+  scale_shape_manual(values = c(18, 17, 15, 3, 8, 8)) +
+  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
+  labs(shape = 'Method', col = 'Method')
+p.comb.1.legend <- ggplotGrob(p.comb.1.legend)$grobs[[which(sapply(ggplotGrob(p.comb.1.legend)$grobs, function(x) x$name) == 'guide-box')]]
+
+p.comb.1 <- arrangeGrob(p.comb.1a, p.comb.1b, p.comb.1.legend, widths = c(1, 1, 0.35))
+plot(p.comb.1)
+# ggsave(filename = 'results/plots/overall_accuracy_by_method.svg', p.comb.1, height = 6, width = 11)
+
+# Plot accuracy by method, strength, and duration:
+p.comb.2 <- arrangeGrob(p.corr.1, p.gam.1, p.granger.1.1, p.granger.1.2, p.te.1.3, p.te.1.4, p.ccm.1.1, p.ccm.1.4, p.ccm.1.2, p.ccm.1.5, p.legend.1,
+                        layout_matrix = rbind(c(1, 2), c(3, 4), c(5, 6), c(7, 8), c(9, 10), c(11, 11)),
+                        heights = c(1, 1, 1, 1, 1, 0.25))
+plot(p.comb.2)
+# ggsave(filename = 'results/plots/accuracy_by_method_and_true_int_params.svg', p.comb.2, width = 12, height = 9)
+rm(p.corr.1, p.gam.1, p.granger.1.1, p.granger.1.2, p.granger.1.3, p.granger.1.4, p.te.1.1, p.te.1.2,
+   p.te.1.3, p.te.1.4, p.ccm.1.1, p.ccm.1.4, p.ccm.1.2, p.ccm.1.5, p.ccm.1.3, p.ccm.1.6, p.legend.1)
+
+# Table of correlation coefficients between inferred and true interaction strength magnitude:
+df_assoc <- assoc_corr %>%
+  mutate(method = 'Corr. Coef.', .before = delta) %>%
+  filter(true_int == 'all') %>%
+  bind_rows(assoc_gam %>%
+              mutate(method = 'GAMs', .before = delta) %>%
+              filter(true_int == 'all')) %>%
+  bind_rows(assoc_granger_LIST[1:2] %>%
+              bind_rows(.id = 'direction') %>%
+              mutate(method = 'GC', .before = delta) %>%
+              filter(true_int == 'all') %>%
+              mutate(direction = str_sub(direction, 1, 8))) %>%
+  bind_rows(assoc_te_LIST[3:4] %>%
+              bind_rows(.id = 'direction') %>%
+              mutate(method = 'TE (w/ Seas)', .before = delta) %>%
+              filter(true_int == 'all') %>%
+              mutate(direction = str_sub(direction, 1, 8))) %>%
+  bind_rows(assoc_ccm_LIST_max[c(1, 4)] %>%
+              bind_rows(.id = 'direction') %>%
+              mutate(method = 'CCM', .before = delta) %>%
+              filter(true_int == 'all') %>%
+              mutate(direction = str_sub(direction, 1, 8)))
+print(df_assoc %>% filter(delta == 1))
+print(df_assoc %>% filter(delta == 7 / 28))
+print(df_assoc %>% filter(delta == 7 / 91))
+# rm(assoc_corr, assoc_gam, assoc_granger_LIST, assoc_te_LIST, assoc_ccm_LIST_max)
+
+# Plot metric values vs. true interaction strength by duration:
+p.comb.3 <- arrangeGrob(p.corr.2, p.gam.2, p.granger.2.1, p.granger.2.2, p.te.2.1, p.te.2.2, p.ccm.2.1, p.ccm.2.2, p.legend.2,
+                        layout_matrix = rbind(c(1, 2), c(3, 4), c(5, 6), c(7, 8), c(9, 9)),
+                        heights = c(1, 1, 1, 1, 0.25))
+plot(p.comb.3)
+# ggsave(filename = 'results/plots/true_strength_vs_point_estimates.svg', p.comb.3, width = 12, height = 9)
+rm(p.corr.2, p.gam.2, p.granger.2.1, p.granger.2.2, p.te.2.1, p.te.2.2, p.ccm.2.1, p.ccm.2.2, p.legend.2)
 
 # Plot Spearman's rho between metrics and true interaction strength for all methods:
 # Note: Values are calculated such that we expect POSITIVE rho for all analyses
-res_assoc <- assoc_corr %>% mutate(method = 'Corr. Coef.', direction = 'v1 -> v2') %>%
-  bind_rows(assoc_corr %>% mutate(method = 'Corr. Coef.', direction = 'v2 -> v1')) %>%
-  bind_rows(assoc_gam %>% mutate(method = 'GAMs', direction = 'v1 -> v2')) %>%
-  bind_rows(assoc_gam %>% mutate(method = 'GAMs', direction = 'v2 -> v1')) %>%
-  bind_rows(assoc_gam_confound %>% mutate(method = 'GAMs (w/ Seas.)', direction = 'v1 -> v2')) %>%
-  bind_rows(assoc_gam_confound %>% mutate(method = 'GAMs (w/ Seas.)', direction = 'v2 -> v1')) %>%
-  bind_rows(assoc_granger_LIST[[1]] %>% mutate(method = 'GC', direction = 'v1 -> v2')) %>%
-  bind_rows(assoc_granger_LIST[[2]] %>% mutate(method = 'GC', direction = 'v2 -> v1')) %>%
-  bind_rows(assoc_granger_LIST[[3]] %>% mutate(method = 'GC (w/ Seas.)', direction = 'v1 -> v2')) %>%
-  bind_rows(assoc_granger_LIST[[4]] %>% mutate(method = 'GC (w/ Seas.)', direction = 'v2 -> v1')) %>%
-  bind_rows(assoc_te_LIST[[1]] %>% mutate(method = 'TE', direction = 'v1 -> v2')) %>%
-  bind_rows(assoc_te_LIST[[2]] %>% mutate(method = 'TE', direction = 'v2 -> v1')) %>%
-  bind_rows(assoc_ccm_LIST_max[[1]] %>% mutate(method = 'CCM (Method 1)', direction = 'v1 -> v2')) %>%
-  bind_rows(assoc_ccm_LIST_max[[2]] %>% mutate(method = 'CCM (Method 1)', direction = 'v2 -> v1')) %>%
-  bind_rows(assoc_ccm_LIST_max[[5]] %>% mutate(method = 'CCM (Method 3)', direction = 'v1 -> v2')) %>%
-  bind_rows(assoc_ccm_LIST_max[[6]] %>% mutate(method = 'CCM (Method 3)', direction = 'v2 -> v1')) %>%
-  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GAMs (w/ Seas.)', 'GC', 'GC (w/ Seas.)', 'TE', 'CCM (Method 1)', 'CCM (Method 3)'))) %>%
+df_assoc <- df_assoc %>%
+  mutate(direction = if_else(is.na(direction), 'v1 -> v2', direction)) %>%
+  bind_rows(df_assoc %>% filter(method == 'Corr. Coef.') %>% mutate(direction = 'v2 -> v1')) %>%
+  bind_rows(df_assoc %>% filter(method == 'GAMs') %>% mutate(direction = 'v2 -> v1')) %>%
+  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC', 'TE (w/ Seas)', 'CCM'))) %>%
   mutate(duration = 1 / delta) %>%
   mutate(d_proxy = case_match(duration, 1 ~ 1, 4 ~ 2, 13 ~ 3),
          method_num = as.numeric(method),
-         x_use = d_proxy + 0.1 * (method_num - 5))
+         x_use = d_proxy + 0.15 * (method_num - 3))
 
-p.comb.3 <- ggplot(res_assoc, aes(x = x_use, y = rho, group = method, shape = method, col = method)) +
+p.comb.4 <- ggplot(df_assoc, aes(x = x_use, y = rho, group = method, shape = method, col = method)) +
   geom_rect(aes(xmin = -Inf, xmax = 1.5, ymin = -Inf, ymax = Inf), fill = 'white', col = 'white') +
   geom_rect(aes(xmin = 1.5, xmax = 2.5, ymin = -Inf, ymax = Inf), fill = 'gray95', col = 'gray95') +
   geom_rect(aes(xmin = 2.5, xmax = Inf, ymin = -Inf, ymax = Inf), fill = 'white', col = 'white') +
   geom_point(size = 2.5) +
   geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf), fill = 'white', col = NA, alpha = 0.075) +
-  geom_point(data = res_assoc %>% filter(rho > 0 & p_value < 0.05), size = 2.5) +
+  geom_point(data = df_assoc %>% filter(rho > 0 & p_value < 0.05), size = 2.5) +
   geom_hline(yintercept = 0) +
-  facet_grid(true_int ~ direction) +
+  facet_wrap(~ direction) +
   theme_bw() +
-  scale_x_continuous(limits = c(0.6, 3.3), breaks = 1:3, labels = c('1', '4', '13')) +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        strip.text = element_text(size = 12),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        legend.position = 'right') +
+  scale_x_continuous(limits = c(0.6, 3.4), breaks = 1:3, labels = c('1', '4', '13')) +
   scale_y_continuous(limits = c(-1, 1)) +
-  scale_shape_manual(values = c(18, 17, 17, 15, 15, 3, 18, 18)) +
-  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#fb9a99', '#1f78b4', '#a6cee3', '#6a3d9a', '#33a02c', '#b2df8a')) +
+  scale_shape_manual(values = c(18, 17, 15, 3, 8)) +
+  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c')) +
   labs(x = 'Interaction Duration', y = "Spearman's Rho", shape = 'Method', col = 'Method')
-print(p.comb.3)
-rm(assoc_corr, assoc_gam, assoc_gam_confound, assoc_granger_LIST, assoc_te_LIST, assoc_ccm_LIST_max)
-
-# Calculate measure of overall accuracy, weighted by number of simulations per true parameter set:
-# Note that correlation, GAMs, and gradient boosting will have some disadvantage here, since it matters
-# for them whether the predicted interaction is positive or negative
-
-res_acc_weighted <- bind_cols(method = 'Corr. Coef.', weighted_acc = acc_weighted_corr, direction = 'v1 -> v2') %>%
-  bind_rows(bind_cols(method = 'Corr. Coef.', weighted_acc = acc_weighted_corr, direction = 'v2 -> v1')) %>%
-  bind_rows(bind_cols(method = 'GAMs', weighted_acc = acc_weighted_gam, direction = 'v1 -> v2')) %>%
-  bind_rows(bind_cols(method = 'GAMs', weighted_acc = acc_weighted_gam, direction = 'v2 -> v1')) %>%
-  bind_rows(bind_cols(method = 'GAMs (w/ Seas.)', weighted_acc = acc_weighted_gam_confound, direction = 'v1 -> v2')) %>%
-  bind_rows(bind_cols(method = 'GAMs (w/ Seas.)', weighted_acc = acc_weighted_gam_confound, direction = 'v2 -> v1')) %>%
-  bind_rows(acc_weighted_granger %>%
-              bind_rows() %>%
-              pivot_longer(everything(), values_to = 'weighted_acc') %>%
-              mutate(direction = str_sub(name, 1, 8),
-                     method = if_else(str_detect(name, 'Seasonality'), 'GC (w/ Seas.)', 'GC')) %>%
-              select(method, weighted_acc, direction)) %>%
-  bind_rows(acc_weighted_te %>%
-              bind_rows() %>%
-              pivot_longer(everything(), names_to = 'direction', values_to = 'weighted_acc') %>%
-              mutate(direction = str_sub(direction, 1, 8),
-                     method = 'TE') %>%
-              select(method, weighted_acc, direction)) %>%
-  bind_rows(acc_weighted_ccm %>%
-              bind_rows() %>%
-              pivot_longer(everything(), values_to = 'weighted_acc') %>%
-              mutate(direction = str_sub(name, 1, 8),
-                     method = paste0('CCM ', str_sub(name, 10))) %>%
-              select(method, weighted_acc, direction) %>%
-              filter(!str_detect(method, '2')))
-
-res_acc_weighted <- res_acc_weighted %>%
-  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GAMs (w/ Seas.)', 'GC', 'GC (w/ Seas.)', 'TE', 'CCM (Method 1)', 'CCM (Method 3)')))
-
-p.comb.4 <- ggplot(res_acc_weighted, aes(x = direction, y = weighted_acc, shape = method, col = method)) +
-  geom_point(size = 3) +
-  # facet_wrap(~ direction, nrow = 1) +
-  theme_bw() +
-  scale_y_continuous(limits = c(0, 0.75), n.breaks = 20) +
-  scale_shape_manual(values = c(18, 17, 17, 15, 15, 3, 8, 8, 16)) +
-  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#fb9a99', '#1f78b4', '#a6cee3', '#6a3d9a', '#33a02c', '#b2df8a', '#000000')) +
-  labs(x = 'Direction', y = 'Accuracy (Weighted)', shape = 'Method', col = 'Method')
 print(p.comb.4)
-rm(acc_weighted_corr, acc_weighted_gam, acc_weighted_gam_confound,
-   acc_weighted_granger, acc_weighted_te, acc_weighted_ccm)
+# ggsave(filename = 'results/plots/correlation_true_strength_vs_point_estimates.svg', height = 5.5, width = 11)
+rm(assoc_corr, assoc_gam, assoc_granger_LIST, assoc_te_LIST, assoc_ccm_LIST_max)
 
 # Close pdf:
 dev.off()

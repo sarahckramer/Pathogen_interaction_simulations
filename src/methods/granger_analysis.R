@@ -71,8 +71,8 @@ granger_func <- function(data){
   # run AR for univariate analysis - models of just the single virus against its 
   # own lags (VAR is only for multivariate and if you try to run a univariate analysis
   # like this with VAR it will tell you to use ar or arima)
-  ar_v1 = ar(data$V1_obs, order = var1$p, aic = F, method="ols")
-  ar_v2 = ar(data$V2_obs, order = var1$p, aic = F, method="ols")
+  ar_v1 = stats::ar(data$V1_obs, order = var1$p, aic = F, method="ols")
+  ar_v2 = stats::ar(data$V2_obs, order = var1$p, aic = F, method="ols")
   
   sink(file = nullfile())
   ar_v1_confound <- VARfit(data$V1_obs, p = var1$p, exogen = data$seasonal_component)
