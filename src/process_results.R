@@ -73,23 +73,6 @@ for (i in 1:c(1, 2, 8, 12, 17, 24)) {
 }
 # ggsave(filename = 'results/plots/supp_plot1.svg', p.data, width = 11, height = 7)
 
-p.data.alt <- ggplot(data = dat_plot %>%
-                       filter(.id == ids_to_plot[[1]]) %>%
-                       mutate(theta_lambda = as.character(theta_lambda),
-                              delta = as.character(7 / delta)) %>%
-                       filter((theta_lambda %in% c(0, 0.5, 2, 4) & delta %in% c(28, 91)) |
-                                theta_lambda == 1) %>%
-                       mutate(delta = if_else(theta_lambda == '1', '28', delta)),
-                     aes(x = date, y = obs, group = virus, col = virus)) +
-  geom_line(linewidth = 0.75) +
-  geom_vline(xintercept = year_breaks, lty = 2, col = 'gray60') +
-  facet_grid(theta_lambda ~ delta) +
-  theme_classic() +
-  scale_x_continuous(breaks = NULL) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(x = '', y = 'Incidence (per 1000)', col = '')
-print(p.data.alt)
-
 rm(dat_plot, ids_to_plot)
 
 # ------------------------------------------------------------------------------
