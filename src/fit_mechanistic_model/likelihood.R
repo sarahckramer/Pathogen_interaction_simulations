@@ -67,7 +67,7 @@ dat <- dat %>%
 expect_true(nrow(dat) == 522)
 
 # Add data to model object:
-resp_mod@data[, 106:627] <- dat %>%
+resp_mod@data[, 1045:1566] <- dat %>%
   select(-time) %>%
   t()
 
@@ -80,8 +80,8 @@ expect_true(all(coef(resp_mod) == true_params[, data_id]))
 # Setup fitting exercise
 
 # Choose parameters to be estimated:
-estpars <- c('Ri1', 'Ri2', 'rho1', 'rho2', 'theta_lambda1', 'theta_lambda2', 'delta1', 'delta2',
-             'A1', 'phi1', 'A2', 'phi2', 'k1', 'k2', 'E01', 'E02', 'R01', 'R02', 'R012',
+estpars <- c('Ri1', 'Ri2', 'w2', 'rho1', 'rho2', 'theta_lambda1', 'theta_lambda2', 'delta1', 'delta2',
+             'A1', 'phi1', 'A2', 'phi2', 'k1', 'k2',
              't_si_1', 't_si_2', 't_si_3', 't_si_4', 't_si_5', 't_si_6',
              't_si_7', 't_si_8', 't_si_9', 't_si_10',
              'w_delta_i_1', 'w_delta_i_2', 'w_delta_i_3', 'w_delta_i_4', 'w_delta_i_5', 'w_delta_i_6',
@@ -113,16 +113,16 @@ start_range <- data.frame(Ri1 = c(1.0, 2.0),
                           R01 = c(0, 0.3),
                           R02 = c(0, 0.3),
                           R012 = c(0, 0.3),
-                          t_si_1 = c(105, 156),
-                          t_si_2 = c(157, 208),
-                          t_si_3 = c(209, 260),
-                          t_si_4 = c(261, 312),
-                          t_si_5 = c(313, 365),
-                          t_si_6 = c(366, 417),
-                          t_si_7 = c(418, 469),
-                          t_si_8 = c(470, 521),
-                          t_si_9 = c(522, 573),
-                          t_si_10 = c(574, 626),
+                          t_si_1 = c(1, 53),
+                          t_si_2 = c(54, 105),
+                          t_si_3 = c(106, 157),
+                          t_si_4 = c(158, 209),
+                          t_si_5 = c(210, 261),
+                          t_si_6 = c(262, 313),
+                          t_si_7 = c(314, 366),
+                          t_si_8 = c(367, 418),
+                          t_si_9 = c(419, 470),
+                          t_si_10 = c(471, 522),
                           w_delta_i_1 = c(0, 0.5),
                           w_delta_i_2 = c(0, 0.5),
                           w_delta_i_3 = c(0, 0.5),
