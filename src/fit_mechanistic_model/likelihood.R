@@ -236,7 +236,7 @@ if (run_parallel) {
         try(
           nloptr(x0 = x0_trans,
                  eval_f = obj_fun,
-                 opts = list(algorithm = "NLOPT_LN_SBPLX",
+                 opts = list(algorithm = "NLOPT_LN_PRAXIS",
                              maxtime = 60 * nmins_exec,
                              maxeval = -1, # Negative value: criterion is disabled
                              xtol_rel = -1, # Default value: 1e-4
@@ -306,7 +306,7 @@ if (run_parallel) {
     m <- try(
       nloptr(x0 = unname(x0_trans),
              eval_f = obj_fun,
-             opts = list(algorithm = 'NLOPT_LN_SBPLX',
+             opts = list(algorithm = 'NLOPT_LN_PRAXIS',
                          maxtime = 60.0 * nmins_exec,
                          maxeval = -1, # disabled
                          xtol_rel = -1, # disabled; default: 1e-4
