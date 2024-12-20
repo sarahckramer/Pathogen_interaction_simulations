@@ -114,8 +114,8 @@ true_params_LIST <- true_params_LIST[order(as.numeric(unlist(map(str_split(data_
 data_LIST <- data_LIST[order(as.numeric(unlist(map(str_split(data_files, '_'), where_run))))]
 
 # Format true params as tibble:
-estpars <- c('Ri1', 'Ri2', 'rho1', 'rho2', 'theta_lambda1', 'theta_lambda2', 'delta1', 'delta2',
-             'A1', 'phi1', 'A2', 'phi2', 'k1', 'k2', 'E01', 'E02', 'R01', 'R02', 'R012',
+estpars <- c('Ri1', 'Ri2', 'w2', 'rho1', 'rho2', 'theta_lambda1', 'theta_lambda2', 'delta1', 'delta2',
+             'A1', 'phi1', 'A2', 'phi2', 'k1', 'k2',
              't_si_1', 't_si_2', 't_si_3', 't_si_4', 't_si_5', 't_si_6',
              't_si_7', 't_si_8', 't_si_9', 't_si_10',
              'w_delta_i_1', 'w_delta_i_2', 'w_delta_i_3', 'w_delta_i_4', 'w_delta_i_5', 'w_delta_i_6',
@@ -143,7 +143,7 @@ rm(i, data_files, where_run, true_params_LIST)
 res_dir <- 'results/trajectory_matching/round1/'
 
 # Loop through interaction parameter sets:
-ids_to_fit <- ids_to_fit[1:5] # TEMPORARY
+# ids_to_fit <- ids_to_fit[1:5] # TEMPORARY
 
 res_LIST = vector('list', length = 16)
 for (int_set in 1:16) {
@@ -178,6 +178,8 @@ res$delta2[res$delta2 > 7.0] <- NA
 
 res$rho1[res$rho1 == 1.0] <- NA
 res$rho2[res$rho2 == 1.0] <- NA
+
+res$w2[res$w2 > 5.0] <- NA
 
 # res <- res %>%
 #   mutate(across(contains('w_delta'), ~ if_else(.x == 1.0, NA, .x)))
@@ -249,60 +251,12 @@ lapply(res_list, function(ix) {
 
 # Reset initial conditions so that sum cannot be >1:
 ci_start <- lapply(res_list, function(ix) {
-  
-  # init_cond_estpars <- c('E01', 'E02', 'R01', 'R02', 'R012')
-  
   ix %>%
-    mutate(minmax = c('min', 'max')) %>%
-    # select(int_set, .id, contains(init_cond_estpars), minmax) %>%
-    mutate(sum = E01 + E02 + R01 + R02 + R012)
-  
+    mutate(minmax = c('min', 'max'))
 }) %>%
-  bind_rows()
+  bind_rows() %>%
+  as_tibble()
 rm(res_list)
-
-expect_true(ci_start %>%
-              filter(minmax == 'min', sum > 1.0) %>%
-              nrow() == 0)
-
-ci_start <- ci_start %>%
-  filter(minmax == 'max', sum > 1.0) %>%
-  group_by(int_set, .id) %>%
-  mutate(across(c('E01', 'E02', 'R01', 'R02', 'R012'),
-                ~ .x - ((sum - 0.9999999) * (.x / sum)))) %>%
-  bind_rows(ci_start %>%
-              filter(minmax == 'min')) %>%
-  mutate(minmax = factor(minmax, levels = c('min', 'max'))) %>%
-  arrange(minmax, .by_group = TRUE)
-
-# Ensure upper bounds still greater than lower:
-expect_true(
-  ci_start %>%
-    filter(minmax == 'max') %>%
-    select(int_set:.id, E01:R012) %>%
-    inner_join(ci_start %>%
-                 filter(minmax == 'min') %>%
-                 select(int_set:.id, E01:R012),
-               by = c('int_set', '.id')) %>%
-    mutate(E01 = E01.x > E01.y,
-           E02 = E02.x > E02.y,
-           R01 = R01.x > R01.y,
-           R02 = R02.x > R02.y,
-           R012 = R012.x > R012.y) %>%
-    ungroup() %>%
-    select(E01:R012) %>%
-    all(TRUE)
-)
-
-# Ensure that upper bounds now sum to <1:
-expect_equal(ci_start %>%
-               mutate(sum = E01 + E02 + R01 + R02 + R012) %>%
-               filter(sum > 1.0) %>%
-               nrow(), 0)
-
-# Remove 'sum' column:
-ci_start <- ci_start %>%
-  select(!sum)
 
 # If w_delta_i range greater than c(0, 0.5), reset:
 ci_start <- ci_start %>%
@@ -366,6 +320,8 @@ res$delta2[res$delta2 > 7.0] <- NA
 
 res$rho1[res$rho1 == 1.0] <- NA
 res$rho2[res$rho2 == 1.0] <- NA
+
+res$w2[res$w2 > 5.0] <- NA
 
 # Since phi=0 is equivalent to phi=52.25, don't use full range; transform so that we can select from only best-supported range:
 phi_ranges_orig <- res %>%
@@ -435,59 +391,13 @@ lapply(res_list, function(ix) {
 # Reset initial conditions so that sum cannot be >1:
 ci_start <- lapply(res_list, function(ix) {
   
-  # init_cond_estpars <- c('E01', 'E02', 'R01', 'R02', 'R012')
-  
   ix %>%
-    mutate(minmax = c('min', 'max')) %>%
-    # select(int_set, .id, contains(init_cond_estpars), minmax) %>%
-    mutate(sum = E01 + E02 + R01 + R02 + R012)
+    mutate(minmax = c('min', 'max'))
   
 }) %>%
-  bind_rows()
+  bind_rows() %>%
+  as_tibble()
 rm(res_list)
-
-expect_true(ci_start %>%
-              filter(minmax == 'min', sum > 1.0) %>%
-              nrow() == 0)
-
-ci_start <- ci_start %>%
-  filter(minmax == 'max', sum > 1.0) %>%
-  group_by(int_set, .id) %>%
-  mutate(across(c('E01', 'E02', 'R01', 'R02', 'R012'),
-                ~ .x - ((sum - 0.9999999) * (.x / sum)))) %>%
-  bind_rows(ci_start %>%
-              filter(minmax == 'min')) %>%
-  mutate(minmax = factor(minmax, levels = c('min', 'max'))) %>%
-  arrange(minmax, .by_group = TRUE)
-
-# Ensure upper bounds still greater than lower:
-expect_true(
-  ci_start %>%
-    filter(minmax == 'max') %>%
-    select(int_set:.id, E01:R012) %>%
-    inner_join(ci_start %>%
-                 filter(minmax == 'min') %>%
-                 select(int_set:.id, E01:R012),
-               by = c('int_set', '.id')) %>%
-    mutate(E01 = E01.x > E01.y,
-           E02 = E02.x > E02.y,
-           R01 = R01.x > R01.y,
-           R02 = R02.x > R02.y,
-           R012 = R012.x > R012.y) %>%
-    ungroup() %>%
-    select(E01:R012) %>%
-    all(TRUE)
-)
-
-# Ensure that upper bounds now sum to <1:
-expect_equal(ci_start %>%
-               mutate(sum = E01 + E02 + R01 + R02 + R012) %>%
-               filter(sum > 1.0) %>%
-               nrow(), 0)
-
-# Remove 'sum' column:
-ci_start <- ci_start %>%
-  select(!sum)
 
 # If w_delta_i range greater than c(0, 0.5), reset:
 ci_start <- ci_start %>%
@@ -806,10 +716,8 @@ rm(round4_ids)
 
 # Join information on true parameter values:
 res <- res %>%
-  mutate(R01_tot = R01 + R012, R02_tot = R02 + R012, .after = R012) %>%
   pivot_longer(Ri1:w_delta_i_10, names_to = 'param') %>%
   inner_join(true_params %>%
-               mutate(R01_tot = R01 + R012, R02_tot = R02 + R012, .after = R012) %>%
                pivot_longer(Ri1:w_delta_i_10, names_to = 'param', values_to = 'truth'),
              by = c('int_set', '.id', 'param'))
 
@@ -893,7 +801,8 @@ p4 <- ggplot(res %>%
   scale_y_continuous(transform = 'sqrt', breaks = c(0, 10, 50, 100, 200, 500)) +
   labs(x = 'True Duration', y = 'Fit Value', fill = expression('True ' * theta[lambda] * '   '), title = expression(delta[2]))
 
-grid.arrange(p1, p2, p3, p4, ncol = 2)
+grid.arrange(p1, p3, ncol = 2)
+grid.arrange(p2, p4, ncol = 2)
 
 # Look at just top results for each run, and combine datasets:
 res_top <- res %>%
@@ -918,9 +827,9 @@ p1_top <- ggplot(res_top %>%
   labs(x = expression('True ' * theta[lambda]), y = 'Fit Value', fill = 'True Duration', title = expression(theta[lambda*1]))
 
 p2_top <- ggplot(res_top %>%
-               filter(param == 'delta1') %>%
-               mutate(truth_recode = case_when(truth == 1 ~ 1, truth == 7 / 28 ~ 2, truth == 7 / 91 ~ 3),
-                      true_theta_lambda = if_else(true_theta_lambda == 0, 0.1, true_theta_lambda))) +
+                   filter(param == 'delta1') %>%
+                   mutate(truth_recode = case_when(truth == 1 ~ 1, truth == 7 / 28 ~ 2, truth == 7 / 91 ~ 3),
+                          true_theta_lambda = if_else(true_theta_lambda == 0, 0.1, true_theta_lambda))) +
   geom_boxplot(aes(x = truth_recode, y = 7 / value, fill = true_theta_lambda, group = paste(true_theta_lambda, truth_recode))) +
   geom_segment(aes(x = truth_recode - 0.5, xend = truth_recode + 0.5, y = 7 / truth, yend = 7 / truth), lty = 2) +#, linewidth = 1.0) +
   theme_classic() +
@@ -931,12 +840,12 @@ p2_top <- ggplot(res_top %>%
   labs(x = 'True Duration', y = 'Fit Value', fill = expression('True ' * theta[lambda] * '   '), title = expression(delta[1]))
 
 p3_top <- ggplot(res_top %>%
-               filter(param == 'theta_lambda2') %>%
-               mutate(true_delta = factor(true_delta, levels = c(7, 28, 91)),
-                      x_use = case_when(int_set == 7 ~ 2, int_set == 12 ~ 3, int_set == 2 ~ 5, int_set == 8 ~ 6, int_set == 13 ~ 7,
-                                        int_set == 3 ~ 9, int_set == 9 ~ 10, int_set == 14 ~ 11, int_set == 4 ~ 13, int_set == 5 ~ 15,
-                                        int_set == 10 ~ 16, int_set == 15 ~ 17, int_set == 6 ~ 19, int_set == 11 ~ 20, int_set == 16 ~ 21,
-                                        .default = int_set))) +
+                   filter(param == 'theta_lambda2') %>%
+                   mutate(true_delta = factor(true_delta, levels = c(7, 28, 91)),
+                          x_use = case_when(int_set == 7 ~ 2, int_set == 12 ~ 3, int_set == 2 ~ 5, int_set == 8 ~ 6, int_set == 13 ~ 7,
+                                            int_set == 3 ~ 9, int_set == 9 ~ 10, int_set == 14 ~ 11, int_set == 4 ~ 13, int_set == 5 ~ 15,
+                                            int_set == 10 ~ 16, int_set == 15 ~ 17, int_set == 6 ~ 19, int_set == 11 ~ 20, int_set == 16 ~ 21,
+                                            .default = int_set))) +
   geom_boxplot(aes(x = x_use, y = value, fill = true_delta, group = paste(true_delta, x_use))) +
   geom_segment(aes(x = x_use - 0.5, xend = x_use + 0.5, y = truth, yend = truth), lty = 2, linewidth = 0.6) +
   theme_classic() +
@@ -947,9 +856,9 @@ p3_top <- ggplot(res_top %>%
   labs(x = expression('True ' * theta[lambda]), y = 'Fit Value', fill = 'True Duration', title = expression(theta[lambda*2]))
 
 p4_top <- ggplot(res_top %>%
-               filter(param == 'delta2') %>%
-               mutate(truth_recode = case_when(truth == 1 ~ 1, truth == 7 / 28 ~ 2, truth == 7 / 91 ~ 3),
-                      true_theta_lambda = if_else(true_theta_lambda == 0, 0.1, true_theta_lambda))) +
+                   filter(param == 'delta2') %>%
+                   mutate(truth_recode = case_when(truth == 1 ~ 1, truth == 7 / 28 ~ 2, truth == 7 / 91 ~ 3),
+                          true_theta_lambda = if_else(true_theta_lambda == 0, 0.1, true_theta_lambda))) +
   geom_boxplot(aes(x = truth_recode, y = 7 / value, fill = true_theta_lambda, group = paste(true_theta_lambda, truth_recode))) +
   geom_segment(aes(x = truth_recode - 0.5, xend = truth_recode + 0.5, y = 7 / truth, yend = 7 / truth), lty = 2) +#, linewidth = 1.0) +
   theme_classic() +
@@ -970,7 +879,7 @@ p_Ri <- ggplot(res %>% filter(param %in% c('Ri1', 'Ri2'))) +
 
 p_est <- ggplot(res %>%
                   # filter(param %in% c('E01', 'E02', 'R01', 'R02', 'R012', 'A1', 'A2', 'phi1', 'phi2', 'rho1', 'rho2', 'k1', 'k2'))) +
-                  filter(param %in% c('E01', 'E02', 'R01_tot', 'R02_tot', 'A1', 'A2', 'phi1', 'phi2', 'rho1', 'rho2', 'k1', 'k2'))) +
+                  filter(param %in% c('w2', 'A1', 'A2', 'phi1', 'phi2', 'rho1', 'rho2', 'k1', 'k2'))) +
   geom_violin(aes(x = as.character(.id), y = value, group = paste(int_set, .id), fill = int_set)) +
   geom_hline(aes(yintercept = truth), lty = 2) +
   facet_wrap(~ param, scales = 'free_y', ncol = 2) +
