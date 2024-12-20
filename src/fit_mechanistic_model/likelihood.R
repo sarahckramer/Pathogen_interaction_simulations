@@ -75,6 +75,10 @@ resp_mod@data[, 1045:1566] <- dat %>%
 coef(resp_mod) <- true_params[, data_id]
 expect_true(all(coef(resp_mod) == true_params[, data_id]))
 
+# coef(resp_mod)[which(str_detect(names(coef(resp_mod)), 't_si'))] <- c(1+12, 54+12, 106+12, 158+12, 210+12,
+#                                                                       262+12, 314+12, 367+12, 419+12, 471+12)
+# coef(resp_mod)[which(str_detect(names(coef(resp_mod)), 'w_delta'))] <- 0.28
+
 # ---------------------------------------------------------------------------------------------------------------------
 
 # Setup fitting exercise
