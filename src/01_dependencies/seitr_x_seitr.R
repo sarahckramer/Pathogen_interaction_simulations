@@ -11,7 +11,7 @@ create_SEITRxSEITR_mod <- function(n_weeks, start_time, parms, debug_bool = FALS
   # returns: pomp object with all parameters set to "true" values
   
   # Read model C code:
-  mod_code <- readLines('src/seitr_x_seitr.c')
+  mod_code <- readLines('src/01_dependencies/seitr_x_seitr.c')
   
   components_nm <- c('globs', 'toest', 'fromest', 'dmeas', 'rmeas', 'rinit', 'skel', 'rsim')
   components_l <- vector(mode = 'list', length = length(components_nm))

@@ -12,7 +12,7 @@ library(lubridate)
 library(gridExtra)
 
 #---- read in relevant functions ----#
-source('src/seitr_x_seitr.R')
+source('src/01_dependencies/seitr_x_seitr.R')
 
 # ---------------------------------------------------------------------------------------------------------------------
 

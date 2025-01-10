@@ -14,7 +14,7 @@ library(testthat)
 library(viridis)
 
 # Load functions:
-source('src/functions_etc/fxns_process_results.R')
+source('src/02_dependencies/fxns_process_results.R')
 
 # Open pdf to save plots:
 date <- format(Sys.Date(), '%d%m%y')
@@ -24,7 +24,7 @@ date <- format(Sys.Date(), '%d%m%y')
 # ------------------------------------------------------------------------------ 
 
 # Read in all results
-source('src/functions_etc/load_main_results.R')
+source('src/02_dependencies/load_main_results.R')
 
 # ------------------------------------------------------------------------------
 

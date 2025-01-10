@@ -55,7 +55,7 @@ if (is.na(run_local)) {
 }
 
 #---- set parameters and generate synthetic data ----#
-source('src/functions_etc/generate_data.R')
+source('src/01_dependencies/generate_data.R')
 
 #---- set up list to store all results ----#
 results <- vector(mode = 'list', length = 7)
@@ -104,7 +104,7 @@ if (run_local) {
 }
 
 #---- GAM approach ----#
-source('src/methods/gam_cor.R')
+source('src/01_methods/gam_cor.R')
 
 if (!run_local) {
   
@@ -132,7 +132,7 @@ if (!run_local) {
 #---- Granger causality analysis  ----#
 # apply granger analysis to each simulated data set and save the results
 if (run_local) {
-  source('src/methods/granger_analysis.R')
+  source('src/01_methods/granger_analysis.R')
 
   tic <- Sys.time()
   results$granger <- dat %>% group_by(.id) %>% do(granger_func(.))
@@ -150,7 +150,7 @@ if (run_local) {
   cl <- makeCluster(4, type = 'SOCK')
   registerDoSNOW(cl)
   res_te_1 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
-    source('src/methods/transfer_entropy_jidt.R')
+    source('src/01_methods/transfer_entropy_jidt.R')
     dat %>% filter(.id == i) %>% te_jidt(., lag = '1') %>% mutate(.id = i)
   }
   stopCluster(cl)
@@ -158,7 +158,7 @@ if (run_local) {
   cl <- makeCluster(4, type = 'SOCK')
   registerDoSNOW(cl)
   res_te_2 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
-    source('src/methods/transfer_entropy_jidt.R')
+    source('src/01_methods/transfer_entropy_jidt.R')
     dat %>% filter(.id == i) %>% te_jidt(., lag = '2') %>% mutate(.id = i)
   }
   stopCluster(cl)
@@ -166,7 +166,7 @@ if (run_local) {
   cl <- makeCluster(4, type = 'SOCK')
   registerDoSNOW(cl)
   res_te_4 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
-    source('src/methods/transfer_entropy_jidt.R')
+    source('src/01_methods/transfer_entropy_jidt.R')
     dat %>% filter(.id == i) %>% te_jidt(., lag = '4') %>% mutate(.id = i)
   }
   stopCluster(cl)
@@ -174,7 +174,7 @@ if (run_local) {
   cl <- makeCluster(4, type = 'SOCK')
   registerDoSNOW(cl)
   res_te_13 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
-    source('src/methods/transfer_entropy_jidt.R')
+    source('src/01_methods/transfer_entropy_jidt.R')
     dat %>% filter(.id == i) %>% te_jidt(., lag = '13') %>% mutate(.id = i)
   }
   stopCluster(cl)
@@ -191,7 +191,7 @@ if (run_local) {
 }
 
 #---- Convergent Cross mapping analysis ----#
-source('src/methods/CCM.R')
+source('src/01_methods/CCM.R')
 
 if (!run_local) {
   tic <- Sys.time()
