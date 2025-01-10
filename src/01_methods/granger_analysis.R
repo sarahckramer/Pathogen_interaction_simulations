@@ -26,7 +26,7 @@ granger_func <- function(data){
   df <- data %>% dplyr::select(V1_obs, V2_obs)
   
   lags <- lapply(df, VARselect, lag.max = 20)
-  rm(df)
+  # rm(df)
   
   # pull out the lag with lowest BIC
   # regardless of whether raw of normalised data used the lag chosen is the same
@@ -59,8 +59,12 @@ granger_func <- function(data){
     dplyr::select(time, V1_obs, V2_obs) %>%
     mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26)))
   
-  # specifying the lag to be the minimum of the two series
-  p <- min(lag_v1, lag_v2)
+  # # specifying the lag to be the minimum of the two series
+  # p <- min(lag_v1, lag_v2)
+  
+  # get lag value for further analyses
+  p <- as.numeric(VARselect(df, lag.max = 20)$selection[3])
+  rm(df)
   
   #---- determine causal effect size ----#
   # run the VAR (vector autoregressive) model (i.e. which has both X and Y)
