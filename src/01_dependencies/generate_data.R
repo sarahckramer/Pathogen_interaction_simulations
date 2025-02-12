@@ -59,8 +59,8 @@ for (i in 1:n_sim) {
   t_si[2:10] <- t_si[2:10] + 1 # account for years with 53 weeks
   t_si[8:10] <- t_si[8:10] + 1 # account for years with 53 weeks
   
-  w_delta_i <- runif(n = length(t_si), min = 0.005 * 7, max = 0.075 * 7) # yearly surge in rate of immunity loss
-  # w_delta_i <- runif(n = length(t_si), min = 0.01 * 7, max = 0.1 * 7) # yearly surge in rate of immunity loss
+  # w_delta_i <- runif(n = length(t_si), min = 0.005 * 7, max = 0.075 * 7) # yearly surge in rate of immunity loss
+  w_delta_i <- runif(n = length(t_si), min = 0.05, max = 0.3) # yearly surge in rate of immunity loss
   
   t_si_mat[, i] <- t_si
   w_delta_i_mat[, i] <- w_delta_i
