@@ -98,14 +98,14 @@ granger_func <- function(data){
   
   # get p-values
   # results the same regardless of performance on the raw or normalised data
-  p_gt1_wald <- grangertest(V1_obs ~ V2_obs, order = p, data = data)$`Pr(>F)`[2]
-  p_gt2_wald <- grangertest(V2_obs ~ V1_obs, order = p, data = data)$`Pr(>F)`[2]
+  p_gt1_wald <- grangertest(V1_obs_ln ~ V2_obs_ln, order = p, data = data)$`Pr(>F)`[2]
+  p_gt2_wald <- grangertest(V2_obs_ln ~ V1_obs_ln, order = p, data = data)$`Pr(>F)`[2]
   
-  p_gt1_ftest <- causality(var1, cause = 'V2_obs')$Granger$p.value
-  p_gt2_ftest <- causality(var1, cause = 'V1_obs')$Granger$p.value
+  p_gt1_ftest <- causality(var1, cause = 'V2_obs_ln')$Granger$p.value
+  p_gt2_ftest <- causality(var1, cause = 'V1_obs_ln')$Granger$p.value
   
-  p_gt1_ftest_confound <- causality(var1_confound, cause = 'V2_obs')$Granger$p.value
-  p_gt2_ftest_confound <- causality(var1_confound, cause = 'V1_obs')$Granger$p.value
+  p_gt1_ftest_confound <- causality(var1_confound, cause = 'V2_obs_ln')$Granger$p.value
+  p_gt2_ftest_confound <- causality(var1_confound, cause = 'V1_obs_ln')$Granger$p.value
   
   # output results
   res <- data.frame(cbind(logRSS = c(logRSS_v1, logRSS_v2, logRSS_v1_confound, logRSS_v2_confound),
