@@ -14,6 +14,7 @@
 library(rEDM)
 library(Kendall)
 library(gridExtra)
+library(pracma)
 
 ccm_func <- function(data){
   
@@ -94,16 +95,18 @@ ccm_func <- function(data){
   
   # run the ccm
   v1_xmap_v2 <- CCM(dataFrame = data, E = E_v1, columns = 'V1_obs', target = 'V2_obs', 
-                    libSizes = c(seq(30, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v1xv2, random = TRUE,
+                    libSizes = c(E_v1 + 2, seq(30, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v1xv2, random = TRUE,
                     sample = 100, includeData = TRUE, showPlot = FALSE)
   
   v2_xmap_v1 <- CCM(dataFrame = data, E = E_v2, columns = 'V2_obs', target = 'V1_obs', 
-                    libSizes = c(seq(30, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v2xv1, random = TRUE,
+                    libSizes = c(E_v2 + 2, seq(30, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v2xv1, random = TRUE,
                     sample = 100, includeData = TRUE, showPlot = FALSE)
   
   # pull out the mean rho for each library size
-  mean_rho_v1_xmap_v2 <- v1_xmap_v2$LibMeans
-  mean_rho_v2_xmap_v1 <- v2_xmap_v1$LibMeans
+  mean_rho_v1_xmap_v2 <- v1_xmap_v2$LibMeans %>%
+    mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
+  mean_rho_v2_xmap_v1 <- v2_xmap_v1$LibMeans %>%
+    mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
   
   # combine the means for the two
   res <- mean_rho_v1_xmap_v2 %>%
@@ -120,8 +123,10 @@ ccm_func <- function(data){
     mutate(direction = if_else(direction == 'mean_v1xv2', 'v2 -> v1', 'v1 -> v2'))
   
   # pull out all the predictions to get bootstrap CIs for the mean rho for each libsize
-  all_predictions_v1 <- v1_xmap_v2$CCM1_PredictStat
-  all_predictions_v2 <- v2_xmap_v1$CCM1_PredictStat
+  all_predictions_v1 <- v1_xmap_v2$CCM1_PredictStat %>%
+    mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
+  all_predictions_v2 <- v2_xmap_v1$CCM1_PredictStat %>%
+    mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
   
   # calculate median as well as lower and upper bounds (2.5, 97.5%) on rho for each lib size
   intervals_perc_v1 <- all_predictions_v1 %>%
@@ -162,6 +167,36 @@ ccm_func <- function(data){
   if(!(rhos1[length(rhos1)] > rhos1[1])) MannK_v1_xmap_v2 <- 99
   if(!(rhos2[length(rhos2)] > rhos2[1])) MannK_v2_xmap_v1 <- 99
   rm(rhos1, rhos2)
+  
+  # check that rhos for max libsize greater than for min libsize:
+  corrs_Lmin_v1 <- all_predictions_v1 %>% filter(LibSize == min(LibSize)) %>% pull(rho)
+  corrs_Lmax_v1 <- all_predictions_v1 %>% filter(LibSize == max(LibSize)) %>% pull(rho)
+  
+  corrs_Lmin_v2 <- all_predictions_v2 %>% filter(LibSize == min(LibSize)) %>% pull(rho)
+  corrs_Lmax_v2 <- all_predictions_v2 %>% filter(LibSize == max(LibSize)) %>% pull(rho)
+  
+  inverse_quantile <- function(x, y) {
+    # Based on: https://github.com/cobeylab/pyembedding/blob/master/statutils.py
+    
+    x <- sort(x)
+    
+    if (x[1] == x[length(x)]) {
+      print('Error: Same initial and final value for Lmin')
+    } else {
+      quantiles <- seq(0, 1, length.out = length(x))
+    }
+    
+    y[y < x[1]] <- x[1]
+    y[y > x[length(x)]] <- x[length(x)]
+    
+    inv_q_y <- interp1(x, quantiles, xi = y)
+    
+    return(inv_q_y)
+    
+  }
+  
+  p_conv_v1xv2 <- 1 - mean(inverse_quantile(corrs_Lmin_v1, corrs_Lmax_v1))
+  p_conv_v2xv1 <- 1 - mean(inverse_quantile(corrs_Lmin_v2, corrs_Lmax_v2))
   
   #---- create the null hypothesis for comparison with our CCM output ----#
   
@@ -269,6 +304,7 @@ ccm_func <- function(data){
            tp_use = if_else(direction == 'v2 -> v1', optimal_tp_v1xv2, optimal_tp_v2xv1),
            tp_opt = if_else(direction == 'v2 -> v1', optimal_tp_v1xv2_wide, optimal_tp_v2xv1_wide),
            max_cmc = if_else(direction == 'v2 -> v1', highest_crossmap_cor_v1xv2, highest_crossmap_cor_v2xv1),
+           p_conv = if_else(direction == 'v2 -> v1', p_conv_v1xv2, p_conv_v2xv1),
            p_surr = if_else(direction == 'v2 -> v1', p_surr_v1xv2, p_surr_v2xv1))
   
   return(res)
