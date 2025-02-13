@@ -128,7 +128,7 @@ ccm_func <- function(data){
   all_predictions_v2 <- v2_xmap_v1$CCM1_PredictStat %>%
     mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
   
-  # calculate median as well as lower and upper bounds (2.5, 97.5%) on rho for each lib size
+  # calculate median as well as lower and upper bounds (2.5, 97.5%) on rho for each libsize
   intervals_perc_v1 <- all_predictions_v1 %>%
     group_by(LibSize) %>%
     summarise(rho_median = quantile(rho, probs = 0.5),
