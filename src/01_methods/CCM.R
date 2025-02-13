@@ -24,21 +24,21 @@ ccm_func <- function(data){
   # based on the prediction skill of the model. See rEDM vingette https://ha0ye.github.io/rEDM/articles/rEDM.html 
   
   # specify library set = how much data to fit to
-  # use first two seasons
-  lib <- '1 104'
+  # use full data
+  lib <- paste('1', nrow(data), sep = ' ')
   
   # specify pred = which data to predict on 
-  pred <- paste('105', nrow(data), sep = ' ')
+  pred <- paste('1', nrow(data), sep = ' ')
   
   # get E (embedding dimension - the number nearest neighbours to use for prediction) for v1 
   # EmbedDimension is a wrapper around the simplex function to get out E only  
   E_v1 <- EmbedDimension(dataFrame = data, columns = 'V1_obs', target = 'V1_obs',
-                         lib = lib, pred = pred, maxE = 2, showPlot = FALSE)
+                         lib = lib, pred = pred, maxE = 10, showPlot = FALSE)
   E_v1 <- E_v1 %>% slice_max(rho) %>% pull(E) # keep the row with max prediction skill
   
   # get E for v2
   E_v2 <- EmbedDimension(dataFrame = data, columns = "V2_obs", target = "V2_obs",
-                         lib = lib, pred = pred, maxE = 5, showPlot = FALSE)
+                         lib = lib, pred = pred, maxE = 10, showPlot = FALSE)
   E_v2 <- E_v2 %>% slice_max(rho) %>% pull(E)
   
   #---- check whether highest cross-map correlation is positive and for a negative lag ----#
