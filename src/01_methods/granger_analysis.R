@@ -61,8 +61,9 @@ granger_func <- function(data){
   
   # estimate seasonal component
   data <- data %>%
-    dplyr::select(time, V1_obs, V2_obs) %>%
-    mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26)))
+    dplyr::select(time, V1_obs_ln, V2_obs_ln) %>%
+    mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26))) %>%
+    mutate(seasonal_component = scale(log(seasonal_component), scale = FALSE))
   
   # # specifying the lag to be the minimum of the two series
   # p <- min(lag_v1, lag_v2)

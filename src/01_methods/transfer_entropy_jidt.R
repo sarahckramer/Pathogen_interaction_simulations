@@ -73,7 +73,8 @@ te_jidt <- function(data, lag){
   
   # Calculate seasonal component:
   data <- data %>%
-    mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26)))
+    mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26))) %>%
+    mutate(seasonal_component = scale(log(seasonal_component), scale = FALSE))
   condArray <- data$seasonal_component
   
   # Create a new TE calculator:
