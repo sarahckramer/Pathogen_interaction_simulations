@@ -20,8 +20,14 @@ library("rJava")
 
 te_jidt <- function(data, lag){
   
-  sourceArray <- data$V1_obs
-  destArray <- data$V2_obs
+  # Log-transform and center data:
+  data <- data %>%
+    mutate(V1_obs_ln = scale(log(V1_obs + 1), scale = FALSE),
+           V2_obs_ln = scale(log(V2_obs + 1), scale = FALSE))
+  
+  # Get relevant data:
+  sourceArray <- data$V1_obs_ln
+  destArray <- data$V2_obs_ln
   id <- unique(data$.id)
   
   #---- Analysis w/o confounding ----#

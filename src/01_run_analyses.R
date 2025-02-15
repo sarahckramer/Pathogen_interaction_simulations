@@ -78,7 +78,9 @@ corr_func <- function(data){
   
   cor_raw <- data %>% group_by(.id) %>%
     dplyr::select(.id, V1_obs:V2_obs) %>%
-    group_map(~ cor.test(.$V1_obs, .$V2_obs))
+    mutate(V1_obs_ln = scale(log(V1_obs + 1), scale = FALSE),
+           V2_obs_ln = scale(log(V2_obs + 1), scale = FALSE)) %>%
+    group_map(~ cor.test(.$V1_obs_ln, .$V2_obs_ln))
   
   temp_res <- bind_cols(cor = lapply(cor_raw, getElement, 'estimate') %>%
                           unlist()) %>%
