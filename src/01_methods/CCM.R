@@ -13,7 +13,6 @@
 # load packages
 library(rEDM)
 library(Kendall)
-library(gridExtra)
 library(pracma)
 
 ccm_func <- function(data){
