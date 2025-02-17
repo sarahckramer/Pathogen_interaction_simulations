@@ -14,7 +14,7 @@
 
 # # Code to run through all jobids locally (uncomment and copy-paste in console):
 # for (jobid_use in 1:16) {
-#   source('src/main.R')
+#   source('src/01_run_analyses.R')
 #   detachAllPackages <- function() {
 #     basic.packages <- c("package:stats","package:graphics","package:grDevices","package:utils","package:datasets","package:methods","package:base")
 #     package.list <- search()[ifelse(unlist(gregexpr("package:",search()))==1,TRUE,FALSE)]
