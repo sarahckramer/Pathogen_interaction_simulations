@@ -42,7 +42,7 @@ gam_cor <- function(data){
   }) %>% unlist() %>% sum()
   
   # get results and 95% CIs
-  res <- data.frame(cbind(cor = mean(corrs_alt), cor_median = median(corrs_alt), CI_lower95 = quantile(corrs_alt, p = 0.025), CI_upper95 = quantile(corrs_alt, p = 0.975), t(rhat(mvn_mod)[1:13]), n_div = n_divergent),
+  res <- data.frame(cbind(cor = mean(corrs_alt), cor_median = median(corrs_alt), CI_lower95 = quantile(corrs_alt, p = 0.025), CI_upper95 = quantile(corrs_alt, p = 0.975), t(rhat(mvn_mod)[1:9]), n_div = n_divergent),
                     row.names = '')
   
   # return all results
