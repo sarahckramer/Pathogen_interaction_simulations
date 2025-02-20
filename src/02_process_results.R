@@ -536,7 +536,7 @@ p.te.2.2 <- ggplot(res_te_sum[[4]] %>%
   scale_color_brewer(palette = 'Set1') +
   labs(x = 'True Interaction Strength', y = expression(T[y %->% x]))
 
-rm(res_te_LIST, res_te_LIST_confound, res_te_sum, acc_te_LIST, best_v1xv2, best_v2xv1, best_v1xv2_confound, best_v2xv1_confound)
+rm(res_te_LIST, res_te_sum, acc_te_LIST)
 
 # ------------------------------------------------------------------------------
 
