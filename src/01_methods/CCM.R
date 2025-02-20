@@ -191,17 +191,6 @@ ccm_func <- function(data){
   surr_v1 <- SurrogateData(data$V1_obs_ln, method = "seasonal", num_surr = num_surr, T_period = 52.25, alpha = 10)
   surr_v2 <- SurrogateData(data$V2_obs_ln, method = "seasonal", num_surr = num_surr, T_period = 52.25, alpha = 30) 
   
-  # turn any negative surrogates into 0 - can't have a negative number of cases
-  surr_v1 = apply(surr_v1, 2, function(x) {
-    x[x < 0] <- 0
-    x
-  })
-  
-  surr_v2 = apply(surr_v2, 2, function(x) {
-    x[x < 0] <- 0
-    x
-  })
-  
   # get list of surrogate data to use in ccm
   surr_dat_list_v1xv2 <- vector('list', length = num_surr)
   surr_dat_list_v2xv1 <- vector('list', length = num_surr)
