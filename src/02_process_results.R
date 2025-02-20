@@ -248,10 +248,6 @@ rm(res_gam, res_gam_sum, acc_gam)
 
 # Process accuracy of results (Granger causality)
 
-# Check whether any datasets are not stationary:
-res_granger %>% filter(adf_p >= 0.05) %>% nrow() %>% print()
-res_granger %>% filter(kpss_p < 0.05) %>% nrow() %>% print()
-
 # Calculate sensitivity/specificity:
 for (i in 1:length(res_granger_LIST)) {
   

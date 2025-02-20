@@ -151,6 +151,17 @@ res_gam <- res_gam %>%
 print(table(res_gam$run))
 
 # Granger causality:
+to_remove <- res_granger %>%
+  filter(adf_p >= 0.05 | kpss_p < 0.05) %>%
+  select(run:.id) %>%
+  distinct() %>%
+  mutate(delete = TRUE)
+
+res_granger <- res_granger %>% left_join(to_remove,
+                                         by = c('run', '.id')) %>%
+  filter(is.na(delete)) %>%
+  select(-delete)
+
 res_granger <- res_granger %>%
   mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'),
          int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
@@ -166,7 +177,14 @@ res_granger_LIST[[2]] <- res_granger %>% filter(direction == 'v2 -> v1', confoun
 res_granger_LIST[[3]] <- res_granger %>% filter(direction == 'v1 -> v2', confounding == 'seasonal')
 res_granger_LIST[[4]] <- res_granger %>% filter(direction == 'v2 -> v1', confounding == 'seasonal')
 
+rm(res_granger)
+
 # Transfer entropy:
+res_te <- res_te %>% left_join(to_remove %>% mutate(.id = as.numeric(.id)),
+                               by = c('run', '.id')) %>%
+  filter(is.na(delete)) %>%
+  select(-delete)
+
 res_te <- res_te %>%
   mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'),
          int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
