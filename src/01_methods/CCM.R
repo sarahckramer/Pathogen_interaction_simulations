@@ -48,13 +48,13 @@ ccm_func <- function(data){
   
   #---- check whether highest cross-map correlation is positive and for a negative lag ----#
   vars <- c('V1_obs_ln', 'V2_obs_ln')
-  params <- expand.grid(lib_column = vars, target_column = vars, tp = -52:52) %>%
+  params <- expand.grid(lib_column = vars, target_column = vars, tp = -20:20) %>%
     filter(lib_column != target_column) %>%
     mutate(E = if_else(lib_column == 'V1_obs_ln', E_v1, E_v2))
   
   # explore prediction skill over range of tp values 
   # for a single library size set it to max
-  lib_size_tp <- nrow(data) - (52 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
+  lib_size_tp <- nrow(data) - (20 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
   
   output <- do.call(rbind, lapply(seq_len(nrow(params)), function(i) {
     CCM(dataFrame = data, E = params$E[i], libSizes = lib_size_tp, random = FALSE,
