@@ -150,28 +150,6 @@ ccm_func <- function(data){
   res <- res_long %>%
     left_join(bind_rows(intervals_perc_v1, intervals_perc_v2), by = c('LibSize', 'direction'))
   
-  # check convergence using Mann Kendall - significant p-value implies convergence achieved
-  rhos1 <- res %>%
-    filter(direction == 'v2 -> v1') %>%
-    pull(rho)
-  rhos2 <- res %>%
-    filter(direction == 'v1 -> v2') %>%
-    pull(rho)
-  
-  MannK_v1_xmap_v2 <- rhos1 %>%
-    MannKendall() %>%
-    getElement('sl') %>%
-    purrr::map(~ .[1])
-  MannK_v2_xmap_v1 <- rhos2 %>%
-    MannKendall() %>%
-    getElement('sl') %>%
-    purrr::map(~ .[1])
-  
-  # Check that monotonically increasing, not decreasing:
-  if(!(rhos1[length(rhos1)] > rhos1[1])) MannK_v1_xmap_v2 <- 99
-  if(!(rhos2[length(rhos2)] > rhos2[1])) MannK_v2_xmap_v1 <- 99
-  rm(rhos1, rhos2)
-  
   # check that rhos for max libsize greater than for min libsize:
   corrs_Lmin_v1 <- all_predictions_v1 %>% filter(LibSize == min(LibSize)) %>% pull(rho)
   corrs_Lmax_v1 <- all_predictions_v1 %>% filter(LibSize == max(LibSize)) %>% pull(rho)
@@ -296,12 +274,10 @@ ccm_func <- function(data){
   
   # write out results
   res <- res %>%
-    mutate(data = 'obs') %>%
-    mutate(MannK = if_else(direction == 'v2 -> v1', unlist(MannK_v1_xmap_v2), unlist(MannK_v2_xmap_v1)))
+    mutate(data = 'obs')
   
   surr_res <- surr_res %>%
-    mutate(data = 'surr') %>%
-    mutate(MannK = NA)
+    mutate(data = 'surr')
   
   res <- bind_rows(res, surr_res) %>%
     mutate(E = if_else(direction == 'v2 -> v1', E_v1, E_v2),
