@@ -169,6 +169,9 @@ res_granger <- res_granger %>%
   ungroup() %>%
   mutate(int_est = if_else(ftest_p < 0.05, 'interaction', 'none'))
 
+res_granger <- res_granger %>%
+  select(run:.id, direction:confounding, logRSS, ftest_p, theta_lambda:int_est)
+
 res_granger_LIST <- vector('list', length = 4)
 names(res_granger_LIST) <- c('v1 -> v2 (No confounding)', 'v2 -> v1 (No confounding)', 'v1 -> v2 (Seasonality Controlled)', 'v2 -> v1 (Seasonality Controlled)')
 
@@ -219,8 +222,7 @@ if (median(res_te_confound1$te) >= median(res_te_confound2$te)) {
 
 # Clean up:
 res_te_LIST <- lapply(res_te_LIST, function(ix) {
-  ix <- ix %>%
-    select(run:te, direction, p_value, lag:int_est)
+  ix %>% select(run, .id, lag, direction, te, p_value, theta_lambda:int_est)
 })
 
 rm(res_te, res_te_raw, res_te_confound1, res_te_confound2)
