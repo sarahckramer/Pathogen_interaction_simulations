@@ -230,8 +230,8 @@ rm(res_te, res_te_raw, res_te_confound1, res_te_confound2)
 # CCM:
 res_ccm <- res_ccm %>%
   group_by(run, .id, direction, theta_lambda, delta) %>%
-  select(run:direction, rho, MannK:p_surr, theta_lambda:delta) %>%
-  summarise(rho_mean = mean(rho), rho_max = rho[LibSize == max(LibSize)], MannK = unique(MannK), tp_opt = unique(tp_opt), max_cmc = unique(max_cmc), p_surr = unique(p_surr)) %>%
+  select(run:direction, rho_median, MannK:p_surr, theta_lambda:delta) %>%
+  summarise(rho_mean = mean(rho_median), rho_max = rho_median[LibSize == max(LibSize)], tp_opt = unique(tp_opt), max_cmc = unique(max_cmc), p_conv = unique(p_conv), p_surr = unique(p_surr)) %>%
   ungroup()
 
 res_ccm <- res_ccm %>%
@@ -239,8 +239,11 @@ res_ccm <- res_ccm %>%
          int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
          int_true_dir = if_else(theta_lambda < 1, 'neg', int_true_dir)) %>%
   mutate(int_est_1 = if_else(p_surr < 0.05, 'interaction', 'none'), # method 1: check p-values based on surrogates
-         int_est_2 = if_else(MannK < 0.05 & max_cmc > 0, 'interaction', 'none'), # method 2: check convergence
-         int_est_3 = if_else(MannK < 0.05 & max_cmc > 0 & tp_opt < 0, 'interaction', 'none')) # method 3: check convergence + ideal tp negative
+         int_est_2 = if_else(p_conv < 0.05 & max_cmc > 0, 'interaction', 'none'), # method 2: check convergence
+         int_est_3 = if_else(p_conv < 0.05 & max_cmc > 0 & tp_opt < 0, 'interaction', 'none')) # method 3: check convergence + ideal tp negative
+
+res_ccm <- res_ccm %>%
+  select(run:direction, rho_max, p_surr, p_conv, tp_opt, theta_lambda:delta, int_true:int_est_3)
 
 res_ccm_LIST <- vector('list', length = 6)
 names(res_ccm_LIST) <- c('v1 -> v2 (Method 1)', 'v1 -> v2 (Method 2)', 'v1 -> v2 (Method 3)', 'v2 -> v1 (Method 1)', 'v2 -> v1 (Method 2)', 'v2 -> v1 (Method 3)')
