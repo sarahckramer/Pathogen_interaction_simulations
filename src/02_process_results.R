@@ -53,9 +53,8 @@ for (i in c(1, 2, 8, 12, 17, 24)) {
                      mutate(theta_lambda = as.character(theta_lambda),
                             delta = as.character(7 / delta)) %>%
                      filter((theta_lambda %in% c(0, 0.5, 2, 4) & delta %in% c(28, 91)) |
-                              theta_lambda == 1) %>%
-                     mutate(delta = if_else(theta_lambda == '1', '28', delta),
-                            theta_lambda = paste0('Interaction Strength: ', theta_lambda)),
+                              (theta_lambda == 1 & delta == 28)) %>%
+                     mutate(theta_lambda = paste0('Interaction Strength: ', theta_lambda)),
                    aes(x = date, y = obs, group = paste(virus, delta), color = paste(virus, delta))) +
     geom_line(linewidth = 0.75) +
     geom_vline(xintercept = year_breaks, lty = 2, col = 'gray60') +
@@ -129,6 +128,7 @@ p.legend.1 <- ggplot(data = acc_corr %>%
 p.legend.1 <- ggplotGrob(p.legend.1)$grobs[[which(sapply(ggplotGrob(p.legend.1)$grobs, function(x) x$name) == 'guide-box')]]
 
 res_corr_sum <- res_corr %>%
+  mutate(delta = if_else(theta_lambda == 1, 1, delta)) %>%
   group_by(theta_lambda, delta) %>%
   summarise(median = median(cor),
             lower = quantile(cor, p = 0.1),
@@ -153,7 +153,7 @@ p.corr.2 <- ggplot(res_corr_sum %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
   scale_color_brewer(palette = 'Set1') +
   labs(tag = 'A', x = 'True Interaction Strength', y = expression(paste("Pearson's  ", rho)))
 
@@ -214,6 +214,7 @@ p.gam.1 <- ggplot(data = acc_gam %>%
   labs(tag = 'B', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
 
 res_gam_sum <- res_gam %>%
+  mutate(delta = if_else(theta_lambda == 1, 1, delta)) %>%
   group_by(theta_lambda, delta) %>%
   summarise(median = median(cor_median),
             lower = quantile(cor_median, p = 0.1),
@@ -237,7 +238,7 @@ p.gam.2 <- ggplot(res_gam_sum %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
   scale_color_brewer(palette = 'Set1') +
   labs(tag = 'B', x = 'True Interaction Strength', y = 'Residual Correlation')
 
@@ -343,21 +344,21 @@ p.granger.1.4 <- ggplot(data = acc_granger_LIST[[4]] %>%
   labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
 
 res_granger_sum <- lapply(res_granger_LIST, function(ix) {
-  ix %>% group_by(theta_lambda, delta) %>%
+  ix %>% mutate(delta = if_else(theta_lambda == 1, 1, delta)) %>% group_by(theta_lambda, delta) %>%
     summarise(median = median(logRSS),
               lower = quantile(logRSS, p = 0.1),
               upper = quantile(logRSS, p = 0.9)) %>%
     ungroup()
 })
 
-p.granger.2.1 <- ggplot(res_granger_sum[[1]] %>%
+p.granger.2.1 <- ggplot(res_granger_sum[[3]] %>%
                           mutate(delta = factor(7 / delta)) %>%
                           mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
                           mutate(strength_proxy = if_else(delta == 7, strength_proxy - 0.25, strength_proxy),
                                  strength_proxy = if_else(delta == 91, strength_proxy + 0.25, strength_proxy),
                                  strength_proxy = if_else(theta_lambda > 1, strength_proxy + 1.5, strength_proxy))) +
   geom_pointrange(size = 0.75, linewidth = 1.0, aes(x = strength_proxy, y = median, ymin = lower, ymax = upper, col = delta)) +
-  geom_pointrange(data = res_granger_sum[[1]] %>% filter(theta_lambda == 1),
+  geom_pointrange(data = res_granger_sum[[3]] %>% filter(theta_lambda == 1),
                   size = 0.75, linewidth = 1.0, x = 9.75, aes(y = median, ymin = lower, ymax = upper)) +
   geom_hline(yintercept = 0, lty = 2, linewidth = 1.0, col = 'gray70') +
   theme_classic() +
@@ -367,17 +368,17 @@ p.granger.2.1 <- ggplot(res_granger_sum[[1]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
   scale_color_brewer(palette = 'Set1') +
   labs(tag = 'C', x = 'True Interaction Strength', y = expression(G[x %->% y]))
-p.granger.2.2 <- ggplot(res_granger_sum[[2]] %>%
+p.granger.2.2 <- ggplot(res_granger_sum[[4]] %>%
                           mutate(delta = factor(7 / delta)) %>%
                           mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
                           mutate(strength_proxy = if_else(delta == 7, strength_proxy - 0.25, strength_proxy),
                                  strength_proxy = if_else(delta == 91, strength_proxy + 0.25, strength_proxy),
                                  strength_proxy = if_else(theta_lambda > 1, strength_proxy + 1.5, strength_proxy))) +
   geom_pointrange(size = 0.75, linewidth = 1.0, aes(x = strength_proxy, y = median, ymin = lower, ymax = upper, col = delta)) +
-  geom_pointrange(data = res_granger_sum[[2]] %>% filter(theta_lambda == 1),
+  geom_pointrange(data = res_granger_sum[[4]] %>% filter(theta_lambda == 1),
                   size = 0.75, linewidth = 1.0, x = 9.75, aes(y = median, ymin = lower, ymax = upper)) +
   geom_hline(yintercept = 0, lty = 2, linewidth = 1.0, col = 'gray70') +
   theme_classic() +
@@ -387,7 +388,7 @@ p.granger.2.2 <- ggplot(res_granger_sum[[2]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
   scale_color_brewer(palette = 'Set1') +
   labs(x = 'True Interaction Strength', y = expression(G[y %->% x]))
 
@@ -410,42 +411,24 @@ for (i in 1:length(res_te_LIST)) {
                                                    res_te_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'none') %>% nrow())))
   
 }
-for (i in 1:length(res_te_LIST)) {
-  
-  df_acc <- bind_rows(df_acc, data.frame(method = paste0('TE ', names(res_te_LIST_confound)[i]),
-                                         sens_pos = (res_te_LIST_confound[[i]] %>% filter(int_true_dir == 'pos' & int_est_confound2 == 'interaction') %>% nrow()) / (res_te_LIST_confound[[i]] %>% filter(int_true_dir == 'pos') %>% nrow()),
-                                         sens_neg = (res_te_LIST_confound[[i]] %>% filter(int_true_dir == 'neg' & int_est_confound2 == 'interaction') %>% nrow()) / (res_te_LIST_confound[[i]] %>% filter(int_true_dir == 'neg') %>% nrow()),
-                                         spec = (res_te_LIST_confound[[i]] %>% filter(int_true == 'none' & int_est_confound2 == 'none') %>% nrow()) / (res_te_LIST_confound[[i]] %>% filter(int_true == 'none') %>% nrow()),
-                                         mcc = mcc(res_te_LIST_confound[[i]] %>% filter(int_true != 'none' & int_est_confound2 != 'none') %>% nrow(),
-                                                   res_te_LIST_confound[[i]] %>% filter(int_true == 'none' & int_est_confound2 == 'none') %>% nrow(),
-                                                   res_te_LIST_confound[[i]] %>% filter(int_true == 'none' & int_est_confound2 != 'none') %>% nrow(),
-                                                   res_te_LIST_confound[[i]] %>% filter(int_true != 'none' & int_est_confound2 == 'none') %>% nrow())))
-  
-}
 rm(i)
 
 # Calculate accuracy by true parameter values:
 acc_te_LIST <- vector('list', length = 4)
-names(acc_te_LIST) <- c(names(res_te_LIST), names(res_te_LIST_confound))
+names(acc_te_LIST) <- c(names(res_te_LIST))
 
 for (i in 1:length(res_te_LIST)) {
   acc_te_LIST[[i]] <- calculate_accuracy_matrix(res_te_LIST[[i]])
 }
-acc_te_LIST[[3]] <- calculate_accuracy_matrix(res_te_LIST_confound[[1]] %>% rename('int_est' = 'int_est_confound2'))
-acc_te_LIST[[4]] <- calculate_accuracy_matrix(res_te_LIST_confound[[2]] %>% rename('int_est' = 'int_est_confound2'))
 
 # Are higher values of te associated with higher true interaction strength?:
 assoc_te_LIST <- vector('list', length = 4)
-names(assoc_te_LIST) <- c(names(res_te_LIST), names(res_te_LIST_confound))
+names(assoc_te_LIST) <- c(names(res_te_LIST))
 
 for (i in 1:length(res_te_LIST)) {
   assoc_te_LIST[[i]] <- calculate_assoc_true_strength(res_te_LIST[[i]] %>% mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')),
                                                       method = 'te', met = 'te')
 }
-assoc_te_LIST[[3]] <- calculate_assoc_true_strength(res_te_LIST_confound[[1]] %>% mutate(sig = if_else(int_est_confound2 == 'interaction', 'yes', 'no')),
-                                                    method = 'te', met = 'te_confound2')
-assoc_te_LIST[[4]] <- calculate_assoc_true_strength(res_te_LIST_confound[[2]] %>% mutate(sig = if_else(int_est_confound2 == 'interaction', 'yes', 'no')),
-                                                    method = 'te', met = 'te_confound2')
 rm(i)
 
 # Plot:
@@ -506,23 +489,24 @@ p.te.1.4 <- ggplot(data = acc_te_LIST[[4]] %>%
   scale_color_brewer(palette = 'Set1') +
   labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
 
-res_te_sum <- lapply(res_te_LIST_confound, function(ix) {
+res_te_sum <- lapply(res_te_LIST, function(ix) {
   ix %>%
+    mutate(delta = if_else(theta_lambda == 1, 1, delta)) %>%
     group_by(theta_lambda, delta) %>%
-    summarise(median = median(te_confound2),
-              lower = quantile(te_confound2, p = 0.1),
-              upper = quantile(te_confound2, p = 0.9)) %>%
+    summarise(median = median(te),
+              lower = quantile(te, p = 0.1),
+              upper = quantile(te, p = 0.9)) %>%
     ungroup()
 })
 
-p.te.2.1 <- ggplot(res_te_sum[[1]] %>%
+p.te.2.1 <- ggplot(res_te_sum[[3]] %>%
                      mutate(delta = factor(7 / delta)) %>%
                      mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
                      mutate(strength_proxy = if_else(delta == 7, strength_proxy - 0.25, strength_proxy),
                             strength_proxy = if_else(delta == 91, strength_proxy + 0.25, strength_proxy),
                             strength_proxy = if_else(theta_lambda > 1, strength_proxy + 1.5, strength_proxy))) +
   geom_pointrange(size = 0.75, linewidth = 1.0, aes(x = strength_proxy, y = median, ymin = lower, ymax = upper, col = delta)) +
-  geom_pointrange(data = res_te_sum[[1]] %>% filter(theta_lambda == 1),
+  geom_pointrange(data = res_te_sum[[3]] %>% filter(theta_lambda == 1),
                   size = 0.75, linewidth = 1.0, x = 9.75, aes(y = median, ymin = lower, ymax = upper)) +
   geom_hline(yintercept = 0, lty = 2, linewidth = 1.0, col = 'gray70') +
   theme_classic() +
@@ -532,17 +516,17 @@ p.te.2.1 <- ggplot(res_te_sum[[1]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
   scale_color_brewer(palette = 'Set1') +
   labs(tag = 'D', x = 'True Interaction Strength', y = expression(T[x %->% y]))
-p.te.2.2 <- ggplot(res_te_sum[[2]] %>%
+p.te.2.2 <- ggplot(res_te_sum[[4]] %>%
                      mutate(delta = factor(7 / delta)) %>%
                      mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
                      mutate(strength_proxy = if_else(delta == 7, strength_proxy - 0.25, strength_proxy),
                             strength_proxy = if_else(delta == 91, strength_proxy + 0.25, strength_proxy),
                             strength_proxy = if_else(theta_lambda > 1, strength_proxy + 1.5, strength_proxy))) +
   geom_pointrange(size = 0.75, linewidth = 1.0, aes(x = strength_proxy, y = median, ymin = lower, ymax = upper, col = delta)) +
-  geom_pointrange(data = res_te_sum[[2]] %>% filter(theta_lambda == 1),
+  geom_pointrange(data = res_te_sum[[4]] %>% filter(theta_lambda == 1),
                   size = 0.75, linewidth = 1.0, x = 9.75, aes(y = median, ymin = lower, ymax = upper)) +
   geom_hline(yintercept = 0, lty = 2, linewidth = 1.0, col = 'gray70') +
   theme_classic() +
@@ -552,7 +536,7 @@ p.te.2.2 <- ggplot(res_te_sum[[2]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
   scale_color_brewer(palette = 'Set1') +
   labs(x = 'True Interaction Strength', y = expression(T[y %->% x]))
 
@@ -602,12 +586,12 @@ rm(i)
 # (Could suggest that the surrogates are not representative of the null distribution accounting
 # for underlying seasonality)
 p.ccm.surr <- res_ccm_surr %>%
-  select(run:.id, direction:rho_ci_upper, theta_lambda:delta) %>%
-  inner_join(res_ccm %>% select(run:direction, rho_mean:rho_max, p_surr:int_est_1),
+  select(run:.id, direction:rho_ci_upper) %>%
+  inner_join(res_ccm %>% select(run:direction, rho_max, p_surr:int_est_1),
              by = c('run', '.id', 'direction')) %>%
   ggplot() +
   geom_violin(aes(x = .id, y = rho, group = paste(.id, direction), fill = direction), alpha = 0.1) +
-  geom_point(aes(x = .id, y = rho_mean, group = direction, color = direction)) +
+  geom_point(aes(x = .id, y = rho_max, group = direction, color = direction)) +
   theme_classic() +
   facet_grid(theta_lambda ~ delta, scales = 'free')
 # print(p.ccm.surr)
@@ -701,6 +685,7 @@ p.ccm.1.6 <- ggplot(data = acc_ccm_LIST[[6]] %>%
 
 res_ccm_sum <- lapply(res_ccm_LIST, function(ix) {
   ix %>%
+    mutate(delta = if_else(theta_lambda == 1, 1, delta)) %>%
     group_by(theta_lambda, delta) %>%
     summarise(median = median(rho_max),
               lower = quantile(rho_max, p = 0.1),
@@ -725,7 +710,7 @@ p.ccm.2.1 <- ggplot(res_ccm_sum[[1]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
   scale_color_brewer(palette = 'Set1') +
   labs(tag = 'E', x = 'True Interaction Strength', y = 'Cross-Map Skill')
 p.ccm.2.2 <- ggplot(res_ccm_sum[[4]] %>%
@@ -745,7 +730,7 @@ p.ccm.2.2 <- ggplot(res_ccm_sum[[4]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-0.4, 1.0)) +
+  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
   scale_color_brewer(palette = 'Set1') +
   labs(x = 'True Interaction Strength', y = 'Cross-Map Skill')
 
@@ -759,9 +744,8 @@ rm(res_ccm_LIST, res_ccm_sum, res_ccm, acc_ccm_LIST)
 df_acc <- df_acc %>%
   mutate(direction = if_else(str_detect(method, 'v1 -> v2'), 'v1 -> v2', 'v2 -> v1')) %>%
   mutate(method = str_remove(method, 'v1 -> v2 ')) %>% mutate(method = str_remove(method, 'v2 -> v1 ')) %>%
-  mutate(confounding = if_else(str_detect(method, 'Seasonality') | str_detect(method, 'lag 13'), ' (w/ Seas)', '')) %>%
-  mutate(method = if_else(!(method %in% c('Corr. Coef.', 'GAMs') | str_detect(method, 'CCM')), str_sub(method, 1, 3), method),
-         method = if_else(str_detect(method, 'CCM') | str_detect(method, 'Corr. Coef.'), method, str_remove(method, ' ')),
+  mutate(confounding = if_else(str_detect(method, 'Seasonality'), ' (w/ Seas)', '')) %>%
+  mutate(method = if_else(!(method %in% c('Corr. Coef.', 'GAMs') | str_detect(method, 'CCM')), str_sub(method, 1, 2), method),
          method = paste0(method, confounding)) %>%
   select(-confounding)
 
@@ -841,7 +825,7 @@ df_assoc <- df_assoc %>%
   mutate(direction = if_else(is.na(direction), 'v1 -> v2', direction)) %>%
   bind_rows(df_assoc %>% filter(method == 'Corr. Coef.') %>% mutate(direction = 'v2 -> v1')) %>%
   bind_rows(df_assoc %>% filter(method == 'GAMs') %>% mutate(direction = 'v2 -> v1')) %>%
-  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC', 'TE (w/ Seas)', 'CCM'))) %>%
+  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC (w/ Seas)', 'TE (w/ Seas)', 'CCM'))) %>%
   mutate(duration = 1 / delta) %>%
   mutate(d_proxy = case_match(duration, 1 ~ 1, 4 ~ 2, 13 ~ 3),
          method_num = as.numeric(method),
