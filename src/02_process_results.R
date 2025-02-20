@@ -783,24 +783,19 @@ rm(p.corr.1, p.gam.1, p.granger.1.1, p.granger.1.2, p.granger.1.3, p.granger.1.4
 # Table of correlation coefficients between inferred and true interaction strength magnitude:
 df_assoc <- assoc_corr %>%
   mutate(method = 'Corr. Coef.', .before = delta) %>%
-  filter(true_int == 'all') %>%
   bind_rows(assoc_gam %>%
-              mutate(method = 'GAMs', .before = delta) %>%
-              filter(true_int == 'all')) %>%
-  bind_rows(assoc_granger_LIST[1:2] %>%
+              mutate(method = 'GAMs', .before = delta)) %>%
+  bind_rows(assoc_granger_LIST[3:4] %>%
               bind_rows(.id = 'direction') %>%
-              mutate(method = 'GC', .before = delta) %>%
-              filter(true_int == 'all') %>%
+              mutate(method = 'GC (w/ Seas)', .before = delta) %>%
               mutate(direction = str_sub(direction, 1, 8))) %>%
   bind_rows(assoc_te_LIST[3:4] %>%
               bind_rows(.id = 'direction') %>%
               mutate(method = 'TE (w/ Seas)', .before = delta) %>%
-              filter(true_int == 'all') %>%
               mutate(direction = str_sub(direction, 1, 8))) %>%
   bind_rows(assoc_ccm_LIST_max[c(1, 4)] %>%
               bind_rows(.id = 'direction') %>%
               mutate(method = 'CCM', .before = delta) %>%
-              filter(true_int == 'all') %>%
               mutate(direction = str_sub(direction, 1, 8)))
 print(df_assoc %>% filter(delta == 1))
 print(df_assoc %>% filter(delta == 7 / 28))

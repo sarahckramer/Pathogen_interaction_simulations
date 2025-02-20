@@ -65,33 +65,12 @@ calculate_assoc_true_strength <- function(df, method, met) {
       
     }
     
-    cor_temp_neg <- df %>%
-      filter(theta_lambda < 1,
-             delta == d) %>%
-      filter(sig == 'yes') %>%
-      cor.test(~ theta_lambda + metric, data = ., method = 'spearman') # lm(data = ., metric ~ theta_lambda)
-    cor_temp_pos <- df %>%
-      filter(theta_lambda > 1,
-             delta == d) %>%
-      filter(sig == 'yes') %>%
-      cor.test(~ theta_lambda + metric, data = ., method = 'spearman')
-    
-    res_temp <- res_temp %>% bind_rows(rbind(c(d, cor_temp_overall$estimate, cor_temp_overall$p.value),
-                                             c(d, cor_temp_neg$estimate, cor_temp_neg$p.value),
-                                             c(d, cor_temp_pos$estimate, cor_temp_pos$p.value)) %>%
-                                         as_tibble() %>%
-                                         mutate(true_int = c('all', 'neg', 'pos')))
+    res_temp <- res_temp %>% bind_rows(c(d, cor_temp_overall$estimate, cor_temp_overall$p.value) %>%
+                                         setNames(c('delta', 'rho', 'p_value')))
     
   }
   
-  names(res_temp) <- c('delta', 'rho', 'p_value', 'true_int')
-  
-  if (method %in% c('granger', 'te', 'ccm')) {
-    
-    res_temp <- res_temp %>%
-      mutate(rho = if_else(true_int == 'neg', -1 * rho, rho))
-    
-  }
+  res_temp <- res_temp %>% as_tibble()
   
   return(res_temp)
   
