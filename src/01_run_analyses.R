@@ -13,7 +13,7 @@
 ##################################################################################################################
 
 # # Code to run through all jobids locally (uncomment and copy-paste in console):
-# for (jobid_use in 1:16) {
+# for (jobid_use in 1:18) {
 #   source('src/01_run_analyses.R')
 #   detachAllPackages <- function() {
 #     basic.packages <- c("package:stats","package:graphics","package:grDevices","package:utils","package:datasets","package:methods","package:base")

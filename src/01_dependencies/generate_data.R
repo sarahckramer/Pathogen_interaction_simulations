@@ -177,7 +177,7 @@ dat_red <- dat %>%
 #             V2_obs = sum(V2_obs)) %>%
 #   filter(V1_obs < 1000)
 
-if (true_int_params$theta_lambda1 == 1.0 & true_int_params$theta_lambda2 == 1.0) {
+if (true_int_params$theta_lambda1 == 1.0 & true_int_params$theta_lambda2 == 1.0 & true_int_params$delta1 == 1.0) {
   expect_true(nrow(dat_red) == 0)
 }
 rm(dat_red, season_breaks)
