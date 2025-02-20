@@ -127,25 +127,6 @@ rm(results_T, results_F, res_trueparams)
 
 # ------------------------------------------------------------------------------
 
-# Calculate weights for weighted accuracy measurement
-
-# Classify runs as positive, negative, or null:
-df_true_int <- dat %>%
-  select(run, .id, theta_lambda:delta) %>%
-  distinct() %>%
-  mutate(int_true = if_else(theta_lambda > 1, 'pos', 'neg'),
-         int_true = if_else(theta_lambda == 1, 'none', int_true))
-
-# Get weights based on relative amount of simulations with pos/neg/no interaction:
-weight_pos <- min(table(df_true_int$int_true)) / (df_true_int %>% filter(int_true == 'pos') %>% nrow())
-weight_neg <- min(table(df_true_int$int_true)) / (df_true_int %>% filter(int_true == 'neg') %>% nrow())
-weight_null <- min(table(df_true_int$int_true)) / (df_true_int %>% filter(int_true == 'none') %>% nrow())
-
-# Clean up:
-rm(df_true_int)
-
-# ------------------------------------------------------------------------------
-
 # Determine significance/direction of true and detected interactions
 
 # Correlation coefficients:

@@ -755,12 +755,7 @@ rm(res_ccm_LIST, res_ccm_sum, res_ccm, acc_ccm_LIST)
 
 # Compile/plot results of all methods
 
-# Calculate measure of overall accuracy, weighted by number of simulations per true parameter set:
-# Note that correlation, GAMs, and gradient boosting will have some disadvantage here, since it matters
-# for them whether the predicted interaction is positive or negative
-df_acc <- df_acc %>%
-  mutate(weighted_acc = (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null))
-
+# Plot overall accuracy:
 df_acc <- df_acc %>%
   mutate(direction = if_else(str_detect(method, 'v1 -> v2'), 'v1 -> v2', 'v2 -> v1')) %>%
   mutate(method = str_remove(method, 'v1 -> v2 ')) %>% mutate(method = str_remove(method, 'v2 -> v1 ')) %>%
@@ -778,42 +773,21 @@ df_acc <- df_acc %>% bind_rows(df_acc[1:2, ] %>%
 
 df_acc %>%
   filter(!is.na(method)) %>%
-  select(method, direction, weighted_acc, mcc, sens_pos:spec) %>%
+  select(method, direction, mcc, sens_pos:spec) %>%
   print()
 
-p.comb.1a <- ggplot(df_acc %>% filter(!is.na(method)), aes(x = direction, y = weighted_acc, shape = method, col = method)) +
+p.comb.1 <- ggplot(df_acc %>% filter(!is.na(method)), aes(x = direction, y = mcc, shape = method, col = method)) +
   geom_point(size = 3) +
   theme_bw() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
-        legend.position = 'none') +
-  scale_y_continuous(limits = c(0, 0.75), n.breaks = 20) +
-  scale_shape_manual(values = c(18, 17, 15, 3, 8, 8)) +
-  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
-  labs(x = 'Direction', y = 'Accuracy (Weighted)', shape = 'Method', col = 'Method')
-p.comb.1b <- ggplot(df_acc %>% filter(!is.na(method)), aes(x = direction, y = mcc, shape = method, col = method)) +
-  geom_point(size = 3) +
-  theme_bw() +
-  theme(axis.title = element_text(size = 14),
-        axis.text = element_text(size = 12),
-        legend.position = 'none') +
-  scale_y_continuous(limits = c(-0.15, 0.20), n.breaks = 15) +
-  scale_shape_manual(values = c(18, 17, 15, 3, 8, 8)) +
-  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
-  labs(x = 'Direction', y = 'Matthews correlation coefficient', shape = 'Method', col = 'Method')
-
-p.comb.1.legend <- ggplot(df_acc %>% filter(!is.na(method)), aes(x = direction, y = weighted_acc, shape = method, col = method)) +
-  geom_point(size = 3) +
-  theme_bw() +
-  theme(legend.title = element_text(size = 14),
+        legend.title = element_text(size = 14),
         legend.text = element_text(size = 12),
         legend.position = 'right') +
   scale_shape_manual(values = c(18, 17, 15, 3, 8, 8)) +
   scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
-  labs(shape = 'Method', col = 'Method')
-p.comb.1.legend <- ggplotGrob(p.comb.1.legend)$grobs[[which(sapply(ggplotGrob(p.comb.1.legend)$grobs, function(x) x$name) == 'guide-box')]]
-
-p.comb.1 <- arrangeGrob(p.comb.1a, p.comb.1b, p.comb.1.legend, widths = c(1, 1, 0.35))
+  scale_y_continuous(limits = c(-0.10, 0.55), n.breaks = 15) +
+  labs(x = 'Direction', y = 'Matthews correlation coefficient', shape = 'Method', col = 'Method')
 plot(p.comb.1)
 # ggsave(filename = 'results/plots/overall_accuracy_by_method.svg', p.comb.1, height = 6, width = 11)
 
