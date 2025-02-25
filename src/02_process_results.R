@@ -99,7 +99,7 @@ assoc_corr <- calculate_assoc_true_strength(res_corr %>% mutate(sig = if_else(in
 # Plot:
 p.corr.1 <- ggplot(data = acc_corr %>%
                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3.5) +
   theme_classic() +
@@ -117,7 +117,7 @@ p.legend.1 <- ggplot(data = acc_corr %>%
                        mutate(duration = paste0(duration, ' week'),
                               duration = if_else(str_detect(duration, '1 '), duration, paste0(duration, 's'))) %>%
                        mutate(duration = factor(duration, levels = c('1 week', '4 weeks', '13 weeks'))),
-                     aes(x = as.numeric(strength), y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                     aes(x = as.numeric(strength), y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3.5) +
   theme_classic() +
@@ -125,7 +125,7 @@ p.legend.1 <- ggplot(data = acc_corr %>%
         legend.text = element_text(size = 12),
         legend.position = 'bottom') +
   scale_color_brewer(palette = 'Set1') +
-  labs(shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(shape = 'Duration', color = 'Duration')
 p.legend.1 <- ggplotGrob(p.legend.1)$grobs[[which(sapply(ggplotGrob(p.legend.1)$grobs, function(x) x$name) == 'guide-box')]]
 
 res_corr_sum <- res_corr %>%
@@ -201,7 +201,7 @@ assoc_gam <- calculate_assoc_true_strength(res_gam %>%
 # Plot:
 p.gam.1 <- ggplot(data = acc_gam %>%
                     mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                  aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                  aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -213,7 +213,7 @@ p.gam.1 <- ggplot(data = acc_gam %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'B', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(tag = 'B', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 
 res_gam_sum <- res_gam %>%
   mutate(delta = if_else(theta_lambda == 1, 1, delta)) %>%
@@ -287,7 +287,7 @@ rm(i)
 # Plot:
 p.granger.1.1 <- ggplot(data = acc_granger_LIST[[1]] %>%
                           mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -299,10 +299,10 @@ p.granger.1.1 <- ggplot(data = acc_granger_LIST[[1]] %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'C', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(tag = 'C', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p.granger.1.2 <- ggplot(data = acc_granger_LIST[[2]] %>%
                           mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -312,10 +312,10 @@ p.granger.1.2 <- ggplot(data = acc_granger_LIST[[2]] %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p.granger.1.3 <- ggplot(data = acc_granger_LIST[[3]] %>%
                           mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -327,10 +327,10 @@ p.granger.1.3 <- ggplot(data = acc_granger_LIST[[3]] %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'C', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(tag = 'C', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p.granger.1.4 <- ggplot(data = acc_granger_LIST[[4]] %>%
                           mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -340,7 +340,7 @@ p.granger.1.4 <- ggplot(data = acc_granger_LIST[[4]] %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 
 res_granger_sum <- lapply(res_granger_LIST, function(ix) {
   ix %>% mutate(delta = if_else(theta_lambda == 1, 1, delta)) %>% group_by(theta_lambda, delta) %>%
@@ -434,7 +434,7 @@ rm(i)
 # Plot:
 p.te.1.1 <- ggplot(data = acc_te_LIST[[1]] %>%
                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -446,10 +446,10 @@ p.te.1.1 <- ggplot(data = acc_te_LIST[[1]] %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'D', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(tag = 'D', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p.te.1.2 <- ggplot(data = acc_te_LIST[[2]] %>%
                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -459,10 +459,10 @@ p.te.1.2 <- ggplot(data = acc_te_LIST[[2]] %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p.te.1.3 <- ggplot(data = acc_te_LIST[[3]] %>%
                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -474,10 +474,10 @@ p.te.1.3 <- ggplot(data = acc_te_LIST[[3]] %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'D', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(tag = 'D', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p.te.1.4 <- ggplot(data = acc_te_LIST[[4]] %>%
                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -487,7 +487,7 @@ p.te.1.4 <- ggplot(data = acc_te_LIST[[4]] %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 
 res_te_sum <- lapply(res_te_LIST, function(ix) {
   ix %>%
@@ -601,7 +601,7 @@ rm(res_ccm_surr, p.ccm.surr)
 # Plot:
 p.ccm.1.1 <- ggplot(data = acc_ccm_LIST[[1]] %>%
                       mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -613,10 +613,10 @@ p.ccm.1.1 <- ggplot(data = acc_ccm_LIST[[1]] %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'E', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(tag = 'E', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p.ccm.1.2 <- ggplot(data = acc_ccm_LIST[[2]] %>%
                       mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -628,10 +628,10 @@ p.ccm.1.2 <- ggplot(data = acc_ccm_LIST[[2]] %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'F', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(tag = 'F', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p.ccm.1.3 <- ggplot(data = acc_ccm_LIST[[3]] %>%
                       mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -643,10 +643,10 @@ p.ccm.1.3 <- ggplot(data = acc_ccm_LIST[[3]] %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p.ccm.1.4 <- ggplot(data = acc_ccm_LIST[[4]] %>%
                       mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -656,10 +656,10 @@ p.ccm.1.4 <- ggplot(data = acc_ccm_LIST[[4]] %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p.ccm.1.5 <- ggplot(data = acc_ccm_LIST[[5]] %>%
                       mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -669,10 +669,10 @@ p.ccm.1.5 <- ggplot(data = acc_ccm_LIST[[5]] %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p.ccm.1.6 <- ggplot(data = acc_ccm_LIST[[6]] %>%
                       mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration, lty = duration)) +
+                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
   geom_point(size = 3) +
   theme_classic() +
@@ -682,7 +682,7 @@ p.ccm.1.6 <- ggplot(data = acc_ccm_LIST[[6]] %>%
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration', lty = 'Duration')
+  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 
 res_ccm_sum <- lapply(res_ccm_LIST, function(ix) {
   ix %>%
@@ -763,6 +763,7 @@ df_acc %>%
 
 p.comb.1 <- ggplot(df_acc %>% filter(!is.na(method)), aes(x = direction, y = mcc, shape = method, col = method)) +
   geom_point(size = 3) +
+  geom_hline(yintercept = 0, lty = 2) +
   theme_bw() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
@@ -777,7 +778,7 @@ plot(p.comb.1)
 # ggsave(filename = 'results/plots/overall_accuracy_by_method.svg', p.comb.1, height = 6, width = 11)
 
 # Plot accuracy by method, strength, and duration:
-p.comb.2 <- arrangeGrob(p.corr.1, p.gam.1, p.granger.1.1, p.granger.1.2, p.te.1.3, p.te.1.4, p.ccm.1.1, p.ccm.1.4, p.ccm.1.2, p.ccm.1.5, p.legend.1,
+p.comb.2 <- arrangeGrob(p.corr.1, p.gam.1, p.granger.1.3, p.granger.1.4, p.te.1.3, p.te.1.4, p.ccm.1.1, p.ccm.1.4, p.ccm.1.2, p.ccm.1.5, p.legend.1,
                         layout_matrix = rbind(c(1, 2), c(3, 4), c(5, 6), c(7, 8), c(9, 10), c(11, 11)),
                         heights = c(1, 1, 1, 1, 1, 0.25))
 plot(p.comb.2)
