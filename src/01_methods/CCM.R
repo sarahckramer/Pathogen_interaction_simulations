@@ -188,8 +188,8 @@ ccm_func <- function(data){
   # between v1 and v2 whilst accounting for shared seasonality  
   
   # generate surrogates
-  surr_v1 <- SurrogateData(data$V1_obs_ln, method = "seasonal", num_surr = num_surr, T_period = 52.25, alpha = 10)
-  surr_v2 <- SurrogateData(data$V2_obs_ln, method = "seasonal", num_surr = num_surr, T_period = 52.25, alpha = 30) 
+  surr_v1 <- SurrogateData(data$V1_obs_ln, method = "seasonal", num_surr = num_surr, T_period = 52.25, alpha = 0)
+  surr_v2 <- SurrogateData(data$V2_obs_ln, method = "seasonal", num_surr = num_surr, T_period = 52.25, alpha = 0)
   
   # get list of surrogate data to use in ccm
   surr_dat_list_v1xv2 <- vector('list', length = num_surr)
