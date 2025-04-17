@@ -162,6 +162,13 @@ res_granger <- res_granger %>% left_join(to_remove,
   filter(is.na(delete)) %>%
   select(-delete)
 
+res_corr<- res_corr %>% left_join(to_remove %>% mutate(.id = as.integer(.id)),
+                       by = c('run', '.id')) %>%
+  filter(is.na(delete))
+res_gam <- res_gam %>% left_join(to_remove %>% mutate(.id = as.integer(.id)),
+                       by = c('run', '.id')) %>%
+  filter(is.na(delete))
+
 res_granger <- res_granger %>%
   mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'),
          int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
@@ -244,6 +251,10 @@ res_ccm <- res_ccm %>%
 
 res_ccm <- res_ccm %>%
   select(run:direction, rho_max, p_surr, p_conv, tp_opt, theta_lambda:delta, int_true:int_est_3)
+
+res_ccm <- res_ccm %>% left_join(to_remove, by = c('run', '.id')) %>%
+  filter(is.na(delete)) %>%
+  select(-delete)
 
 res_ccm_LIST <- vector('list', length = 6)
 names(res_ccm_LIST) <- c('v1 -> v2 (Method 1)', 'v1 -> v2 (Method 2)', 'v1 -> v2 (Method 3)', 'v2 -> v1 (Method 1)', 'v2 -> v1 (Method 2)', 'v2 -> v1 (Method 3)')
