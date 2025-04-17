@@ -144,7 +144,8 @@ res_gam <- res_gam %>%
          int_est = if_else(CI_lower95 > 0 | CI_upper95 < 0, int_est, 'none'))
 
 res_gam <- res_gam %>%
-  filter(!if_any(b_V1obsln_Intercept:rescor__V1obsln__V2obsln, ~ . > 1.01)) %>%
+  # filter(!if_any(b_V1obsln_Intercept:rescor__V1obsln__V2obsln, ~ . > 1.01)) %>%
+  filter(!if_any(b_V1obsln_Intercept:lp__, ~ . > 1.01)) %>%
   filter(n_div == 0) %>%
   select(run:.id, cor_median:CI_upper95, theta_lambda:int_est)
 
