@@ -556,7 +556,7 @@ p.granger.2.2 <- ggplot(res_granger_sum[[4]] %>%
   scale_color_brewer(palette = 'Set1') +
   labs(x = 'True Interaction Strength', y = expression(G[y %->% x]))
 
-rm(res_granger, res_granger_LIST, res_granger_sum, acc_granger_LIST)
+rm(res_granger_LIST, res_granger_sum, acc_granger_LIST)
 
 # ------------------------------------------------------------------------------
 
@@ -663,6 +663,7 @@ res_te_sum <- lapply(res_te_LIST, function(ix) {
     ungroup()
 })
 
+
 p.te.2.1 <- ggplot(res_te_sum[[3]] %>%
                      mutate(delta = factor(7 / delta)) %>%
                      mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
@@ -702,7 +703,7 @@ p.te.2.2 <- ggplot(res_te_sum[[4]] %>%
   scale_color_brewer(palette = 'Set1') +
   labs(x = 'True Interaction Strength', y = expression(T[y %->% x]))
 
-rm(res_te_LIST, res_te_sum, acc_te_LIST)
+# rm(res_te_LIST, res_te_sum, acc_te_LIST)
 
 # ------------------------------------------------------------------------------
 
