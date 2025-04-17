@@ -93,8 +93,7 @@ df_acc <- as_tibble(data.frame(method = 'Corr. Coef.',
 acc_corr <- calculate_accuracy_matrix(res_corr)
 
 # Are correlation coefficient magnitudes associated with true interaction strength?:
-assoc_corr <- calculate_assoc_true_strength(res_corr %>% mutate(sig = if_else(int_est == 'none', 'no', 'yes')),
-                                            method = 'corr', met = 'cor')
+assoc_corr <- calculate_assoc_true_strength(res_corr, method = 'corr', met = 'cor')
 
 # Plot:
 p.corr.1 <- ggplot(data = acc_corr %>%
@@ -154,7 +153,7 @@ p.corr.2 <- ggplot(res_corr_sum %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
+  scale_y_continuous(n.breaks = 6) +#, limits = c(-1.0, 1.0)) +
   scale_color_brewer(palette = 'Set1') +
   labs(tag = 'A', x = 'True Interaction Strength', y = expression(paste("Pearson's  ", rho)))
 
@@ -194,9 +193,7 @@ df_acc <- bind_rows(df_acc, data.frame(method = 'GAMs',
 acc_gam <- calculate_accuracy_matrix(res_gam)
 
 # Are correlation coefficient magnitudes associated with true interaction strength?:
-assoc_gam <- calculate_assoc_true_strength(res_gam %>%
-                                             mutate(sig = if_else(int_est == 'none', 'no', 'yes')),
-                                           method = 'gam', met = 'cor_median')
+assoc_gam <- calculate_assoc_true_strength(res_gam, method = 'gam', met = 'cor_median')
 
 # Plot:
 p.gam.1 <- ggplot(data = acc_gam %>%
@@ -240,7 +237,7 @@ p.gam.2 <- ggplot(res_gam_sum %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
+  scale_y_continuous(n.breaks = 6) +
   scale_color_brewer(palette = 'Set1') +
   labs(tag = 'B', x = 'True Interaction Strength', y = 'Residual Correlation')
 
@@ -279,8 +276,7 @@ assoc_granger_LIST <- vector('list', length = 4)
 names(assoc_granger_LIST) <- names(res_granger_LIST)
 
 for (i in 1:length(assoc_granger_LIST)) {
-  assoc_granger_LIST[[i]] <- calculate_assoc_true_strength(res_granger_LIST[[i]] %>% mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')),
-                                                           method = 'granger', met = 'logRSS')
+  assoc_granger_LIST[[i]] <- calculate_assoc_true_strength(res_granger_LIST[[i]], method = 'granger', met = 'logRSS')
 }
 rm(i)
 
@@ -367,7 +363,7 @@ p.granger.2.1 <- ggplot(res_granger_sum[[3]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
+  scale_y_continuous(n.breaks = 7) +
   scale_color_brewer(palette = 'Set1') +
   labs(tag = 'C', x = 'True Interaction Strength', y = expression(G[x %->% y]))
 p.granger.2.2 <- ggplot(res_granger_sum[[4]] %>%
@@ -387,7 +383,7 @@ p.granger.2.2 <- ggplot(res_granger_sum[[4]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
+  scale_y_continuous(n.breaks = 4) +
   scale_color_brewer(palette = 'Set1') +
   labs(x = 'True Interaction Strength', y = expression(G[y %->% x]))
 
@@ -426,8 +422,7 @@ assoc_te_LIST <- vector('list', length = 4)
 names(assoc_te_LIST) <- c(names(res_te_LIST))
 
 for (i in 1:length(res_te_LIST)) {
-  assoc_te_LIST[[i]] <- calculate_assoc_true_strength(res_te_LIST[[i]] %>% mutate(sig = if_else(int_est == 'interaction', 'yes', 'no')),
-                                                      method = 'te', met = 'te')
+  assoc_te_LIST[[i]] <- calculate_assoc_true_strength(res_te_LIST[[i]], method = 'te', met = 'te')
 }
 rm(i)
 
@@ -516,7 +511,6 @@ p.te.2.1 <- ggplot(res_te_sum[[3]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
   scale_color_brewer(palette = 'Set1') +
   labs(tag = 'D', x = 'True Interaction Strength', y = expression(T[x %->% y]))
 p.te.2.2 <- ggplot(res_te_sum[[4]] %>%
@@ -536,7 +530,6 @@ p.te.2.2 <- ggplot(res_te_sum[[4]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
   scale_color_brewer(palette = 'Set1') +
   labs(x = 'True Interaction Strength', y = expression(T[y %->% x]))
 
@@ -573,10 +566,6 @@ for (i in 1:length(acc_ccm_LIST)) {
 # Are higher values of rho associated with higher true interaction strength?:
 assoc_ccm_LIST_max <- vector('list', length = 6)
 names(assoc_ccm_LIST_max) <- names(res_ccm_LIST)
-
-res_ccm_LIST <- lapply(res_ccm_LIST, function(ix) {
-  ix %>% mutate(sig = if_else(int_est == 'interaction', 'yes', 'no'))
-})
 
 for (i in 1:length(assoc_ccm_LIST_max)) {
   assoc_ccm_LIST_max[[i]] <- calculate_assoc_true_strength(res_ccm_LIST[[i]], method = 'ccm', met = 'rho_max')
@@ -711,7 +700,6 @@ p.ccm.2.1 <- ggplot(res_ccm_sum[[1]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
   scale_color_brewer(palette = 'Set1') +
   labs(tag = 'E', x = 'True Interaction Strength', y = 'Cross-Map Skill')
 p.ccm.2.2 <- ggplot(res_ccm_sum[[4]] %>%
@@ -731,7 +719,6 @@ p.ccm.2.2 <- ggplot(res_ccm_sum[[4]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 10, limits = c(-1.0, 1.0)) +
   scale_color_brewer(palette = 'Set1') +
   labs(x = 'True Interaction Strength', y = 'Cross-Map Skill')
 
@@ -788,70 +775,60 @@ rm(p.corr.1, p.gam.1, p.granger.1.1, p.granger.1.2, p.granger.1.3, p.granger.1.4
 
 # Table of correlation coefficients between inferred and true interaction strength magnitude:
 df_assoc <- assoc_corr %>%
-  mutate(method = 'Corr. Coef.', .before = delta) %>%
+  mutate(method = 'Corr. Coef.', .before = coef) %>%
   bind_rows(assoc_gam %>%
-              mutate(method = 'GAMs', .before = delta)) %>%
+              mutate(method = 'GAMs')) %>%
   bind_rows(assoc_granger_LIST[3:4] %>%
               bind_rows(.id = 'direction') %>%
-              mutate(method = 'GC (w/ Seas)', .before = delta) %>%
+              mutate(method = 'GC (w/ Seas)') %>%
               mutate(direction = str_sub(direction, 1, 8))) %>%
   bind_rows(assoc_te_LIST[3:4] %>%
               bind_rows(.id = 'direction') %>%
-              mutate(method = 'TE (w/ Seas)', .before = delta) %>%
+              mutate(method = 'TE (w/ Seas)') %>%
               mutate(direction = str_sub(direction, 1, 8))) %>%
   bind_rows(assoc_ccm_LIST_max[c(1, 4)] %>%
               bind_rows(.id = 'direction') %>%
-              mutate(method = 'CCM', .before = delta) %>%
+              mutate(method = 'CCM') %>%
               mutate(direction = str_sub(direction, 1, 8)))
-print(df_assoc %>% filter(delta == 1))
-print(df_assoc %>% filter(delta == 7 / 28))
-print(df_assoc %>% filter(delta == 7 / 91))
-# rm(assoc_corr, assoc_gam, assoc_granger_LIST, assoc_te_LIST, assoc_ccm_LIST_max)
 
-# Plot metric values vs. true interaction strength by duration:
-p.comb.3 <- arrangeGrob(p.corr.2, p.gam.2, p.granger.2.1, p.granger.2.2, p.te.2.1, p.te.2.2, p.ccm.2.1, p.ccm.2.2, p.legend.2,
-                        layout_matrix = rbind(c(1, 2), c(3, 4), c(5, 6), c(7, 8), c(9, 9)),
-                        heights = c(1, 1, 1, 1, 0.25))
-plot(p.comb.3)
-# ggsave(filename = 'results/plots/true_strength_vs_point_estimates.svg', p.comb.3, width = 12, height = 9)
-rm(p.corr.2, p.gam.2, p.granger.2.1, p.granger.2.2, p.te.2.1, p.te.2.2, p.ccm.2.1, p.ccm.2.2, p.legend.2)
-
-# Plot Spearman's rho between metrics and true interaction strength for all methods:
-# Note: Values are calculated such that we expect POSITIVE rho for all analyses
 df_assoc <- df_assoc %>%
   mutate(direction = if_else(is.na(direction), 'v1 -> v2', direction)) %>%
   bind_rows(df_assoc %>% filter(method == 'Corr. Coef.') %>% mutate(direction = 'v2 -> v1')) %>%
-  bind_rows(df_assoc %>% filter(method == 'GAMs') %>% mutate(direction = 'v2 -> v1')) %>%
-  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC (w/ Seas)', 'TE (w/ Seas)', 'CCM'))) %>%
-  mutate(duration = 1 / delta) %>%
-  mutate(d_proxy = case_match(duration, 1 ~ 1, 4 ~ 2, 13 ~ 3),
-         method_num = as.numeric(method),
-         x_use = d_proxy + 0.15 * (method_num - 3))
+  bind_rows(df_assoc %>% filter(method == 'GAMs') %>% mutate(direction = 'v2 -> v1'))
 
-p.comb.4 <- ggplot(df_assoc, aes(x = x_use, y = rho, group = method, shape = method, col = method)) +
-  geom_rect(aes(xmin = -Inf, xmax = 1.5, ymin = -Inf, ymax = Inf), fill = 'white', col = 'white') +
-  geom_rect(aes(xmin = 1.5, xmax = 2.5, ymin = -Inf, ymax = Inf), fill = 'gray95', col = 'gray95') +
-  geom_rect(aes(xmin = 2.5, xmax = Inf, ymin = -Inf, ymax = Inf), fill = 'white', col = 'white') +
-  geom_point(size = 2.5) +
-  geom_rect(aes(xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf), fill = 'white', col = NA, alpha = 0.075) +
-  geom_point(data = df_assoc %>% filter(rho > 0 & p_value < 0.05), size = 2.5) +
-  geom_hline(yintercept = 0) +
-  facet_wrap(~ direction) +
-  theme_bw() +
-  theme(axis.title = element_text(size = 14),
-        axis.text = element_text(size = 12),
-        strip.text = element_text(size = 12),
-        legend.title = element_text(size = 14),
-        legend.text = element_text(size = 12),
-        legend.position = 'right') +
-  scale_x_continuous(limits = c(0.6, 3.4), breaks = 1:3, labels = c('1', '4', '13')) +
-  scale_y_continuous(limits = c(-1, 1)) +
-  scale_shape_manual(values = c(18, 17, 15, 3, 8)) +
-  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c')) +
-  labs(x = 'Interaction Duration', y = "Spearman's Rho", shape = 'Method', col = 'Method')
-print(p.comb.4)
-# ggsave(filename = 'results/plots/correlation_true_strength_vs_point_estimates.svg', height = 5.5, width = 11)
-rm(assoc_corr, assoc_gam, assoc_granger_LIST, assoc_te_LIST, assoc_ccm_LIST_max)
+df_assoc <- df_assoc %>%
+  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC (w/ Seas)', 'TE (w/ Seas)', 'CCM')))
+
+p3.1 <- df_assoc %>% filter(direction == 'v1 -> v2') %>% mutate(delta = factor(delta)) %>%
+  ggplot(aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
+  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_pointrange() +
+  theme_classic() +
+  theme(legend.position = 'none') +
+  facet_wrap(~ method, ncol = 1) +
+  scale_x_continuous(n.breaks = 6) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(x = 'Relative Change in Point Estimate Due to 2x Change in True Strength', y = 'Duration')
+p3.2 <- df_assoc %>% filter(direction == 'v2 -> v1') %>% mutate(delta = factor(delta)) %>%
+  ggplot(aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
+  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_pointrange() +
+  theme_classic() +
+  theme(legend.position = 'none') +
+  facet_wrap(~ method, ncol = 1) +
+  scale_x_continuous(n.breaks = 6) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(x = 'Relative Change in Point Estimate Due to 2x Change in True Strength', y = 'Duration')
+p.comb.3 <- arrangeGrob(p3.1, p3.2, nrow = 1)
+plot(p.comb.3)
+
+# Plot metric values vs. true interaction strength by duration:
+p.comb.4 <- arrangeGrob(p.corr.2, p.gam.2, p.granger.2.1, p.granger.2.2, p.te.2.1, p.te.2.2, p.ccm.2.1, p.ccm.2.2, p.legend.2,
+                        layout_matrix = rbind(c(1, 2), c(3, 4), c(5, 6), c(7, 8), c(9, 9)),
+                        heights = c(1, 1, 1, 1, 0.25))
+plot(p.comb.4)
+# ggsave(filename = 'results/plots/true_strength_vs_point_estimates.svg', p.comb.4, width = 12, height = 9)
+rm(p.corr.2, p.gam.2, p.granger.2.1, p.granger.2.2, p.te.2.1, p.te.2.2, p.ccm.2.1, p.ccm.2.2, p.legend.2)
 
 # Close pdf:
 dev.off()
