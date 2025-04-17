@@ -52,8 +52,8 @@ for (i in c(1, 2, 8, 12, 17, 24)) {
                      filter(.id == ids_to_plot[[i]]) %>%
                      mutate(theta_lambda = as.character(theta_lambda),
                             delta = as.character(7 / delta)) %>%
-                     filter((theta_lambda %in% c(0, 0.5, 2, 4) & delta %in% c(28, 91)) |
-                              (theta_lambda == 1 & delta == 28)) %>%
+                     filter((theta_lambda %in% c(0, 4)) |
+                              (theta_lambda == 1 & delta == 7)) %>%
                      mutate(theta_lambda = paste0('Interaction Strength: ', theta_lambda)),
                    aes(x = date, y = obs, group = paste(virus, delta), color = paste(virus, delta))) +
     geom_line(linewidth = 0.75) +
@@ -65,14 +65,183 @@ for (i in c(1, 2, 8, 12, 17, 24)) {
           axis.text = element_text(size = 11),
           strip.text = element_text(size = 12)) +
     scale_x_continuous(breaks = NULL) +
-    scale_color_manual(values = c('#e31a1c', '#fb9a99', '#1f78b4', '#a6cee3')) +
+    # scale_color_manual(values = c('#e31a1c', '#fb9a99', '#1f78b4', '#a6cee3')) +
+    scale_color_manual(values = c('#fc9272', '#de2d26', '#fee0d2', '#6baed6', '#2171b5', '#bdd7e7')) +
     labs(x = '', y = 'Incidence (per 1000)', col = '', title = i)
   print(p.data)
   
 }
+
+p1 <- ggplot(data = dat_plot %>%
+               filter(.id == ids_to_plot[[i]]) %>%
+               mutate(theta_lambda = as.character(theta_lambda),
+                      delta = as.character(7 / delta)) %>%
+               filter((theta_lambda %in% c(0, 4)) |
+                        (theta_lambda == 1 & delta == 7)) %>%
+               mutate(theta_lambda = paste0('Interaction Strength: ', theta_lambda)),
+             aes(x = date, y = obs, group = paste(virus, delta), color = paste(virus, delta))) +
+  geom_line(linewidth = 0.75) +
+  geom_vline(xintercept = year_breaks, lty = 2, col = 'gray60') +
+  facet_wrap(~ theta_lambda, ncol = 1) +
+  theme_classic() +
+  theme(legend.position = 'none',
+        axis.title = element_text(size = 13.5),
+        axis.text = element_text(size = 11),
+        strip.text = element_text(size = 12),
+        plot.tag = element_text(size = 24),
+        plot.tag.position = c(0.008, 0.975)) +
+  scale_x_continuous(breaks = NULL) +
+  # scale_color_manual(values = c('#e31a1c', '#fb9a99', '#1f78b4', '#a6cee3')) +
+  scale_color_manual(values = c('#fc9272', '#de2d26', '#fee0d2', '#6baed6', '#2171b5', '#bdd7e7')) +
+  labs(x = '', y = 'Incidence (per 1000)', col = '', tag = 'A')
 # ggsave(filename = 'results/plots/supp_plot1.svg', p.data, width = 11, height = 7)
 
 rm(dat_plot, ids_to_plot)
+
+# ------------------------------------------------------------------------------
+
+# Calculate outbreak metrics by interaction strength/duration
+
+# Get season information:
+dat <- dat %>%
+  mutate(season = cut(date, breaks = year_breaks, labels = 1:10, include.lowest = TRUE))
+
+# Set population size:
+N <- 5000000
+
+# Calculate seasonal attack rates, peak timings, and phase differences for each simulation:
+met <- dat %>%
+  group_by(run, theta_lambda, delta, .id, season) %>%
+  summarise(ar1 = sum(V1_obs) / N, ar2 = sum(V2_obs) / N,
+            pt1 = which.max(V1_obs), pt2 = which.max(V2_obs),
+            pt_diff = abs(pt1 - pt2)) %>%
+  ungroup()
+
+# Calculate difference in metrics from scenario with no interaction:
+met <- met %>%
+  group_by(.id, season, delta) %>%
+  mutate(change_ar1 = ar1 / ar1[theta_lambda == 1],
+         change_ar2 = ar2 / ar2[theta_lambda == 1],
+         change_pt1 = pt1 - pt1[theta_lambda == 1],
+         change_pt2 = pt2 - pt2[theta_lambda == 1],
+         change_ptdiff = pt_diff - pt_diff[theta_lambda == 1]) %>%
+  ungroup()
+
+# Get average and st.dev. across all seasons:
+met <- met %>%
+  group_by(run, theta_lambda, delta, .id) %>%
+  summarise(across(ar1:change_ptdiff, mean, .names = '{.col}_mean'),
+            ar1_sd = sd(ar1), ar2_sd = sd(ar2),
+            pt1_sd = sd(pt1), pt2_sd = sd(pt2),
+            pt_diff_sd = sd(pt_diff)) %>%
+  ungroup() %>%
+  select(run:pt_diff_mean, ar1_sd:pt_diff_sd, change_ar1_mean:change_ptdiff_mean)
+
+# Get change in st.dev. from scenario with no interaction:
+met <- met %>%
+  group_by(.id, delta) %>%
+  mutate(change_ar1_sd = ar1_sd / ar1_sd[theta_lambda == 1],
+         change_ar2_sd = ar2_sd / ar2_sd[theta_lambda == 1],
+         change_pt1_sd = pt1_sd - pt1_sd[theta_lambda == 1],
+         change_pt2_sd = pt2_sd - pt2_sd[theta_lambda == 1],
+         change_ptdiff_sd = pt_diff_sd - pt_diff_sd[theta_lambda == 1]) %>%
+  ungroup()
+
+# Plot:
+met <- met %>%
+  mutate(delta = factor(1 / delta, levels = c('1', '4', '13')))
+
+# met %>%
+#   select(theta_lambda:delta, contains('change')) %>%
+#   filter(theta_lambda != 1) %>%
+#   pivot_longer(contains('change')) %>%
+#   ggplot(aes(x = theta_lambda, y = value, group = paste(theta_lambda, delta), fill = delta)) +
+#   geom_boxplot() + theme_classic() + facet_wrap(~ name, scales = 'free')
+
+p2a <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
+              # met %>% filter(theta_lambda != 1 & theta_lambda != 0.25),
+              aes(x = change_ar2_mean, group = delta, fill = delta)) +
+  geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
+  geom_vline(xintercept = 1.0, lty = 2) +
+  facet_wrap(~ theta_lambda, ncol = 1) +
+  theme_classic() +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.title = element_text(size = 13.5),
+        axis.text = element_text(size = 11),
+        strip.text = element_text(size = 12),
+        plot.tag = element_text(size = 24),
+        plot.tag.position = c(0.03, 0.975),
+        legend.position = 'none') +
+  scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
+  scale_x_continuous(n.breaks = 5) +
+  labs(x = 'Relative AR', y = '', tag = 'B')
+p2b <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
+              # met %>% filter(theta_lambda != 1 & theta_lambda != 0.25),
+              aes(x = change_ar2_sd, group = delta, fill = delta)) +
+  geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
+  geom_vline(xintercept = 1.0, lty = 2) +
+  facet_wrap(~ theta_lambda, ncol = 1) +
+  theme_classic() +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.title = element_text(size = 13.5),
+        axis.text = element_text(size = 11),
+        strip.text = element_text(size = 12),
+        legend.position = 'none') +
+  scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
+  scale_x_continuous(n.breaks = 10) +
+  labs(x = 'Relative sd(AR)', y = '')
+p2c <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
+              # met %>% filter(theta_lambda != 1 & theta_lambda != 0.25),
+              aes(x = change_pt2_mean, group = delta, fill = delta)) +
+  geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
+  geom_vline(xintercept = 0, lty = 2) +
+  facet_wrap(~ theta_lambda, ncol = 1) +
+  theme_classic() +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.title = element_text(size = 13.5),
+        axis.text = element_text(size = 11),
+        strip.text = element_text(size = 12),
+        legend.position = 'none') +
+  scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
+  scale_x_continuous(n.breaks = 10) +
+  labs(x = 'Change in PT', y = '')
+p2d <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
+              # met %>% filter(theta_lambda != 1 & theta_lambda != 0.25),
+              aes(x = change_pt2_sd, group = delta, fill = delta)) +
+  geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
+  geom_vline(xintercept = 0, lty = 2) +
+  facet_wrap(~ theta_lambda, ncol = 1) +
+  theme_classic() +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.title = element_text(size = 13.5),
+        axis.text = element_text(size = 11),
+        strip.text = element_text(size = 12),
+        legend.position = 'none') +
+  scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
+  scale_x_continuous(n.breaks = 10) +
+  labs(x = 'Change in sd(PT)', y = '')
+
+p.legend <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
+                   aes(x = change_ar1_mean, group = delta, fill = delta)) +
+  geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
+  theme_classic() +
+  theme(legend.title = element_text(size = 16, margin = margin(b = 8)),
+        legend.text = element_text(size = 14),
+        legend.key.spacing.y = unit(0.1, 'cm'),
+        legend.key.height = unit(1.0, 'cm'),
+        legend.key.width = unit(1.0, 'cm'),
+        legend.position = 'right') +
+  # guides(fill = guide_legend(byrow = TRUE)) +
+  scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
+  labs(fill = 'Duration')
+p.legend <- ggplotGrob(p.legend)$grobs[[which(sapply(ggplotGrob(p.legend)$grobs, function(x) x$name) == 'guide-box')]]
+
+p.int.impact <- arrangeGrob(p1, arrangeGrob(p2a, p2b, p2c, p2d, p.legend, nrow = 1, widths = c(1, 1, 1, 1, 0.4)), ncol = 1)
+plot(p.int.impact)
 
 # ------------------------------------------------------------------------------
 
@@ -736,9 +905,10 @@ df_acc <- df_acc %>%
   mutate(method = if_else(!(method %in% c('Corr. Coef.', 'GAMs') | str_detect(method, 'CCM')), str_sub(method, 1, 2), method),
          method = paste0(method, confounding)) %>%
   select(-confounding)
+df_acc_STORE <- df_acc
 
 df_acc <- df_acc %>%
-  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC', 'TE (w/ Seas)', 'CCM (Method 1)', 'CCM (Method 2)')))
+  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC (w/ Seas)', 'TE (w/ Seas)', 'CCM (Method 1)', 'CCM (Method 2)')))
 
 df_acc <- df_acc %>% bind_rows(df_acc[1:2, ] %>%
                                  mutate(direction = 'v1 -> v2'))
@@ -748,19 +918,25 @@ df_acc %>%
   select(method, direction, mcc, sens_pos:spec) %>%
   print()
 
-p.comb.1 <- ggplot(df_acc %>% filter(!is.na(method)), aes(x = direction, y = mcc, shape = method, col = method)) +
+p.comb.1 <- ggplot(df_acc %>% filter(!is.na(method)) %>%
+                     mutate(lab_x = if_else(str_detect(method, 'TE'), sens + 0.03, sens)) %>%
+                     mutate(lab_y = if_else(str_detect(method, 'TE'), spec + 0.04, spec)),
+                   aes(x = sens, y = spec, shape = method, col = method)) +
   geom_point(size = 3) +
-  geom_hline(yintercept = 0, lty = 2) +
+  facet_wrap(~ direction, nrow = 1) +
+  # geom_label(aes(label = method, x = lab_x, y = lab_y), nudge_x = -0.03, hjust = 1, fontface = 'bold') +
   theme_bw() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
+        # legend.position = 'none',
         legend.title = element_text(size = 14),
         legend.text = element_text(size = 12),
         legend.position = 'right') +
-  scale_shape_manual(values = c(18, 17, 15, 3, 8, 8)) +
-  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
-  scale_y_continuous(limits = c(-0.10, 0.55), n.breaks = 15) +
-  labs(x = 'Direction', y = 'Matthews correlation coefficient', shape = 'Method', col = 'Method')
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_shape_manual(values = c(18, 17, 15, 3, 8, 8, 8)) +
+  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +#, '#006d2c')) +
+  labs(x = 'Sensitivity', y = 'Specificity', shape = 'Method', col = 'Method')
 plot(p.comb.1)
 # ggsave(filename = 'results/plots/overall_accuracy_by_method.svg', p.comb.1, height = 6, width = 11)
 
@@ -773,7 +949,25 @@ plot(p.comb.2)
 rm(p.corr.1, p.gam.1, p.granger.1.1, p.granger.1.2, p.granger.1.3, p.granger.1.4, p.te.1.1, p.te.1.2,
    p.te.1.3, p.te.1.4, p.ccm.1.1, p.ccm.1.4, p.ccm.1.2, p.ccm.1.5, p.ccm.1.3, p.ccm.1.6, p.legend.1)
 
-# Table of correlation coefficients between inferred and true interaction strength magnitude:
+# Plot accuracy for methods accounting for vs. not accounting for seasonality:
+p.seas <- ggplot(df_acc_STORE %>% filter(str_detect(method, 'GC') | str_detect(method, 'TE')) %>%
+                   mutate(seas = str_detect(method, 'Seas'), method = str_sub(method, 1, 2)),
+                 aes(x = sens, y = spec, shape = method, col = method, alpha = seas)) +
+  geom_point(size = 3) +
+  facet_wrap(~ direction, nrow = 1) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        legend.position = 'right') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_shape_manual(values = c(15, 3)) +
+  scale_color_manual(values = c('#1f78b4', '#6a3d9a')) +
+  scale_alpha_manual(values = c(0.4, 1.0), guide = 'none') +
+  labs(x = 'Sensitivity', y = 'Specificity', shape = 'Method', col = 'Method')
+plot(p.seas)
+
+# Plot effect of true interaction strength on point estimates:
 df_assoc <- assoc_corr %>%
   mutate(method = 'Corr. Coef.', .before = coef) %>%
   bind_rows(assoc_gam %>%
