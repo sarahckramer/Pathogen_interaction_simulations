@@ -13,57 +13,62 @@
 # load packages
 library(rEDM)
 library(Kendall)
-library(gridExtra)
+library(pracma)
 
 ccm_func <- function(data){
   
   print(unique(data$.id))
-  data <- data %>% dplyr::select(time, V1_obs, V2_obs)
+  
+  # Log-transform and center data:
+  data <- data %>%
+    mutate(V1_obs_ln = scale(log(V1_obs + 1), scale = FALSE),
+           V2_obs_ln = scale(log(V2_obs + 1), scale = FALSE)) %>%
+    dplyr::select(time, V1_obs_ln, V2_obs_ln)
   
   #---- determine Embedding dimension (i.e. the number of lags used to build up the shadow manifold) ----#
   # based on the prediction skill of the model. See rEDM vingette https://ha0ye.github.io/rEDM/articles/rEDM.html 
   
   # specify library set = how much data to fit to
-  # use first two seasons
-  lib <- '1 104'
+  # use full data
+  lib <- paste('1', nrow(data), sep = ' ')
   
   # specify pred = which data to predict on 
-  pred <- paste('105', nrow(data), sep = ' ')
+  pred <- paste('1', nrow(data), sep = ' ')
   
   # get E (embedding dimension - the number nearest neighbours to use for prediction) for v1 
   # EmbedDimension is a wrapper around the simplex function to get out E only  
-  E_v1 <- EmbedDimension(dataFrame = data, columns = 'V1_obs', target = 'V1_obs',
+  E_v1 <- EmbedDimension(dataFrame = data, columns = 'V1_obs_ln', target = 'V1_obs_ln',
                          lib = lib, pred = pred, maxE = 2, showPlot = FALSE)
   E_v1 <- E_v1 %>% slice_max(rho) %>% pull(E) # keep the row with max prediction skill
   
   # get E for v2
-  E_v2 <- EmbedDimension(dataFrame = data, columns = "V2_obs", target = "V2_obs",
+  E_v2 <- EmbedDimension(dataFrame = data, columns = "V2_obs_ln", target = "V2_obs_ln",
                          lib = lib, pred = pred, maxE = 5, showPlot = FALSE)
   E_v2 <- E_v2 %>% slice_max(rho) %>% pull(E)
   
   #---- check whether highest cross-map correlation is positive and for a negative lag ----#
-  vars <- c('V1_obs', 'V2_obs')
-  params <- expand.grid(lib_column = vars, target_column = vars, tp = -52:52) %>%
+  vars <- c('V1_obs_ln', 'V2_obs_ln')
+  params <- expand.grid(lib_column = vars, target_column = vars, tp = -20:20) %>%
     filter(lib_column != target_column) %>%
-    mutate(E = if_else(lib_column == 'V1_obs', E_v1, E_v2))
+    mutate(E = if_else(lib_column == 'V1_obs_ln', E_v1, E_v2))
   
   # explore prediction skill over range of tp values 
   # for a single library size set it to max
-  lib_size_tp <- nrow(data) - (52 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
-
+  lib_size_tp <- nrow(data) - (20 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
+  
   output <- do.call(rbind, lapply(seq_len(nrow(params)), function(i) {
     CCM(dataFrame = data, E = params$E[i], libSizes = lib_size_tp, random = FALSE,
         columns = as.character(params$lib_column[i]), target = as.character(params$target_column[i]),
         Tp = params$tp[i], verbose = FALSE) %>%
       bind_cols(params[i, ])
   }))
-
-  optimal_tp_v1xv2_wide <- output %>% filter(target_column == 'V2_obs') %>% filter(`V1_obs:V2_obs` == max(`V1_obs:V2_obs`)) %>% pull(tp)
-  optimal_tp_v2xv1_wide <- output %>% filter(target_column == 'V1_obs') %>% filter(`V2_obs:V1_obs` == max(`V2_obs:V1_obs`)) %>% pull(tp)
   
-  highest_crossmap_cor_v1xv2 <- output %>% filter(target_column == 'V2_obs') %>% pull(`V1_obs:V2_obs`) %>% max()
-  highest_crossmap_cor_v2xv1 <- output %>% filter(target_column == 'V1_obs') %>% pull(`V2_obs:V1_obs`) %>% max()
-
+  optimal_tp_v1xv2_wide <- output %>% filter(target_column == 'V2_obs_ln') %>% filter(`V1_obs_ln:V2_obs_ln` == max(`V1_obs_ln:V2_obs_ln`)) %>% pull(tp)
+  optimal_tp_v2xv1_wide <- output %>% filter(target_column == 'V1_obs_ln') %>% filter(`V2_obs_ln:V1_obs_ln` == max(`V2_obs_ln:V1_obs_ln`)) %>% pull(tp)
+  
+  highest_crossmap_cor_v1xv2 <- output %>% filter(target_column == 'V2_obs_ln') %>% pull(`V1_obs_ln:V2_obs_ln`) %>% max()
+  highest_crossmap_cor_v2xv1 <- output %>% filter(target_column == 'V1_obs_ln') %>% pull(`V2_obs_ln:V1_obs_ln`) %>% max()
+  
   #---- determine if any time delay needs considering: i.e. tp parameter ----#
   # generate all combinations of lib_column, target_column, tp
   params <- expand.grid(lib_column = vars, target_column = vars, tp = -20:0) %>%
@@ -72,7 +77,7 @@ ccm_func <- function(data){
   # want E to be that corresponding to the lib column variable (i.e. the names
   # of the input data used to create the library)
   params <- params %>%
-    mutate(E = if_else(lib_column == 'V1_obs', E_v1, E_v2))
+    mutate(E = if_else(lib_column == 'V1_obs_ln', E_v1, E_v2))
   
   output <- do.call(rbind, lapply(seq_len(nrow(params)), function(i) {
     CCM(dataFrame = data, E = params$E[i], libSizes = lib_size_tp, random = FALSE,
@@ -83,8 +88,8 @@ ccm_func <- function(data){
   
   # pull out optimal Tp
   # note: lib_column xmap target column and E is based on lib_column
-  optimal_tp_v1xv2 <- output %>% filter(target_column == 'V2_obs') %>% filter(`V1_obs:V2_obs` == max(`V1_obs:V2_obs`)) %>% pull(tp)
-  optimal_tp_v2xv1 <- output %>% filter(target_column == 'V1_obs') %>% filter(`V2_obs:V1_obs` == max(`V2_obs:V1_obs`)) %>% pull(tp)
+  optimal_tp_v1xv2 <- output %>% filter(target_column == 'V2_obs_ln') %>% filter(`V1_obs_ln:V2_obs_ln` == max(`V1_obs_ln:V2_obs_ln`)) %>% pull(tp)
+  optimal_tp_v2xv1 <- output %>% filter(target_column == 'V1_obs_ln') %>% filter(`V2_obs_ln:V1_obs_ln` == max(`V2_obs_ln:V1_obs_ln`)) %>% pull(tp)
   
   #----- run CCM ------#
   
@@ -93,17 +98,19 @@ ccm_func <- function(data){
   if (optimal_tp_v1xv2 == 0 & optimal_tp_v2xv1 == 0) lib_max <- lib_max - 1
   
   # run the ccm
-  v1_xmap_v2 <- CCM(dataFrame = data, E = E_v1, columns = 'V1_obs', target = 'V2_obs', 
-                    libSizes = c(seq(30, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v1xv2, random = TRUE,
+  v1_xmap_v2 <- CCM(dataFrame = data, E = E_v1, columns = 'V1_obs_ln', target = 'V2_obs_ln', 
+                    libSizes = c(E_v1 + 2, seq(30, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v1xv2, random = TRUE,
                     sample = 100, includeData = TRUE, showPlot = FALSE)
   
-  v2_xmap_v1 <- CCM(dataFrame = data, E = E_v2, columns = 'V2_obs', target = 'V1_obs', 
-                    libSizes = c(seq(30, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v2xv1, random = TRUE,
+  v2_xmap_v1 <- CCM(dataFrame = data, E = E_v2, columns = 'V2_obs_ln', target = 'V1_obs_ln', 
+                    libSizes = c(E_v2 + 2, seq(30, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v2xv1, random = TRUE,
                     sample = 100, includeData = TRUE, showPlot = FALSE)
   
   # pull out the mean rho for each library size
-  mean_rho_v1_xmap_v2 <- v1_xmap_v2$LibMeans
-  mean_rho_v2_xmap_v1 <- v2_xmap_v1$LibMeans
+  mean_rho_v1_xmap_v2 <- v1_xmap_v2$LibMeans %>%
+    mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
+  mean_rho_v2_xmap_v1 <- v2_xmap_v1$LibMeans %>%
+    mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
   
   # combine the means for the two
   res <- mean_rho_v1_xmap_v2 %>%
@@ -111,8 +118,8 @@ ccm_func <- function(data){
     inner_join(mean_rho_v2_xmap_v1 %>%
                  dplyr::select(1:2),
                by = 'LibSize') %>%
-    rename('mean_v1xv2' = 'V1_obs:V2_obs',
-           'mean_v2xv1' = 'V2_obs:V1_obs')
+    rename('mean_v1xv2' = 'V1_obs_ln:V2_obs_ln',
+           'mean_v2xv1' = 'V2_obs_ln:V1_obs_ln')
   
   # make data long
   res_long <- res %>%
@@ -120,10 +127,12 @@ ccm_func <- function(data){
     mutate(direction = if_else(direction == 'mean_v1xv2', 'v2 -> v1', 'v1 -> v2'))
   
   # pull out all the predictions to get bootstrap CIs for the mean rho for each libsize
-  all_predictions_v1 <- v1_xmap_v2$CCM1_PredictStat
-  all_predictions_v2 <- v2_xmap_v1$CCM1_PredictStat
+  all_predictions_v1 <- v1_xmap_v2$CCM1_PredictStat %>%
+    mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
+  all_predictions_v2 <- v2_xmap_v1$CCM1_PredictStat %>%
+    mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
   
-  # calculate median as well as lower and upper bounds (2.5, 97.5%) on rho for each lib size
+  # calculate median as well as lower and upper bounds (2.5, 97.5%) on rho for each libsize
   intervals_perc_v1 <- all_predictions_v1 %>%
     group_by(LibSize) %>%
     summarise(rho_median = quantile(rho, probs = 0.5),
@@ -141,49 +150,46 @@ ccm_func <- function(data){
   res <- res_long %>%
     left_join(bind_rows(intervals_perc_v1, intervals_perc_v2), by = c('LibSize', 'direction'))
   
-  # check convergence using Mann Kendall - significant p-value implies convergence achieved
-  rhos1 <- res %>%
-    filter(direction == 'v2 -> v1') %>%
-    pull(rho)
-  rhos2 <- res %>%
-    filter(direction == 'v1 -> v2') %>%
-    pull(rho)
+  # check that rhos for max libsize greater than for min libsize:
+  corrs_Lmin_v1 <- all_predictions_v1 %>% filter(LibSize == min(LibSize)) %>% pull(rho)
+  corrs_Lmax_v1 <- all_predictions_v1 %>% filter(LibSize == max(LibSize)) %>% pull(rho)
   
-  MannK_v1_xmap_v2 <- rhos1 %>%
-    MannKendall() %>%
-    getElement('sl') %>%
-    purrr::map(~ .[1])
-  MannK_v2_xmap_v1 <- rhos2 %>%
-    MannKendall() %>%
-    getElement('sl') %>%
-    purrr::map(~ .[1])
+  corrs_Lmin_v2 <- all_predictions_v2 %>% filter(LibSize == min(LibSize)) %>% pull(rho)
+  corrs_Lmax_v2 <- all_predictions_v2 %>% filter(LibSize == max(LibSize)) %>% pull(rho)
   
-  # Check that monotonically increasing, not decreasing:
-  if(!(rhos1[length(rhos1)] > rhos1[1])) MannK_v1_xmap_v2 <- 99
-  if(!(rhos2[length(rhos2)] > rhos2[1])) MannK_v2_xmap_v1 <- 99
-  rm(rhos1, rhos2)
+  inverse_quantile <- function(x, y) {
+    # Based on: https://github.com/cobeylab/pyembedding/blob/master/statutils.py
+    
+    x <- sort(x)
+    
+    if (x[1] == x[length(x)]) {
+      print('Error: Same initial and final value for Lmin')
+    } else {
+      quantiles <- seq(0, 1, length.out = length(x))
+    }
+    
+    y[y < x[1]] <- x[1]
+    y[y > x[length(x)]] <- x[length(x)]
+    
+    inv_q_y <- interp1(x, quantiles, xi = y)
+    
+    return(inv_q_y)
+    
+  }
+  
+  p_conv_v1xv2 <- 1 - mean(inverse_quantile(corrs_Lmin_v1, corrs_Lmax_v1))
+  p_conv_v2xv1 <- 1 - mean(inverse_quantile(corrs_Lmin_v2, corrs_Lmax_v2))
   
   #---- create the null hypothesis for comparison with our CCM output ----#
   
-  num_surr <- 100 # number of surrogate datasets
+  num_surr <- 500 # number of surrogate datasets
   
   # Create seasonal surrogate data to describe the null hypothesis of no causal effect
   # between v1 and v2 whilst accounting for shared seasonality  
   
   # generate surrogates
-  surr_v1 <- SurrogateData(data$V1_obs, method = "seasonal", num_surr = num_surr, T_period = 52.25, alpha = 10)
-  surr_v2 <- SurrogateData(data$V2_obs, method = "seasonal", num_surr = num_surr, T_period = 52.25, alpha = 30) 
-  
-  # turn any negative surrogates into 0 - can't have a negative number of cases
-  surr_v1 = apply(surr_v1, 2, function(x) {
-    x[x < 0] <- 0
-    x
-  })
-  
-  surr_v2 = apply(surr_v2, 2, function(x) {
-    x[x < 0] <- 0
-    x
-  })
+  surr_v1 <- SurrogateData(data$V1_obs_ln, method = "seasonal", num_surr = num_surr, T_period = 52.25, alpha = 0)
+  surr_v2 <- SurrogateData(data$V2_obs_ln, method = "seasonal", num_surr = num_surr, T_period = 52.25, alpha = 0)
   
   # get list of surrogate data to use in ccm
   surr_dat_list_v1xv2 <- vector('list', length = num_surr)
@@ -192,12 +198,12 @@ ccm_func <- function(data){
   for (i in 1:num_surr) {
     
     surr_dat_list_v1xv2[[i]] <- data %>%
-      dplyr::select(time, V1_obs) %>%
-      mutate(V2_obs = surr_v2[, i])
+      dplyr::select(time, V1_obs_ln) %>%
+      mutate(V2_obs_ln = surr_v2[, i])
     
     surr_dat_list_v2xv1[[i]] <- data %>%
-      dplyr::select(time, V2_obs) %>%
-      mutate(V1_obs = surr_v1[, i])
+      dplyr::select(time, V2_obs_ln) %>%
+      mutate(V1_obs_ln = surr_v1[, i])
     
   }
   
@@ -209,18 +215,18 @@ ccm_func <- function(data){
   
   surr_res <- foreach(i = 1:num_surr, .packages = c('rEDM', 'tidyverse')) %dopar% {
     
-    ccm_v1xv2 <- CCM(dataFrame = surr_dat_list_v1xv2[[i]], E = E_v1, columns = 'V1_obs', target = 'V2_obs', 
+    ccm_v1xv2 <- CCM(dataFrame = surr_dat_list_v1xv2[[i]], E = E_v1, columns = 'V1_obs_ln', target = 'V2_obs_ln', 
                      libSizes = lib_max_use, Tp = optimal_tp_v1xv2, random = TRUE, sample = 100, includeData = TRUE)
-    ccm_v2xv1 <- CCM(dataFrame = surr_dat_list_v2xv1[[i]], E = E_v2, columns = 'V2_obs', target = 'V1_obs', 
+    ccm_v2xv1 <- CCM(dataFrame = surr_dat_list_v2xv1[[i]], E = E_v2, columns = 'V2_obs_ln', target = 'V1_obs_ln', 
                      libSizes = lib_max_use, Tp = optimal_tp_v2xv1, random = TRUE, sample = 100, includeData = TRUE)
     
     temp_means <- ccm_v1xv2$LibMeans %>%
       dplyr::select(1:2) %>%
-      rename('rho' = 'V1_obs:V2_obs') %>%
+      rename('rho' = 'V1_obs_ln:V2_obs_ln') %>%
       mutate(direction = 'v2 -> v1') %>%
       bind_rows(ccm_v2xv1$LibMeans %>%
                   dplyr::select(1:2) %>%
-                  rename('rho' = 'V2_obs:V1_obs') %>%
+                  rename('rho' = 'V2_obs_ln:V1_obs_ln') %>%
                   mutate(direction = 'v1 -> v2'))
     
     temp_ci <- ccm_v1xv2$CCM1_PredictStat %>%
@@ -257,18 +263,17 @@ ccm_func <- function(data){
   
   # write out results
   res <- res %>%
-    mutate(data = 'obs') %>%
-    mutate(MannK = if_else(direction == 'v2 -> v1', unlist(MannK_v1_xmap_v2), unlist(MannK_v2_xmap_v1)))
+    mutate(data = 'obs')
   
   surr_res <- surr_res %>%
-    mutate(data = 'surr') %>%
-    mutate(MannK = NA)
+    mutate(data = 'surr')
   
   res <- bind_rows(res, surr_res) %>%
     mutate(E = if_else(direction == 'v2 -> v1', E_v1, E_v2),
            tp_use = if_else(direction == 'v2 -> v1', optimal_tp_v1xv2, optimal_tp_v2xv1),
            tp_opt = if_else(direction == 'v2 -> v1', optimal_tp_v1xv2_wide, optimal_tp_v2xv1_wide),
            max_cmc = if_else(direction == 'v2 -> v1', highest_crossmap_cor_v1xv2, highest_crossmap_cor_v2xv1),
+           p_conv = if_else(direction == 'v2 -> v1', p_conv_v1xv2, p_conv_v2xv1),
            p_surr = if_else(direction == 'v2 -> v1', p_surr_v1xv2, p_surr_v2xv1))
   
   return(res)

@@ -324,6 +324,10 @@ double s2 = 1 + A2 * cos(omega * (t - phi2));
 double lambda1 = beta1 * (p1 / N) * s1; // virus 1
 double lambda2 = beta2 * (p2 / N) * s2; // virus 2
 
+// adjust w1 and w2 according to delta1/delta2
+double w1_prime = 1 / ((1 / w1) - (1 / delta1));
+double w2_prime = 1 / ((1 / w2) - (1 / delta2));
+
 // addition of surges for V1
 // note: we are using these surges for virus 1 only as it represents influenza 
 // which has a number of different strains and new mutations each season      
@@ -344,10 +348,10 @@ double w1_s;
 // assigning the loss in immunity depending on the number of surges we have
 for(int i = 0; i < nsurges; i++){
   if(floor(t) == nearbyint(t_vec[i])) { // if t is a surge time point the add the surge in loss of immunity
-    w1_s = w1 + w_delta_vec[i];
+    w1_s = w1_prime + w_delta_vec[i];
     break; // exit if we find a surge point
   } else{
-    w1_s = w1; // if we don't find a surge point then just set the constant immunity loss
+    w1_s = w1_prime; // if we don't find a surge point then just set the constant immunity loss
   }
 }
 
@@ -364,39 +368,39 @@ Rprintf("N_sum=%.4f\n", N_sum);
 //Rprintf("SS=%.1f, SE=%.1f, SI=%.1f, ST=%.1f, t1=%.4f, w1=%.4f\n", X_SS, X_SE, X_SI, X_ST, t_vec[0], w_delta_vec[0]);
 
 // column 1 of schematic
-DX_SS = -(lambda1 + lambda2) * X_SS + w2 * X_SR + w1_s * X_RS + mu * N - nu * X_SS;// - i0;
+DX_SS = -(lambda1 + lambda2) * X_SS + w2_prime * X_SR + w1_s * X_RS + mu * N - nu * X_SS;// - i0;
 DX_SE = lambda2 * X_SS - (lambda1 + sigma2) * X_SE + w1_s * X_RE - nu * X_SE;
 DX_SI = sigma2 * X_SE - (lambda1 * theta_lambda2 + gamma2) * X_SI + w1_s * X_RI - nu * X_SI;
 DX_ST = gamma2 * X_SI - (lambda1 * theta_lambda2 + delta2) * X_ST + w1_s * X_RT - nu * X_ST;
-DX_SR = delta2 * X_ST - lambda1 * X_SR + w1_s * X_RR - w2 * X_SR - nu * X_SR;
+DX_SR = delta2 * X_ST - lambda1 * X_SR + w1_s * X_RR - w2_prime * X_SR - nu * X_SR;
 
 // column 2  of schematic
-DX_ES = lambda1 * X_SS - (sigma1 + lambda2) * X_ES + w2 * X_ER - nu * X_ES;
+DX_ES = lambda1 * X_SS - (sigma1 + lambda2) * X_ES + w2_prime * X_ER - nu * X_ES;
 DX_EE = lambda2 * X_ES + lambda1 * X_SE - (sigma1 + sigma2) * X_EE - nu * X_EE;
 DX_EI = lambda1 * theta_lambda2 * X_SI + sigma2 * X_EE - (sigma1 + gamma2) * X_EI - nu * X_EI;
 DX_ET = gamma2 * X_EI + lambda1 * theta_lambda2 * X_ST - (sigma1 + delta2) * X_ET - nu * X_ET;
-DX_ER = lambda1 * X_SR + delta2 * X_ET - sigma1 * X_ER - w2 * X_ER - nu * X_ER;
+DX_ER = lambda1 * X_SR + delta2 * X_ET - sigma1 * X_ER - w2_prime * X_ER - nu * X_ER;
 
 // column 3  of schematic
-DX_IS = sigma1 * X_ES - (gamma1 + lambda2 * theta_lambda1) * X_IS + w2 * X_IR - nu * X_IS;// + i0;
+DX_IS = sigma1 * X_ES - (gamma1 + lambda2 * theta_lambda1) * X_IS + w2_prime * X_IR - nu * X_IS;// + i0;
 DX_IE = lambda2 * theta_lambda1 * X_IS + sigma1 * X_EE - (gamma1 + sigma2) * X_IE - nu * X_IE;
 DX_II = sigma1 * X_EI + sigma2 * X_IE - (gamma1 + gamma2) * X_II - nu * X_II;
 DX_IT = sigma1 * X_ET + gamma2 * X_II - (gamma1 + delta2) * X_IT - nu * X_IT;
-DX_IR = delta2 * X_IT + sigma1 * X_ER - gamma1 * X_IR - w2 * X_IR - nu * X_IR;
+DX_IR = delta2 * X_IT + sigma1 * X_ER - gamma1 * X_IR - w2_prime * X_IR - nu * X_IR;
 
 // column 4  of schematic
-DX_TS = gamma1 * X_IS - (delta1 + lambda2 * theta_lambda1) * X_TS + w2 * X_TR - nu * X_TS;
+DX_TS = gamma1 * X_IS - (delta1 + lambda2 * theta_lambda1) * X_TS + w2_prime * X_TR - nu * X_TS;
 DX_TE = lambda2 * theta_lambda1 * X_TS + gamma1 * X_IE - (delta1 + sigma2) * X_TE - nu * X_TE;
 DX_TI = sigma2 * X_TE + gamma1 * X_II - (delta1 + gamma2) * X_TI - nu * X_TI;
 DX_TT = gamma1 * X_IT + gamma2 * X_TI - (delta1 + delta2)* X_TT - nu * X_TT;
-DX_TR = gamma1 * X_IR + delta2 * X_TT - delta1 * X_TR - w2 * X_TR - nu * X_TR;
+DX_TR = gamma1 * X_IR + delta2 * X_TT - delta1 * X_TR - w2_prime * X_TR - nu * X_TR;
 
 // column 5  of schematic
-DX_RS = delta1 * X_TS - lambda2 * X_RS + w2 * X_RR - w1_s * X_RS - nu * X_RS;
+DX_RS = delta1 * X_TS - lambda2 * X_RS + w2_prime * X_RR - w1_s * X_RS - nu * X_RS;
 DX_RE = lambda2 * X_RS + delta1 * X_TE - sigma2 * X_RE - w1_s * X_RE - nu * X_RE;
 DX_RI = sigma2 * X_RE + delta1 * X_TI - gamma2 * X_RI - w1_s * X_RI - nu * X_RI;
 DX_RT = gamma2 * X_RI + delta1 * X_TT - delta2* X_RT - w1_s * X_RT - nu * X_RT;
-DX_RR = delta2 * X_RT + delta1  * X_TR - w1_s * X_RR - w2 * X_RR - nu * X_RR;
+DX_RR = delta2 * X_RT + delta1  * X_TR - w1_s * X_RR - w2_prime * X_RR - nu * X_RR;
 
 DV1 = p1 * gamma1;
 DV2 = p2 * gamma2;
@@ -451,6 +455,10 @@ double s2 = 1 + A2 * cos(omega * (t - phi2));
 double lambda1 = beta1 * (p1 / N) * s1; // virus 1
 double lambda2 = beta2 * (p2 / N) * s2; // virus 2
 
+// adjust w1 and w2 according to delta1/delta2
+double w1_prime = 1 / ((1 / w1) - (1 / delta1));
+double w2_prime = 1 / ((1 / w2) - (1 / delta2));
+
 // addition of surges for vir1
 // initialising vectors for t_si and delta_i
 double *t_vec = (double *) &t_si_1;
@@ -461,11 +469,11 @@ double w1_s;
 //Rprintf("t=%.2f\n", t);
 for(int i = 0; i < nsurges; i++){
     if(floor(t) == nearbyint(t_vec[i])) { // if t is a surge time point the add the surge in loss of immunity
-      w1_s = w1 + w_delta_vec[i];
+      w1_s = w1_prime + w_delta_vec[i];
       //Rprintf("Surge point found: %.3f\n", w1_s);
       break; // exit if we find a surge point
    } else{
-      w1_s = w1; // if we don't find a surge point then just set the constant immunity loss
+      w1_s = w1_prime; // if we don't find a surge point then just set the constant immunity loss
       //Rprintf("No surge found: %.3f\n", w1_s);
    }
 }
@@ -554,19 +562,19 @@ rates[59] = nu; // natural X_RT death rate
 
 // row 5 of schematic
 rates[60] = lambda1; // (X_SR -> X_ER) 
-rates[61] = w2; // (X_SR -> X_SS)
+rates[61] = w2_prime; // (X_SR -> X_SS)
 rates[62] = nu; // natural X_SR death rate
 rates[63] = sigma1; // (X_ER -> X_IR)
-rates[64] = w2; // (X_ER -> X_ES)
+rates[64] = w2_prime; // (X_ER -> X_ES)
 rates[65] = nu; // natural X_ER death rate
 rates[66] = gamma1; // (X_IR -> X_TR)
-rates[67] = w2; // (X_IR -> X_IS)
+rates[67] = w2_prime; // (X_IR -> X_IS)
 rates[68] = nu; // natural X_IR death rate
 rates[69] = delta1; // (X_TR -> X_RR)
-rates[70] = w2; // (X_TR -> X_TS)
+rates[70] = w2_prime; // (X_TR -> X_TS)
 rates[71] = nu; // natural X_TR death rate
 rates[72] = w1_s; // (X_RR -> X_SR)
-rates[73] = w2;// (X_RR -> X_RS)
+rates[73] = w2_prime;// (X_RR -> X_RS)
 rates[74] = nu; // natural X_RR death rate
 
 // drawing sample for each of the compartments from the Euler-multinomial distribution

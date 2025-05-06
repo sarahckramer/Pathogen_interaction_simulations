@@ -13,8 +13,8 @@
 ##################################################################################################################
 
 # # Code to run through all jobids locally (uncomment and copy-paste in console):
-# for (jobid_use in 1:16) {
-#   source('src/main.R')
+# for (jobid_use in 1:18) {
+#   source('src/01_run_analyses.R')
 #   detachAllPackages <- function() {
 #     basic.packages <- c("package:stats","package:graphics","package:grDevices","package:utils","package:datasets","package:methods","package:base")
 #     package.list <- search()[ifelse(unlist(gregexpr("package:",search()))==1,TRUE,FALSE)]
@@ -78,7 +78,9 @@ corr_func <- function(data){
   
   cor_raw <- data %>% group_by(.id) %>%
     dplyr::select(.id, V1_obs:V2_obs) %>%
-    group_map(~ cor.test(.$V1_obs, .$V2_obs))
+    mutate(V1_obs_ln = scale(log(V1_obs + 1), scale = FALSE),
+           V2_obs_ln = scale(log(V2_obs + 1), scale = FALSE)) %>%
+    group_map(~ cor.test(.$V1_obs_ln, .$V2_obs_ln))
   
   temp_res <- bind_cols(cor = lapply(cor_raw, getElement, 'estimate') %>%
                           unlist()) %>%
@@ -147,7 +149,7 @@ if (run_local) {
   
   tic <- Sys.time()
   
-  cl <- makeCluster(4, type = 'SOCK')
+  cl <- makeCluster(8, type = 'SOCK')
   registerDoSNOW(cl)
   res_te_1 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
     source('src/01_methods/transfer_entropy_jidt.R')
@@ -155,7 +157,7 @@ if (run_local) {
   }
   stopCluster(cl)
   
-  cl <- makeCluster(4, type = 'SOCK')
+  cl <- makeCluster(8, type = 'SOCK')
   registerDoSNOW(cl)
   res_te_2 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
     source('src/01_methods/transfer_entropy_jidt.R')
@@ -163,7 +165,7 @@ if (run_local) {
   }
   stopCluster(cl)
   
-  cl <- makeCluster(4, type = 'SOCK')
+  cl <- makeCluster(8, type = 'SOCK')
   registerDoSNOW(cl)
   res_te_4 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
     source('src/01_methods/transfer_entropy_jidt.R')
@@ -171,7 +173,7 @@ if (run_local) {
   }
   stopCluster(cl)
   
-  cl <- makeCluster(4, type = 'SOCK')
+  cl <- makeCluster(8, type = 'SOCK')
   registerDoSNOW(cl)
   res_te_13 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
     source('src/01_methods/transfer_entropy_jidt.R')

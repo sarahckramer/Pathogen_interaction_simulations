@@ -25,10 +25,15 @@ gam_cor <- function(data){
   data <- data %>%
     mutate(week = week(date))
   
+  # log-transform and center data:
+  data <- data %>%
+    mutate(V1_obs_ln = scale(log(V1_obs + 1), scale = FALSE),
+           V2_obs_ln = scale(log(V2_obs + 1), scale = FALSE))
+  
   # run gam model (brms - Bayesian)
-  mvn_mod_form <- bf(mvbind(V1_obs, V2_obs) ~ s(week, bs = 'cc', k = 53) + s(time, bs = 'cr', k = 150)) + set_rescor(TRUE)
-  mvn_mod <- brm(mvn_mod_form, data = data, chains = 4, cores = 4, warmup = 2000, iter = 3000, control = list(max_treedepth = 15, adapt_delta = 0.95))
-  corrs_alt <- as_draws_df(mvn_mod, variable = 'rescor__V1obs__V2obs')$rescor__V1obs__V2obs
+  mvn_mod_form <- bf(mvbind(V1_obs_ln, V2_obs_ln) ~ s(week, bs = 'cc', k = 53)) + set_rescor(TRUE)
+  mvn_mod <- brm(mvn_mod_form, data = data, chains = 4, cores = 4, warmup = 2000, iter = 3000)#, control = list(max_treedepth = 15, adapt_delta = 0.95))
+  corrs_alt <- as_draws_df(mvn_mod, variable = 'rescor__V1obsln__V2obsln')$rescor__V1obsln__V2obsln
   
   # check for divergent transitions
   # https://github.com/paul-buerkner/brms/issues/97
@@ -37,7 +42,8 @@ gam_cor <- function(data){
   }) %>% unlist() %>% sum()
   
   # get results and 95% CIs
-  res <- data.frame(cbind(cor = mean(corrs_alt), cor_median = median(corrs_alt), CI_lower95 = quantile(corrs_alt, p = 0.025), CI_upper95 = quantile(corrs_alt, p = 0.975), t(rhat(mvn_mod)[1:13]), n_div = n_divergent), row.names = '')
+  res <- data.frame(cbind(cor = mean(corrs_alt), cor_median = median(corrs_alt), CI_lower95 = quantile(corrs_alt, p = 0.025), CI_upper95 = quantile(corrs_alt, p = 0.975), t(rhat(mvn_mod)), n_div = n_divergent),
+                    row.names = '')
   
   # return all results
   return(res)

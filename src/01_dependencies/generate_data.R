@@ -36,8 +36,8 @@ int_params <- expand.grid(theta_lambda1, theta_lambda2, delta1, delta2) %>%
          'delta1' = 'Var3',
          'delta2' = 'Var4') %>%
   filter(theta_lambda1 == theta_lambda2,
-         delta1 == delta2) %>%
-  filter(!(theta_lambda1 == 1 & theta_lambda2 == 1 & delta1 < 1))
+         delta1 == delta2)# %>%
+  # filter(!(theta_lambda1 == 1 & theta_lambda2 == 1 & delta1 < 1))
 rm(theta_lambda1, theta_lambda2, delta1, delta2)
 
 #---- generate timing of surges in immunity loss ----#
@@ -59,8 +59,8 @@ for (i in 1:n_sim) {
   t_si[2:10] <- t_si[2:10] + 1 # account for years with 53 weeks
   t_si[8:10] <- t_si[8:10] + 1 # account for years with 53 weeks
   
-  w_delta_i <- runif(n = length(t_si), min = 0.005 * 7, max = 0.075 * 7) # yearly surge in rate of immunity loss
-  # w_delta_i <- runif(n = length(t_si), min = 0.01 * 7, max = 0.1 * 7) # yearly surge in rate of immunity loss
+  # w_delta_i <- runif(n = length(t_si), min = 0.005 * 7, max = 0.075 * 7) # yearly surge in rate of immunity loss
+  w_delta_i <- runif(n = length(t_si), min = 0.05, max = 0.3) # yearly surge in rate of immunity loss
   
   t_si_mat[, i] <- t_si
   w_delta_i_mat[, i] <- w_delta_i
@@ -177,7 +177,7 @@ dat_red <- dat %>%
 #             V2_obs = sum(V2_obs)) %>%
 #   filter(V1_obs < 1000)
 
-if (true_int_params$theta_lambda1 == 1.0 & true_int_params$theta_lambda2 == 1.0) {
+if (true_int_params$theta_lambda1 == 1.0 & true_int_params$theta_lambda2 == 1.0 & true_int_params$delta1 == 1.0) {
   expect_true(nrow(dat_red) == 0)
 }
 rm(dat_red, season_breaks)

@@ -41,59 +41,44 @@ calculate_accuracy_matrix <- function(df) {
 # Function to assess whether higher values of a method's metric are associated with stronger true interaction strengths:
 calculate_assoc_true_strength <- function(df, method, met) {
   
+  # Format tibble for use in regression model:
   df <- df %>%
     rename('metric' = all_of(met))
   
-  res_temp <- NULL
+  df <- df %>%
+    mutate(theta_lambda = if_else(theta_lambda == 0, 1/16, theta_lambda)) %>%
+    mutate(theta_lambda = if_else(theta_lambda < 1, 1 / theta_lambda, theta_lambda)) %>%
+    mutate(delta = factor(1 / delta))
+  df <- df %>%
+    mutate(ln_x = log(theta_lambda, base = 2)) %>%
+    mutate(ln_y = log(abs(metric), base = 2))
   
-  for (d in unique(df$delta)) {
-    
-    if (method %in% c('granger', 'te', 'ccm')) {
-      
-      cor_temp_overall <- df %>%
-        mutate(theta_lambda = if_else(theta_lambda < 1, 1 / theta_lambda, theta_lambda)) %>%
-        filter(delta == d | theta_lambda == 1) %>%
-        # filter(p_value < 0.05) %>%
-        cor.test(~ theta_lambda + metric, data = ., method = 'spearman')
-      
-    } else {
-      
-      cor_temp_overall <- df %>%
-        filter(delta == d | theta_lambda == 1) %>%
-        # filter(p_value < 0.05) %>%
-        cor.test(~ theta_lambda + metric, data = ., method = 'spearman')
-      
-    }
-    
-    cor_temp_neg <- df %>%
-      filter(theta_lambda < 1,
-             delta == d) %>%
-      filter(sig == 'yes') %>%
-      cor.test(~ theta_lambda + metric, data = ., method = 'spearman') # lm(data = ., metric ~ theta_lambda)
-    cor_temp_pos <- df %>%
-      filter(theta_lambda > 1,
-             delta == d) %>%
-      filter(sig == 'yes') %>%
-      cor.test(~ theta_lambda + metric, data = ., method = 'spearman')
-    
-    res_temp <- res_temp %>% bind_rows(rbind(c(d, cor_temp_overall$estimate, cor_temp_overall$p.value),
-                                             c(d, cor_temp_neg$estimate, cor_temp_neg$p.value),
-                                             c(d, cor_temp_pos$estimate, cor_temp_pos$p.value)) %>%
-                                         as_tibble() %>%
-                                         mutate(true_int = c('all', 'neg', 'pos')))
-    
-  }
+  # # Plot:
+  # p1 <- ggplot(data = df, aes(x = ln_x, y = metric, group = ln_x)) + geom_violin() + facet_wrap(~ delta, ncol = 1) + theme_classic()
+  # print(p1)
   
-  names(res_temp) <- c('delta', 'rho', 'p_value', 'true_int')
+  # Fit model and get confidence intervals:
+  m1 <- lm(ln_y ~ ln_x*delta, data = df)
   
-  if (method %in% c('granger', 'te', 'ccm')) {
-    
-    res_temp <- res_temp %>%
-      mutate(rho = if_else(true_int == 'neg', -1 * rho, rho))
-    
-  }
+  coefs <- m1$coefficients
+  coefs_var <- vcov(m1)
   
-  return(res_temp)
+  assoc_lm <- c(coefs['ln_x'], confint(m1)['ln_x', ])
+  
+  plusminus_4 <- qt(0.975, df = nrow(df) - 6) * sqrt(coefs_var['ln_x', 'ln_x'] + coefs_var['ln_x:delta4', 'ln_x:delta4'] + 2 * coefs_var['ln_x', 'ln_x:delta4'])
+  plusminus_13 <- qt(0.975, df = nrow(df) - 6) * sqrt(coefs_var['ln_x', 'ln_x'] + coefs_var['ln_x:delta13', 'ln_x:delta13'] + 2 * coefs_var['ln_x', 'ln_x:delta13'])
+  
+  # print(c(qt(0.975, df = nrow(df) - 6) * sqrt(coefs_var['ln_x', 'ln_x']), plusminus_4, plusminus_13))
+  
+  assoc_lm <- assoc_lm %>%
+    rbind(c(coefs['ln_x'] + coefs['ln_x:delta4'], coefs['ln_x'] + coefs['ln_x:delta4'] - plusminus_4, coefs['ln_x'] + coefs['ln_x:delta4'] + plusminus_4)) %>%
+    rbind(c(coefs['ln_x'] + coefs['ln_x:delta13'], coefs['ln_x'] + coefs['ln_x:delta13'] - plusminus_13, coefs['ln_x'] + coefs['ln_x:delta13'] + plusminus_13)) %>%
+    as_tibble()
+  names(assoc_lm) <- c('coef', 'lower', 'upper')
+  
+  assoc_lm <- assoc_lm %>% mutate(delta = c(1, 4, 13))
+  
+  return(assoc_lm)
   
 }
 

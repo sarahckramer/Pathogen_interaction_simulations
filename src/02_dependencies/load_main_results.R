@@ -127,25 +127,6 @@ rm(results_T, results_F, res_trueparams)
 
 # ------------------------------------------------------------------------------
 
-# Calculate weights for weighted accuracy measurement
-
-# Classify runs as positive, negative, or null:
-df_true_int <- dat %>%
-  select(run, .id, theta_lambda:delta) %>%
-  distinct() %>%
-  mutate(int_true = if_else(theta_lambda > 1, 'pos', 'neg'),
-         int_true = if_else(theta_lambda == 1, 'none', int_true))
-
-# Get weights based on relative amount of simulations with pos/neg/no interaction:
-weight_pos <- min(table(df_true_int$int_true)) / (df_true_int %>% filter(int_true == 'pos') %>% nrow())
-weight_neg <- min(table(df_true_int$int_true)) / (df_true_int %>% filter(int_true == 'neg') %>% nrow())
-weight_null <- min(table(df_true_int$int_true)) / (df_true_int %>% filter(int_true == 'none') %>% nrow())
-
-# Clean up:
-rm(df_true_int)
-
-# ------------------------------------------------------------------------------
-
 # Determine significance/direction of true and detected interactions
 
 # Correlation coefficients:
@@ -163,19 +144,40 @@ res_gam <- res_gam %>%
          int_est = if_else(CI_lower95 > 0 | CI_upper95 < 0, int_est, 'none'))
 
 res_gam <- res_gam %>%
-  filter(!if_any(b_V1obs_Intercept:rescor__V1obs__V2obs, ~ . > 1.05)) %>%
+  # filter(!if_any(b_V1obsln_Intercept:rescor__V1obsln__V2obsln, ~ . > 1.01)) %>%
+  filter(!if_any(b_V1obsln_Intercept:lp__, ~ . > 1.01)) %>%
   filter(n_div == 0) %>%
   select(run:.id, cor_median:CI_upper95, theta_lambda:int_est)
-
 print(table(res_gam$run))
 
 # Granger causality:
+to_remove <- res_granger %>%
+  filter(adf_p >= 0.05 | kpss_p < 0.05) %>%
+  select(run:.id) %>%
+  distinct() %>%
+  mutate(delete = TRUE)
+
+res_granger <- res_granger %>% left_join(to_remove,
+                                         by = c('run', '.id')) %>%
+  filter(is.na(delete)) %>%
+  select(-delete)
+
+res_corr<- res_corr %>% left_join(to_remove %>% mutate(.id = as.integer(.id)),
+                       by = c('run', '.id')) %>%
+  filter(is.na(delete))
+res_gam <- res_gam %>% left_join(to_remove %>% mutate(.id = as.integer(.id)),
+                       by = c('run', '.id')) %>%
+  filter(is.na(delete))
+
 res_granger <- res_granger %>%
   mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'),
          int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
          int_true_dir = if_else(theta_lambda < 1, 'neg', int_true_dir)) %>%
   ungroup() %>%
   mutate(int_est = if_else(ftest_p < 0.05, 'interaction', 'none'))
+
+res_granger <- res_granger %>%
+  select(run:.id, direction:confounding, logRSS, ftest_p, theta_lambda:int_est)
 
 res_granger_LIST <- vector('list', length = 4)
 names(res_granger_LIST) <- c('v1 -> v2 (No confounding)', 'v2 -> v1 (No confounding)', 'v1 -> v2 (Seasonality Controlled)', 'v2 -> v1 (Seasonality Controlled)')
@@ -185,7 +187,14 @@ res_granger_LIST[[2]] <- res_granger %>% filter(direction == 'v2 -> v1', confoun
 res_granger_LIST[[3]] <- res_granger %>% filter(direction == 'v1 -> v2', confounding == 'seasonal')
 res_granger_LIST[[4]] <- res_granger %>% filter(direction == 'v2 -> v1', confounding == 'seasonal')
 
+rm(res_granger)
+
 # Transfer entropy:
+res_te <- res_te %>% left_join(to_remove %>% mutate(.id = as.numeric(.id)),
+                               by = c('run', '.id')) %>%
+  filter(is.na(delete)) %>%
+  select(-delete)
+
 res_te <- res_te %>%
   mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'),
          int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
@@ -195,85 +204,41 @@ res_te <- res_te %>%
          int_est_confound = if_else(p_value_confound < 0.05, 'interaction', 'none'),
          int_est_confound2 = if_else(p_value_confound2 < 0.05, 'interaction', 'none'))
 
-res_te_LIST <- vector('list', length = 8)
-names(res_te_LIST) <- c('v1 -> v2 (lag 1)', 'v1 -> v2 (lag 2)', 'v1 -> v2 (lag 4)', 'v1 -> v2 (lag 13)',
-                        'v2 -> v1 (lag 1)', 'v2 -> v1 (lag 2)', 'v2 -> v1 (lag 4)', 'v2 -> v1 (lag 13)')
+# Keep only lag with highest TE for each synthetic dataset:
+res_te_raw <- res_te %>% group_by(direction, run, .id) %>% filter(te == max(te)) %>% ungroup() %>% select(-contains('confound'))
+res_te_confound1 <- res_te %>% group_by(direction, run, .id) %>% filter(te_confound == max(te_confound)) %>% ungroup() %>% select(-c(te, te_confound2, sd_null, sd_null_confound2, p_value, p_value_confound2, int_est, int_est_confound2))
+res_te_confound2 <- res_te %>% group_by(direction, run, .id) %>% filter(te_confound2 == max(te_confound2)) %>% ungroup() %>% select(-c(te, te_confound, sd_null, sd_null_confound, p_value, p_value_confound, int_est, int_est_confound))
 
-res_te_LIST[[1]] <- res_te %>% filter(direction == 'v1 -> v2' & lag == '1')
-res_te_LIST[[2]] <- res_te %>% filter(direction == 'v1 -> v2' & lag == '2')
-res_te_LIST[[3]] <- res_te %>% filter(direction == 'v1 -> v2' & lag == '4')
-res_te_LIST[[4]] <- res_te %>% filter(direction == 'v1 -> v2' & lag == '13')
-res_te_LIST[[5]] <- res_te %>% filter(direction == 'v2 -> v1' & lag == '1')
-res_te_LIST[[6]] <- res_te %>% filter(direction == 'v2 -> v1' & lag == '2')
-res_te_LIST[[7]] <- res_te %>% filter(direction == 'v2 -> v1' & lag == '4')
-res_te_LIST[[8]] <- res_te %>% filter(direction == 'v2 -> v1' & lag == '13')
+res_te_LIST <- vector('list', length = 4)
+names(res_te_LIST) <- c('v1 -> v2 (No confounding)', 'v2 -> v1 (No confounding)', 'v1 -> v2 (Seasonality Controlled)', 'v2 -> v1 (Seasonality Controlled)')
 
-acc_weighted_te = acc_weighted_te_confound = acc_weighted_te_confound2 = vector('list', length = length(res_te_LIST))
-names(acc_weighted_te) = names(acc_weighted_te_confound) = names(acc_weighted_te_confound2) = names(res_te_LIST)
+res_te_LIST[[1]] <- res_te_raw %>% filter(direction == 'v1 -> v2')
+res_te_LIST[[2]] <- res_te_raw %>% filter(direction == 'v2 -> v1')
 
-for (i in 1:length(res_te_LIST)) {
-  
-  sens_pos <- (res_te_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow())
-  sens_neg <- (res_te_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow())
-  spec <- (res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
-  
-  sens_pos_confound <- (res_te_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est_confound == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow())
-  sens_neg_confound <- (res_te_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est_confound == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow())
-  spec_confound <- (res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est_confound == 'none') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
-  
-  sens_pos_confound2 <- (res_te_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est_confound2 == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow())
-  sens_neg_confound2 <- (res_te_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est_confound2 == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow())
-  spec_confound2 <- (res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est_confound2 == 'none') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
-  
-  acc_weighted_te[[i]] <- (sens_pos * weight_pos + sens_neg * weight_neg + spec * weight_null) / (weight_pos + weight_neg + weight_null)
-  acc_weighted_te_confound[[i]] <- (sens_pos_confound * weight_pos + sens_neg_confound * weight_neg + spec_confound * weight_null) / (weight_pos + weight_neg + weight_null)
-  acc_weighted_te_confound2[[i]] <- (sens_pos_confound2 * weight_pos + sens_neg_confound2 * weight_neg + spec_confound2 * weight_null) / (weight_pos + weight_neg + weight_null)
-  rm(sens_pos, sens_neg, spec, sens_pos_confound, sens_neg_confound, spec_confound, sens_pos_confound2, sens_neg_confound2, spec_confound2)
-  
-}
-rm(i)
+# Keep only seasonality embedding dimension that yields highest average TE:
+res_te_confound1 <- res_te_confound1 %>% rename_with(~ str_remove(.x, pattern = '_confound'))
+res_te_confound2 <- res_te_confound2 %>% rename_with(~ str_remove(.x, pattern = '_confound2'))
 
-# Keep only best-performing lag for each direction:
-best_v1xv2 <- acc_weighted_te[1:4] %>% bind_rows() %>% which.max() %>% names()
-best_v2xv1 <- acc_weighted_te[5:8] %>% bind_rows() %>% which.max() %>% names()
-
-which_confound <- which.max(c(c(acc_weighted_te_confound[1:4] %>% bind_rows() %>% max(), acc_weighted_te_confound[5:8] %>% bind_rows() %>% max()) %>% mean(),
-                              c(acc_weighted_te_confound2[1:4] %>% bind_rows() %>% max(), acc_weighted_te_confound2[5:8] %>% bind_rows() %>% max()) %>% mean()))
-
-if (which_confound == 1) {
-  best_v1xv2_confound <- acc_weighted_te_confound[1:4] %>% bind_rows() %>% which.max() %>% names()
-  best_v2xv1_confound <- acc_weighted_te_confound[5:8] %>% bind_rows() %>% which.max() %>% names()
-} else if (which_confound == 2) {
-  best_v1xv2_confound <- acc_weighted_te_confound2[1:4] %>% bind_rows() %>% which.max() %>% names()
-  best_v2xv1_confound <- acc_weighted_te_confound2[5:8] %>% bind_rows() %>% which.max() %>% names()
+if (median(res_te_confound1$te) >= median(res_te_confound2$te)) {
+  res_te_LIST[[3]] <- res_te_confound1 %>% filter(direction == 'v1 -> v2')
+  res_te_LIST[[4]] <- res_te_confound1 %>% filter(direction == 'v2 -> v1')
+} else {
+  res_te_LIST[[3]] <- res_te_confound2 %>% filter(direction == 'v1 -> v2')
+  res_te_LIST[[4]] <- res_te_confound2 %>% filter(direction == 'v2 -> v1')
 }
 
-res_te_LIST_confound <- res_te_LIST[c(best_v1xv2_confound, best_v2xv1_confound)]
-res_te_LIST <- res_te_LIST[c(best_v1xv2, best_v2xv1)]
-
+# Clean up:
 res_te_LIST <- lapply(res_te_LIST, function(ix) {
-  ix <- ix %>%
-    select(run:te, direction, p_value, lag:int_est)
+  ix %>% select(run, .id, lag, direction, te, p_value, theta_lambda:int_est)
 })
 
-if (which_confound == 1) {
-  res_te_LIST_confound <- lapply(res_te_LIST_confound, function(ix) {
-    ix <- ix %>%
-      select(run, te_confound, direction, p_value_confound, lag:int_true_dir, int_est_confound)
-  })
-} else if (which_confound == 2) {
-  res_te_LIST_confound <- lapply(res_te_LIST_confound, function(ix) {
-    ix <- ix %>%
-      select(run, te_confound2, direction, p_value_confound2, lag:int_true_dir, int_est_confound2)
-  })
-}
-rm(which_confound, acc_weighted_te, acc_weighted_te_confound, acc_weighted_te_confound2, res_te)
+rm(res_te, res_te_raw, res_te_confound1, res_te_confound2)
 
 # CCM:
 res_ccm <- res_ccm %>%
   group_by(run, .id, direction, theta_lambda, delta) %>%
-  select(run:direction, rho, MannK:p_surr, theta_lambda:delta) %>%
-  summarise(rho_mean = mean(rho), rho_max = rho[LibSize == max(LibSize)], MannK = unique(MannK), tp_opt = unique(tp_opt), max_cmc = unique(max_cmc), p_surr = unique(p_surr)) %>%
+  select(run:direction, rho_median, tp_opt:p_surr, theta_lambda:delta) %>%
+  summarise(rho_mean = mean(rho_median), rho_max = rho_median[LibSize == max(LibSize)], tp_opt = unique(tp_opt), max_cmc = unique(max_cmc), p_conv = unique(p_conv), p_surr = unique(p_surr)) %>%
   ungroup()
 
 res_ccm <- res_ccm %>%
@@ -281,8 +246,15 @@ res_ccm <- res_ccm %>%
          int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
          int_true_dir = if_else(theta_lambda < 1, 'neg', int_true_dir)) %>%
   mutate(int_est_1 = if_else(p_surr < 0.05, 'interaction', 'none'), # method 1: check p-values based on surrogates
-         int_est_2 = if_else(MannK < 0.05 & max_cmc > 0, 'interaction', 'none'), # method 2: check convergence
-         int_est_3 = if_else(MannK < 0.05 & max_cmc > 0 & tp_opt < 0, 'interaction', 'none')) # method 3: check convergence + ideal tp negative
+         int_est_2 = if_else(p_conv < 0.05 & max_cmc > 0, 'interaction', 'none'), # method 2: check convergence
+         int_est_3 = if_else(p_conv < 0.05 & max_cmc > 0 & tp_opt < 0, 'interaction', 'none')) # method 3: check convergence + ideal tp negative
+
+res_ccm <- res_ccm %>%
+  select(run:direction, rho_max, p_surr, p_conv, tp_opt, theta_lambda:delta, int_true:int_est_3)
+
+res_ccm <- res_ccm %>% left_join(to_remove, by = c('run', '.id')) %>%
+  filter(is.na(delete)) %>%
+  select(-delete)
 
 res_ccm_LIST <- vector('list', length = 6)
 names(res_ccm_LIST) <- c('v1 -> v2 (Method 1)', 'v1 -> v2 (Method 2)', 'v1 -> v2 (Method 3)', 'v2 -> v1 (Method 1)', 'v2 -> v1 (Method 2)', 'v2 -> v1 (Method 3)')
