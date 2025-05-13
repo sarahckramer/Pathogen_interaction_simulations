@@ -18,9 +18,19 @@ source('src/01_dependencies/seitr_x_seitr.R')
 
 # Set all relevant model parameters
 
+#---- check whether main or sensitivity analysis ----#
+if (!exists('sens')) {
+  sens <- 'main'
+}
+
 #---- set global parameters ----#
 n_sim <- 100 # total number of simulated datasets
 tot_weeks <- 522 # number of weeks to simulate
+
+if (sens == '20y') {
+  tot_weeks <- 1044
+}
+
 debug_bool <- FALSE
 
 #---- get interaction parameter values ----#
@@ -56,8 +66,15 @@ for (i in 1:n_sim) {
   t_si <- t_si + seq(1, 53 * (n_surge - 1), by = 52)
   t_si <- round(t_si) # make whole numbers
   
-  t_si[2:10] <- t_si[2:10] + 1 # account for years with 53 weeks
-  t_si[8:10] <- t_si[8:10] + 1 # account for years with 53 weeks
+  if (sens == '20y') {
+    t_si[2:20] <- t_si[2:20] + 1 # account for years with 53 weeks
+    t_si[8:20] <- t_si[8:20] + 1 # account for years with 53 weeks
+    t_si[13:20] <- t_si[13:20] + 1 # account for years with 53 weeks
+    t_si[19:20] <- t_si[19:20] + 1 # account for years with 53 weeks
+  } else {
+    t_si[2:10] <- t_si[2:10] + 1 # account for years with 53 weeks
+    t_si[8:10] <- t_si[8:10] + 1 # account for years with 53 weeks
+  }
   
   # w_delta_i <- runif(n = length(t_si), min = 0.005 * 7, max = 0.075 * 7) # yearly surge in rate of immunity loss
   w_delta_i <- runif(n = length(t_si), min = 0.05, max = 0.3) # yearly surge in rate of immunity loss
@@ -96,6 +113,40 @@ true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       R01 = 0.30, R02 = 0.25, R012 = 0.001,
                       nsurges = n_surge,
                       t_si_ = t_si_mat[, 1], w_delta_i_ = w_delta_i_mat[, 1])
+
+if (sens == 'forcing_low') {
+  true_params_init['A1'] <- 0
+  true_params_init['A2'] <- 0
+}
+
+if (sens == 'forcing_high') {
+  true_params_init['A1'] <- 0.3
+  true_params_init['A2'] <- 0.3
+}
+
+if (sens == 'reporting_high') {
+  true_params_init['rho1'] <- 0.6
+  true_params_init['rho2'] <- 0.2
+}
+
+if (sens == 'process_noise_low') {
+  true_params_init['beta_sd1'] <- 0.01 * 0.1
+  true_params_init['beta_sd2'] <- 0.005 * 0.1
+}
+
+if (sens == 'obs_noise_low') {
+  true_params_init['k1'] <- 0
+  true_params_init['k2'] <- 0
+}
+
+if (sens == 'obs_noise_high') {
+  true_params_init['k1'] <- 0.1
+  true_params_init['k2'] <- 0.05
+}
+
+if (sens == 'asymmetric') {
+  true_params_init['theta_lambda2'] <- 1.0
+}
 
 true_params <- parmat(true_params_init, nrep = n_sim)
 
@@ -162,20 +213,29 @@ dat <- dat %>%
 
 #---- check for yearly outbreaks ----#
 season_breaks <- dat %>% filter(str_detect(date, '-07-0[1-7]')) %>% pull(date) %>% unique()
-season_breaks <- c(season_breaks, '2022-07-03')
-
-dat_red <- dat %>%
-  mutate(season = cut(date, breaks = season_breaks, labels = 1:10, include.lowest = TRUE)) %>%
-  group_by(season, .id) %>%
-  summarise(V1 = sum(V1),
-            V2 = sum(V2)) %>%
-  filter(V1 < 300000)
-# dat_red <- dat %>%
-#   mutate(season = cut(date, breaks = season_breaks, labels = 1:10, include.lowest = TRUE)) %>%
-#   group_by(season, .id) %>%
-#   summarise(V1_obs = sum(V1_obs),
-#             V2_obs = sum(V2_obs)) %>%
-#   filter(V1_obs < 1000)
+if (sens == '20y') {
+  
+  season_breaks <- c(season_breaks, '2032-07-04')
+  
+  dat_red <- dat %>%
+    mutate(season = cut(date, breaks = season_breaks, labels = 1:20, include.lowest = TRUE)) %>%
+    group_by(season, .id) %>%
+    summarise(V1 = sum(V1),
+              V2 = sum(V2)) %>%
+    filter(V1 < 300000)
+  
+} else {
+  
+  season_breaks <- c(season_breaks, '2022-07-03')
+  
+  dat_red <- dat %>%
+    mutate(season = cut(date, breaks = season_breaks, labels = 1:10, include.lowest = TRUE)) %>%
+    group_by(season, .id) %>%
+    summarise(V1 = sum(V1),
+              V2 = sum(V2)) %>%
+    filter(V1 < 300000)
+  
+}
 
 if (true_int_params$theta_lambda1 == 1.0 & true_int_params$theta_lambda2 == 1.0 & true_int_params$delta1 == 1.0) {
   expect_true(nrow(dat_red) == 0)

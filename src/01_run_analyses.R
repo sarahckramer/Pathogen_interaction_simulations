@@ -40,6 +40,7 @@ print(detectCores())
 # Get cluster environmental variables:
 jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size
 run_local <- as.logical(Sys.getenv("RUNLOCAL")); print(run_local)
+sens <- as.character(Sys.getenv("SENS")); print(sens)
 
 #---- run local or on cluster? ----#
 if (is.na(run_local)) {
@@ -205,7 +206,7 @@ if (!run_local) {
 }
 
 # save out results
-write_rds(results, file=sprintf('results/results_%s_%s.rds', jobid, run_local))
+write_rds(results, file=sprintf('results/results_%s_%s_%s.rds', jobid, run_local, sens))
 
 #---- Clean up ----#
 toc_all <- Sys.time()
