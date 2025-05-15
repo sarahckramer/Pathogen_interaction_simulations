@@ -200,14 +200,12 @@ res_te <- res_te %>%
          int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
          int_true_dir = if_else(theta_lambda < 1, 'neg', int_true_dir)) %>%
   ungroup() %>%
-  mutate(int_est = if_else(p_value < 0.05, 'interaction', 'none'),
-         int_est_confound = if_else(p_value_confound < 0.05, 'interaction', 'none'),
-         int_est_confound2 = if_else(p_value_confound2 < 0.05, 'interaction', 'none'))
+  mutate(int_est = if_else(p_value < 0.05 & te > 0, 'interaction', 'none'),
+         int_est_confound = if_else(p_value_confound < 0.05 & te_confound > 0, 'interaction', 'none'))
 
 # Keep only lag with highest TE for each synthetic dataset:
 res_te_raw <- res_te %>% group_by(direction, run, .id) %>% filter(te == max(te)) %>% ungroup() %>% select(-contains('confound'))
-res_te_confound1 <- res_te %>% group_by(direction, run, .id) %>% filter(te_confound == max(te_confound)) %>% ungroup() %>% select(-c(te, te_confound2, sd_null, sd_null_confound2, p_value, p_value_confound2, int_est, int_est_confound2))
-res_te_confound2 <- res_te %>% group_by(direction, run, .id) %>% filter(te_confound2 == max(te_confound2)) %>% ungroup() %>% select(-c(te, te_confound, sd_null, sd_null_confound, p_value, p_value_confound, int_est, int_est_confound))
+res_te_confound1 <- res_te %>% group_by(direction, run, .id) %>% filter(te_confound == max(te_confound)) %>% ungroup() %>% select(-c(te, te_confound2, sd_null, sd_null_confound2, p_value, p_value_confound2, int_est))
 
 res_te_LIST <- vector('list', length = 4)
 names(res_te_LIST) <- c('v1 -> v2 (No confounding)', 'v2 -> v1 (No confounding)', 'v1 -> v2 (Seasonality Controlled)', 'v2 -> v1 (Seasonality Controlled)')
@@ -215,24 +213,16 @@ names(res_te_LIST) <- c('v1 -> v2 (No confounding)', 'v2 -> v1 (No confounding)'
 res_te_LIST[[1]] <- res_te_raw %>% filter(direction == 'v1 -> v2')
 res_te_LIST[[2]] <- res_te_raw %>% filter(direction == 'v2 -> v1')
 
-# Keep only seasonality embedding dimension that yields highest average TE:
 res_te_confound1 <- res_te_confound1 %>% rename_with(~ str_remove(.x, pattern = '_confound'))
-res_te_confound2 <- res_te_confound2 %>% rename_with(~ str_remove(.x, pattern = '_confound2'))
-
-if (median(res_te_confound1$te) >= median(res_te_confound2$te)) {
-  res_te_LIST[[3]] <- res_te_confound1 %>% filter(direction == 'v1 -> v2')
-  res_te_LIST[[4]] <- res_te_confound1 %>% filter(direction == 'v2 -> v1')
-} else {
-  res_te_LIST[[3]] <- res_te_confound2 %>% filter(direction == 'v1 -> v2')
-  res_te_LIST[[4]] <- res_te_confound2 %>% filter(direction == 'v2 -> v1')
-}
+res_te_LIST[[3]] <- res_te_confound1 %>% filter(direction == 'v1 -> v2')
+res_te_LIST[[4]] <- res_te_confound1 %>% filter(direction == 'v2 -> v1')
 
 # Clean up:
 res_te_LIST <- lapply(res_te_LIST, function(ix) {
   ix %>% select(run, .id, lag, direction, te, p_value, theta_lambda:int_est)
 })
 
-rm(res_te, res_te_raw, res_te_confound1, res_te_confound2)
+rm(res_te, res_te_raw, res_te_confound1)
 
 # CCM:
 res_ccm <- res_ccm %>%
