@@ -28,6 +28,15 @@ source('src/02_dependencies/load_main_results.R')
 
 # ------------------------------------------------------------------------------
 
+# # Store results (for comparison with sensitivity analyses)
+# 
+# res_LIST <- list(res_corr, res_gam, bind_rows(res_granger_LIST[3:4]),
+#                  bind_rows(res_te_LIST[3:4]), res_ccm)
+# write_rds(res_LIST, file = 'results/res_compiled.rds')
+# rm(res_LIST)
+
+# ------------------------------------------------------------------------------
+
 # Visualize some datasets
 
 # Choose five random simulations to plot:
