@@ -256,7 +256,7 @@ if ((X_SS + X_ES + X_RS + X_SE + X_SR + X_RR) != N) {
 
 //end_rinit
 
-//------ MEASUREMENNT MODEL ------//
+//------ MEASUREMENT MODEL ------//
 
 // SIMULATION 
 //start_rmeas
