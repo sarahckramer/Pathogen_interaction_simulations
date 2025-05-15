@@ -145,7 +145,7 @@ res_gam <- res_gam %>%
 
 res_gam <- res_gam %>%
   # filter(!if_any(b_V1obsln_Intercept:rescor__V1obsln__V2obsln, ~ . > 1.01)) %>%
-  filter(!if_any(b_V1obsln_Intercept:lp__, ~ . > 1.01)) %>%
+  filter(!if_any(b_V1obsln_Intercept:lp__, ~ . > 1.05)) %>%
   filter(n_div == 0) %>%
   select(run:.id, cor_median:CI_upper95, theta_lambda:int_est)
 print(table(res_gam$run))
