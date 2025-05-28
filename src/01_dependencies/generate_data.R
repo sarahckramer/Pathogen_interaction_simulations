@@ -47,7 +47,7 @@ int_params <- expand.grid(theta_lambda1, theta_lambda2, delta1, delta2) %>%
          'delta2' = 'Var4') %>%
   filter(theta_lambda1 == theta_lambda2,
          delta1 == delta2)# %>%
-  # filter(!(theta_lambda1 == 1 & theta_lambda2 == 1 & delta1 < 1))
+# filter(!(theta_lambda1 == 1 & theta_lambda2 == 1 & delta1 < 1))
 rm(theta_lambda1, theta_lambda2, delta1, delta2)
 
 #---- generate timing of surges in immunity loss ----#
