@@ -83,7 +83,7 @@ for (i in 1:length(res_filenames)) {
     
     if (which_sens != 'asymmetric') {
       
-      if (which_sens == 'forcing_low') {
+      if (which_sens == 'forcing_none') {
         granger_LIST[[length(granger_LIST) + 1]] <- gc_temp %>%
           select(sens:int_est) %>%
           filter(confounding == 'none') %>%
@@ -368,7 +368,7 @@ df_acc <- df_acc %>%
 df_acc <- df_acc %>%
   mutate(which_sens = case_when(which_sens == '20y' ~ '20 years',
                                 which_sens == 'forcing_high' ~ 'High forcing',
-                                which_sens == 'forcing_low' ~ 'No forcing',
+                                which_sens == 'forcing_none' ~ 'No forcing',
                                 which_sens == 'obs_noise_high' ~ 'High obs noise',
                                 which_sens == 'obs_noise_low' ~ 'Low obs noise',
                                 which_sens == 'process_noise_low' ~ 'Low process noise',
@@ -643,7 +643,7 @@ df_assoc <- df_assoc %>%
 df_assoc <- df_assoc %>%
   mutate(which_sens = case_when(which_sens == '20y' ~ '20 years',
                                 which_sens == 'forcing_high' ~ 'High forcing',
-                                which_sens == 'forcing_low' ~ 'No forcing',
+                                which_sens == 'forcing_none' ~ 'No forcing',
                                 which_sens == 'obs_noise_high' ~ 'High obs noise',
                                 which_sens == 'obs_noise_low' ~ 'Low obs noise',
                                 which_sens == 'process_noise_low' ~ 'Low process noise',

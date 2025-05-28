@@ -114,7 +114,7 @@ true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       nsurges = n_surge,
                       t_si_ = t_si_mat[, 1], w_delta_i_ = w_delta_i_mat[, 1])
 
-if (sens == 'forcing_low') {
+if (sens == 'forcing_none') {
   true_params_init['A1'] <- 0
   true_params_init['A2'] <- 0
 }
