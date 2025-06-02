@@ -164,10 +164,12 @@ res_granger <- res_granger %>% left_join(to_remove,
 
 res_corr<- res_corr %>% left_join(to_remove %>% mutate(.id = as.integer(.id)),
                        by = c('run', '.id')) %>%
-  filter(is.na(delete))
+  filter(is.na(delete)) %>%
+  select(!delete)
 res_gam <- res_gam %>% left_join(to_remove %>% mutate(.id = as.integer(.id)),
                        by = c('run', '.id')) %>%
-  filter(is.na(delete))
+  filter(is.na(delete)) %>%
+  select(!delete)
 
 res_granger <- res_granger %>%
   mutate(int_true = if_else(theta_lambda == 1, 'none', 'interaction'),
