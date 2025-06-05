@@ -23,32 +23,32 @@ pdf('results/plots/sens_ccm_alpha_NEW.pdf', width = 15, height = 8)
 
 # Get synthetic data and true parameter values:
 
-res_filenames_T <- list.files(path = 'results/', pattern = 'TRUE', full.names = TRUE) # run locally
-results_T <- vector('list', length = length(res_filenames_T))
+res_filenames_F <- list.files(path = 'results/', pattern = 'FALSE', full.names = TRUE) # run locally
+results_F <- vector('list', length = length(res_filenames_F))
 
-for (i in 1:length(res_filenames_T)) {
-  results_T[[i]] <- read_rds(res_filenames_T[i])
+for (i in 1:length(res_filenames_F)) {
+  results_F[[i]] <- read_rds(res_filenames_F[i])
 }
 rm(i)
 
-where_run <- which(!is.na(as.numeric(str_split(res_filenames_T, '_')[[1]])))
-names(results_T) <- unlist(map(str_split(res_filenames_T, '_'), where_run))
+where_run <- which(!is.na(as.numeric(str_split(res_filenames_F, '_')[[1]])))
+names(results_F) <- unlist(map(str_split(res_filenames_F, '_'), where_run))
 
 int_params <- c('theta_lambda1', 'delta1')
-res_trueparams <- lapply(1:length(results_T), function(ix) {
-  results_T[[ix]]$true_param[int_params, 1]
+res_trueparams <- lapply(1:length(results_F), function(ix) {
+  results_F[[ix]]$true_param[int_params, 1]
 }) %>%
   bind_rows() %>%
   rename('theta_lambda' = 'theta_lambda1',
          'delta' = 'delta1') %>%
-  mutate(run = as.numeric(names(results_T))) %>%
+  mutate(run = as.numeric(names(results_F))) %>%
   arrange(run)
 
-data_list <- vector('list', length = length(results_T))
-for (i in 1:length(results_T)) {
-  data_list[[i]] <- results_T[[i]]$data %>%
+data_list <- vector('list', length = length(results_F))
+for (i in 1:length(results_F)) {
+  data_list[[i]] <- results_F[[i]]$data %>%
     select(time, date, .id, V1_obs, V2_obs) %>%
-    mutate(run = as.numeric(names(results_T)[i]))
+    mutate(run = as.numeric(names(results_F)[i]))
 }
 
 dat <- bind_rows(data_list) %>%
@@ -56,28 +56,32 @@ dat <- bind_rows(data_list) %>%
   as_tibble() %>%
   inner_join(res_trueparams, by = 'run')
 
-rm(res_filenames_T, results_T, where_run, data_list, i, int_params, res_trueparams)
+rm(res_filenames_F, where_run, data_list, i, int_params, res_trueparams)
+
+# Also get CCM results for alpha = 0:
+res_0 <- lapply(results_F, getElement, 'CCM')
+rm(results_F)
 
 # Read in results using various values for alpha (0, 10, 30, 50):
-res_filenames_ZERO <- list.files(path = 'results/ccm_alpha_sens/', pattern = 'ZERO', full.names = TRUE)
-res_filenames_TENTH <- list.files(path = 'results/ccm_alpha_sens/', pattern = 'TENTH', full.names = TRUE)
-res_filenames_QUARTER <- list.files(path = 'results/ccm_alpha_sens/', pattern = 'QUARTER', full.names = TRUE)
-res_filenames_HALF <- list.files(path = 'results/ccm_alpha_sens/', pattern = 'HALF', full.names = TRUE)
+# res_filenames_ZERO <- list.files(path = 'results/sens_ccm_alpha/', pattern = 'ZERO', full.names = TRUE)
+res_filenames_TENTH <- list.files(path = 'results/sens_ccm_alpha/', pattern = 'TENTH', full.names = TRUE)
+res_filenames_QUARTER <- list.files(path = 'results/sens_ccm_alpha/', pattern = 'QUARTER', full.names = TRUE)
+res_filenames_HALF <- list.files(path = 'results/sens_ccm_alpha/', pattern = 'HALF', full.names = TRUE)
 
-res_0 = res_10 = res_25 = res_50 = vector('list', length = length(res_filenames_HALF))
+res_10 = res_25 = res_50 = vector('list', length = length(res_filenames_HALF))
 
 for (i in 1:length(res_filenames_HALF)) {
   
-  res_0[[i]] <- read_rds(res_filenames_ZERO[i])
-  res_10[[i]] <- read_rds(res_filenames_TENTH[i])
-  res_25[[i]] <- read_rds(res_filenames_QUARTER[i])
-  res_50[[i]] <- read_rds(res_filenames_HALF[i])
+  # res_0[[i]] <- read_rds(res_filenames_ZERO[i])
+  res_10[[i]] <- read_rds(res_filenames_TENTH[i])$CCM
+  res_25[[i]] <- read_rds(res_filenames_QUARTER[i])$CCM
+  res_50[[i]] <- read_rds(res_filenames_HALF[i])$CCM
   
 }
 
 # Rename lists with correct run numbers:
 where_run <- which(!is.na(as.numeric(str_split(res_filenames_HALF, '_')[[1]])))
-names(res_0) = names(res_10) = names(res_25) = names(res_50) <- unlist(map(str_split(res_filenames_HALF, '_'), where_run))
+names(res_10) = names(res_25) = names(res_50) <- unlist(map(str_split(res_filenames_HALF, '_'), where_run))
 
 # Clean up:
 rm(i, res_filenames_ZERO, res_filenames_TENTH, res_filenames_QUARTER, res_filenames_HALF, where_run)
@@ -134,7 +138,7 @@ sens_res_LIST <- lapply(sens_res_LIST, function(ix) {
            int_true_dir = if_else(theta_lambda > 1, 'pos', int_true),
            int_true_dir = if_else(theta_lambda < 1, 'neg', int_true_dir)) %>%
     mutate(int_est_1 = if_else(p_surr < 0.05, 'interaction', 'none'), # method 1: check p-values based on surrogates
-           int_est_3 = if_else(p_conv < 0.05 & max_cmc > 0 & tp_opt < 0, 'interaction', 'none')) # method 3: check convergence + ideal tp negative
+           int_est_2 = if_else(p_conv < 0.05 & max_cmc > 0, 'interaction', 'none')) # method 2: check convergence
   
 })
 
@@ -142,7 +146,7 @@ sens_res_LIST <- lapply(sens_res_LIST, function(ix) {
 sens_res_LIST <- lapply(sens_res_LIST, function(ix) {
   
   ix %>%
-    select(run:direction, rho_max, p_surr, p_conv, tp_opt, theta_lambda:delta, int_true:int_est_3)
+    select(run:direction, rho_max, p_surr, p_conv, tp_opt, theta_lambda:delta, int_true:int_est_2)
   
 })
 
@@ -199,7 +203,7 @@ p.ccm.surr_4 <- sens_res_surr_LIST[[4]] %>%
   facet_wrap(~ delta, scales = 'free', ncol = 1) +
   labs(title = 'alpha = 0.5')
 
-grid.arrange(p.ccm.surr_1, p.ccm.surr_2, p.ccm.surr_3, p.ccm.surr_4, nrow = 1)
+# grid.arrange(p.ccm.surr_1, p.ccm.surr_2, p.ccm.surr_3, p.ccm.surr_4, nrow = 1)
 
 rm(sens_res_surr_LIST, p.ccm.surr_1, p.ccm.surr_2, p.ccm.surr_3, p.ccm.surr_4)
 
@@ -395,26 +399,26 @@ res_acc_v1xv2 <- lapply(1:length(res_v1xv2), function(ix) {
   sens_neg_1 <- (res_v1xv2[[ix]] %>% filter(int_true_dir == 'neg' & int_est_1 == 'interaction') %>% nrow()) / (res_v1xv2[[ix]] %>% filter(int_true_dir == 'neg') %>% nrow())
   spec_1 <- (res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_1 == 'none') %>% nrow()) / (res_v1xv2[[ix]] %>% filter(int_true == 'none') %>% nrow())
   
-  sens_pos_3 <- (res_v1xv2[[ix]] %>% filter(int_true_dir == 'pos' & int_est_3 == 'interaction') %>% nrow()) / (res_v1xv2[[ix]] %>% filter(int_true_dir == 'pos') %>% nrow())
-  sens_neg_3 <- (res_v1xv2[[ix]] %>% filter(int_true_dir == 'neg' & int_est_3 == 'interaction') %>% nrow()) / (res_v1xv2[[ix]] %>% filter(int_true_dir == 'neg') %>% nrow())
-  spec_3 <- (res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_3 == 'none') %>% nrow()) / (res_v1xv2[[ix]] %>% filter(int_true == 'none') %>% nrow())
+  sens_pos_3 <- (res_v1xv2[[ix]] %>% filter(int_true_dir == 'pos' & int_est_2 == 'interaction') %>% nrow()) / (res_v1xv2[[ix]] %>% filter(int_true_dir == 'pos') %>% nrow())
+  sens_neg_3 <- (res_v1xv2[[ix]] %>% filter(int_true_dir == 'neg' & int_est_2 == 'interaction') %>% nrow()) / (res_v1xv2[[ix]] %>% filter(int_true_dir == 'neg') %>% nrow())
+  spec_3 <- (res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_2 == 'none') %>% nrow()) / (res_v1xv2[[ix]] %>% filter(int_true == 'none') %>% nrow())
   
   tp1 <- res_v1xv2[[ix]] %>% filter(int_true != 'none' & int_est_1 != 'none') %>% nrow()
   tn1 <- res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_1 == 'none') %>% nrow()
   fp1 <- res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_1 != 'none') %>% nrow()
   fn1 <- res_v1xv2[[ix]] %>% filter(int_true != 'none' & int_est_1 == 'none') %>% nrow()
   
-  tp3 <- res_v1xv2[[ix]] %>% filter(int_true != 'none' & int_est_3 != 'none') %>% nrow()
-  tn3 <- res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_3 == 'none') %>% nrow()
-  fp3 <- res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_3 != 'none') %>% nrow()
-  fn3 <- res_v1xv2[[ix]] %>% filter(int_true != 'none' & int_est_3 == 'none') %>% nrow()
+  tp3 <- res_v1xv2[[ix]] %>% filter(int_true != 'none' & int_est_2 != 'none') %>% nrow()
+  tn3 <- res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_2 == 'none') %>% nrow()
+  fp3 <- res_v1xv2[[ix]] %>% filter(int_true == 'none' & int_est_2 != 'none') %>% nrow()
+  fn3 <- res_v1xv2[[ix]] %>% filter(int_true != 'none' & int_est_2 == 'none') %>% nrow()
   
   mcc_1 <- mcc(tp1, tn1, fp1, fn1)
   mcc_3 <- mcc(tp3, tn3, fp3, fn3)
   
   bind_rows(setNames(c(mcc_1, sens_pos_1, sens_neg_1, spec_1), nm = c('mcc', 'sens_pos', 'sens_neg', 'spec')),
             setNames(c(mcc_3, sens_pos_3, sens_neg_3, spec_3), nm = c('mcc', 'sens_pos', 'sens_neg', 'spec'))) %>%
-    mutate(method = c('method_1', 'method_3')) %>%
+    mutate(method = c('method_1', 'method_2')) %>%
     mutate(alpha = names(res_v1xv2)[ix])
   
 }) %>%
@@ -427,30 +431,30 @@ res_acc_v2xv1 <- lapply(1:length(res_v2xv1), function(ix) {
   sens_neg_1 <- (res_v2xv1[[ix]] %>% filter(int_true_dir == 'neg' & int_est_1 == 'interaction') %>% nrow()) / (res_v2xv1[[ix]] %>% filter(int_true_dir == 'neg') %>% nrow())
   spec_1 <- (res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_1 == 'none') %>% nrow()) / (res_v2xv1[[ix]] %>% filter(int_true == 'none') %>% nrow())
   
-  sens_pos_3 <- (res_v2xv1[[ix]] %>% filter(int_true_dir == 'pos' & int_est_3 == 'interaction') %>% nrow()) / (res_v2xv1[[ix]] %>% filter(int_true_dir == 'pos') %>% nrow())
-  sens_neg_3 <- (res_v2xv1[[ix]] %>% filter(int_true_dir == 'neg' & int_est_3 == 'interaction') %>% nrow()) / (res_v2xv1[[ix]] %>% filter(int_true_dir == 'neg') %>% nrow())
-  spec_3 <- (res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_3 == 'none') %>% nrow()) / (res_v2xv1[[ix]] %>% filter(int_true == 'none') %>% nrow())
+  sens_pos_3 <- (res_v2xv1[[ix]] %>% filter(int_true_dir == 'pos' & int_est_2 == 'interaction') %>% nrow()) / (res_v2xv1[[ix]] %>% filter(int_true_dir == 'pos') %>% nrow())
+  sens_neg_3 <- (res_v2xv1[[ix]] %>% filter(int_true_dir == 'neg' & int_est_2 == 'interaction') %>% nrow()) / (res_v2xv1[[ix]] %>% filter(int_true_dir == 'neg') %>% nrow())
+  spec_3 <- (res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_2 == 'none') %>% nrow()) / (res_v2xv1[[ix]] %>% filter(int_true == 'none') %>% nrow())
   
   tp1 <- res_v2xv1[[ix]] %>% filter(int_true != 'none' & int_est_1 != 'none') %>% nrow()
   tn1 <- res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_1 == 'none') %>% nrow()
   fp1 <- res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_1 != 'none') %>% nrow()
   fn1 <- res_v2xv1[[ix]] %>% filter(int_true != 'none' & int_est_1 == 'none') %>% nrow()
   
-  tp3 <- res_v2xv1[[ix]] %>% filter(int_true != 'none' & int_est_3 != 'none') %>% nrow()
-  tn3 <- res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_3 == 'none') %>% nrow()
-  fp3 <- res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_3 != 'none') %>% nrow()
-  fn3 <- res_v2xv1[[ix]] %>% filter(int_true != 'none' & int_est_3 == 'none') %>% nrow()
+  tp3 <- res_v2xv1[[ix]] %>% filter(int_true != 'none' & int_est_2 != 'none') %>% nrow()
+  tn3 <- res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_2 == 'none') %>% nrow()
+  fp3 <- res_v2xv1[[ix]] %>% filter(int_true == 'none' & int_est_2 != 'none') %>% nrow()
+  fn3 <- res_v2xv1[[ix]] %>% filter(int_true != 'none' & int_est_2 == 'none') %>% nrow()
   
   mcc_1 <- mcc(tp1, tn1, fp1, fn1)
   mcc_3 <- mcc(tp3, tn3, fp3, fn3)
   
   bind_rows(setNames(c(mcc_1, sens_pos_1, sens_neg_1, spec_1), nm = c('mcc', 'sens_pos', 'sens_neg', 'spec')),
             setNames(c(mcc_3, sens_pos_3, sens_neg_3, spec_3), nm = c('mcc', 'sens_pos', 'sens_neg', 'spec'))) %>%
-    mutate(method = c('method_1', 'method_3')) %>%
+    mutate(method = c('method_1', 'method_2')) %>%
     mutate(alpha = names(res_v2xv1)[ix])
   
 }) %>%
-  bind_rows() %>%
+  bind_rows() %>%s
   mutate(direction = 'v2 -> v1')
 
 res_acc <- res_acc_v1xv2 %>%
