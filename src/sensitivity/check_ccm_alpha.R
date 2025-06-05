@@ -84,7 +84,7 @@ where_run <- which(!is.na(as.numeric(str_split(res_filenames_HALF, '_')[[1]])))
 names(res_10) = names(res_25) = names(res_50) <- unlist(map(str_split(res_filenames_HALF, '_'), where_run))
 
 # Clean up:
-rm(i, res_filenames_ZERO, res_filenames_TENTH, res_filenames_QUARTER, res_filenames_HALF, where_run)
+rm(i, res_filenames_TENTH, res_filenames_QUARTER, res_filenames_HALF, where_run)
 
 # Get true interaction parameter values:
 sens_res_LIST <- vector('list', length = 4)
@@ -454,7 +454,7 @@ res_acc_v2xv1 <- lapply(1:length(res_v2xv1), function(ix) {
     mutate(alpha = names(res_v2xv1)[ix])
   
 }) %>%
-  bind_rows() %>%s
+  bind_rows() %>%
   mutate(direction = 'v2 -> v1')
 
 res_acc <- res_acc_v1xv2 %>%
