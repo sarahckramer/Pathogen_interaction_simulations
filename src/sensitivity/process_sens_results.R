@@ -412,16 +412,20 @@ p_acc <- ggplot(data = df_acc %>% filter(which_sens != 'Main')) +
   theme_bw() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
+        strip.text = element_text(size = 12),
+        strip.background = element_rect(fill = 'gray90'),
         legend.title = element_text(size = 14),
         legend.text = element_text(size = 12),
         legend.position = 'right') +
   scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
   scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
   scale_shape_manual(values = c(18, 17, 15, 15, 3, 3, 8, 8, 8, 8), guide = 'none') +
-  # scale_color_manual(values = c('#fb6a4a', '#fa9fb5', '#8dd3c7', '#bc80bd', '#bebada', '#fdb462')) +
-  scale_color_manual(values = c('#d95f02', '#e6ab02', '#7570b3', '#1b9e77', '#66a61e', '#e7298a')) +
+  # scale_color_manual(values = c('#d95f02', '#e6ab02', '#7570b3', '#1b9e77', '#66a61e', '#e7298a')) +
+  scale_color_manual(values = c('#e6ab02', '#7570b3', '#1b9e77', '#e7298a')) +
   scale_alpha_manual(values = c(0.7, 0.7, 0.7, 0.7, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0), guide = 'none') +
   labs(x = 'Sensitivity', y = 'Specificity', col = 'Analysis')
+print(p_acc)
+# ggsave(filename = 'results/plots/figures/FigureS7.svg', p_acc, width = 9.325, height = 11.5)
 
 # Plot accuracy by true interaction parameters:
 p_acc_corr <- ggplot(data = acc_byparam_corr %>%
@@ -690,9 +694,9 @@ p_assoc <- df_assoc %>%
 # Plot results of asymmetric analysis:
 p_asym <- ggplot(data = acc_byparam_gam %>%
                    filter(which_sens %in% c('Main', 'asymmetric')) %>%
-                   mutate(duration = paste0(duration, ' week'),
+                   mutate(duration = paste0('True Duration: ', duration, ' week'),
                           duration = if_else(str_detect(duration, '1 '), duration, paste0(duration, 's'))) %>%
-                   mutate(duration = factor(duration, levels = c('1 week', '4 weeks', '13 weeks'))) %>%
+                   mutate(duration = factor(duration, levels = c('True Duration: 1 week', 'True Duration: 4 weeks', 'True Duration: 13 weeks'))) %>%
                    group_by(which_sens) %>%
                    mutate(strength_proxy = rank(strength, ties.method = 'min')) %>%
                    ungroup(),
@@ -703,16 +707,20 @@ p_asym <- ggplot(data = acc_byparam_gam %>%
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
+        strip.text = element_text(size = 12),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(limits = c(0, 1)) +
   scale_linetype_manual(values = c(2, 1)) +
   scale_alpha_manual(values = c(0.35, 1)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(x = 'Strength', y = '% Correct')
+  labs(x = 'True Strength', y = '% Correct')
+print(p_asym)
+# ggsave(filename = 'results/plots/figures/FigureS6.svg', p_asym, width = 5, height = 5)
 
 # Print all plots:
 pdf(file = 'results/plots/plot_sensitivity.pdf', width = 16, height = 12)
+print(p_acc_forcing)
 print(p_acc)
 print(p_acc_corr)
 print(p_acc_gam)
