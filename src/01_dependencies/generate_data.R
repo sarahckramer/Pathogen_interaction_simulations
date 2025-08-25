@@ -242,6 +242,14 @@ if (true_int_params$theta_lambda1 == 1.0 & true_int_params$theta_lambda2 == 1.0 
 }
 rm(dat_red, season_breaks)
 
+# Remove simulations where pathogen B = 0 at all time points (sens. analyses only):
+if (sens == 'forcing_very_high') {
+  dat <- dat %>%
+    group_by(.id) %>%
+    filter(!all(V2_obs == 0)) %>%
+    ungroup()
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 
 # If debug_bool==TRUE, get various plots of the data
