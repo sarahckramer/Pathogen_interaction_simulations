@@ -114,9 +114,9 @@ true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
                       nsurges = n_surge,
                       t_si_ = t_si_mat[, 1], w_delta_i_ = w_delta_i_mat[, 1])
 
-if (sens == 'forcing_none') {
-  true_params_init['A1'] <- 0
-  true_params_init['A2'] <- 0
+if (sens == 'forcing_low') {
+  true_params_init['A1'] <- 0.05
+  true_params_init['A2'] <- 0.05
 }
 
 if (sens == 'forcing_high') {
@@ -124,9 +124,14 @@ if (sens == 'forcing_high') {
   true_params_init['A2'] <- 0.3
 }
 
-if (sens == 'reporting_high') {
-  true_params_init['rho1'] <- 0.6
-  true_params_init['rho2'] <- 0.2
+if (sens == 'forcing_mid_high') {
+  true_params_init['A1'] <- 0.4
+  true_params_init['A2'] <- 0.4
+}
+
+if (sens == 'forcing_very_high') {
+  true_params_init['A1'] <- 0.5
+  true_params_init['A2'] <- 0.5
 }
 
 if (sens == 'process_noise_low') {

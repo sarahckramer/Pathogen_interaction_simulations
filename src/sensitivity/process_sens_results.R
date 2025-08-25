@@ -20,8 +20,8 @@ source('src/02_dependencies/fxns_process_results.R')
 # reporting high, 20y, asymmetric (GAM only)
 
 # Get file names:
-res_filenames <- list.files(path = 'results/sens/', full.names = TRUE)
-expect_true(length(res_filenames) == 18 * 2 * 8)
+res_filenames <- list.files(path = 'results/sens/', pattern = 'rds', full.names = TRUE)
+expect_true(length(res_filenames) == 18 * 2 * 9)
 
 # Read in results:
 data_LIST = corr_LIST = gam_LIST = granger_LIST = te_LIST = ccm_LIST = list()
@@ -83,17 +83,10 @@ for (i in 1:length(res_filenames)) {
     
     if (which_sens != 'asymmetric') {
       
-      if (which_sens == 'forcing_none') {
-        granger_LIST[[length(granger_LIST) + 1]] <- gc_temp %>%
-          select(sens:int_est) %>%
-          filter(confounding == 'none') %>%
-          select(-confounding)
-      } else {
-        granger_LIST[[length(granger_LIST) + 1]] <- gc_temp %>%
-          select(sens:int_est) %>%
-          filter(confounding == 'seasonal') %>%
-          select(-confounding)
-      }
+      granger_LIST[[length(granger_LIST) + 1]] <- gc_temp %>%
+        select(sens:int_est) %>%
+        filter(confounding == 'seasonal') %>%
+        select(-confounding)
       
     }
     rm(gc_temp)
@@ -143,7 +136,8 @@ for (i in 1:length(res_filenames)) {
              int_est = if_else(CI_lower95 > 0 | CI_upper95 < 0, int_est, 'none')) %>%
       filter(!if_any(b_V1obsln_Intercept:lp__, ~ . >1.05)) %>%
       filter(n_div == 0) %>%
-      select(sens:run, .id, cor_median:CI_upper95, theta_lambda:int_est)
+      select(sens:run, .id, cor_median:CI_upper95, theta_lambda:int_est) %>%
+      mutate(across(cor_median:CI_upper95, as.numeric))
     
     # Get CCM results:
     if (which_sens != 'asymmetric') {
@@ -365,15 +359,45 @@ df_acc <- df_acc %>%
   mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC (V1 -> V2)', 'GC (V2 -> V1)', 'TE (V1 -> V2)', 'TE (V2 -> V1)',
                                             'CCM (Method 1) (V1 -> V2)', 'CCM (Method 1) (V2 -> V1)', 'CCM (Method 2) (V1 -> V2)', 'CCM (Method 2) (V2 -> V1)')))
 
+df_by_amp <- df_acc %>%
+  filter(which_sens == 'Main' | str_detect(which_sens, 'forcing')) %>%
+  mutate(forcing = case_when(which_sens == 'Main' ~ 0.2,
+                             which_sens == 'forcing_low' ~ 0.05,
+                             which_sens == 'forcing_high' ~ 0.3,
+                             which_sens == 'forcing_mid_high' ~ 0.4,
+                             which_sens == 'forcing_very_high' ~ 0.5))
+
+p_acc_forcing <- ggplot(data = df_by_amp %>% arrange(forcing) %>% mutate(line_col = forcing + 0.05), aes(x = sens, y = spec, shape = method)) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main'),
+             aes(yintercept = spec), lty = 2) +
+  geom_path(aes(col = line_col)) +
+  geom_point(aes(col = forcing), size = 3) +
+  facet_wrap(~ method, ncol = 2) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        strip.text = element_text(size = 12),
+        strip.background = element_rect(fill = 'gray90'),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        legend.position = 'right') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_shape_manual(values = c(18, 17, 15, 15, 3, 3, 8, 8, 8, 8), guide = 'none') +
+  scale_color_viridis(limits = c(0, 0.5)) +
+  labs(x = 'Sensitivity', y = 'Specificity', col = 'Amplitude')
+print(p_acc_forcing)
+# ggsave(filename = 'results/plots/figures/FigureS8.svg', p_acc_forcing, width = 8.5, height = 11.5)
+
 df_acc <- df_acc %>%
   mutate(which_sens = case_when(which_sens == '20y' ~ '20 years',
-                                which_sens == 'forcing_high' ~ 'High forcing',
-                                which_sens == 'forcing_none' ~ 'No forcing',
                                 which_sens == 'obs_noise_high' ~ 'High obs noise',
-                                which_sens == 'obs_noise_low' ~ 'Low obs noise',
+                                which_sens == 'obs_noise_low' ~ 'No obs noise',
                                 which_sens == 'process_noise_low' ~ 'Low process noise',
                                 .default = which_sens)) %>%
-  mutate(which_sens = factor(which_sens, levels = c('Main', 'High forcing', 'No forcing', 'Low process noise', 'High obs noise', 'Low obs noise', '20 years'))) %>%
+  mutate(which_sens = factor(which_sens, levels = c('Main', 'Low process noise', 'High obs noise', 'No obs noise', '20 years'))) %>%
   filter(!is.na(which_sens))
 
 p_acc <- ggplot(data = df_acc %>% filter(which_sens != 'Main')) +
@@ -401,7 +425,7 @@ p_acc <- ggplot(data = df_acc %>% filter(which_sens != 'Main')) +
 
 # Plot accuracy by true interaction parameters:
 p_acc_corr <- ggplot(data = acc_byparam_corr %>%
-                       filter(!(which_sens %in% c('Main', 'reporting_high'))) %>%
+                       filter(which_sens != 'Main') %>%
                        mutate(duration = paste0(duration, ' week'),
                               duration = if_else(str_detect(duration, '1 '), duration, paste0(duration, 's'))) %>%
                        mutate(duration = factor(duration, levels = c('1 week', '4 weeks', '13 weeks'))) %>%
@@ -424,7 +448,7 @@ p_acc_corr <- ggplot(data = acc_byparam_corr %>%
   labs(title = 'Correlation Coefficients', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 
 p_acc_gam <- ggplot(data = acc_byparam_gam %>%
-                      filter(!(which_sens %in% c('Main', 'reporting_high', 'asymmetric'))) %>%
+                      filter(!(which_sens %in% c('Main', 'asymmetric'))) %>%
                       mutate(duration = paste0(duration, ' week'),
                              duration = if_else(str_detect(duration, '1 '), duration, paste0(duration, 's'))) %>%
                       mutate(duration = factor(duration, levels = c('1 week', '4 weeks', '13 weeks'))) %>%
@@ -447,7 +471,7 @@ p_acc_gam <- ggplot(data = acc_byparam_gam %>%
   labs(title = 'GAMs', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 
 p_acc_granger12 <- ggplot(data = acc_byparam_granger_v1v2 %>%
-                            filter(!(which_sens %in% c('Main', 'reporting_high'))) %>%
+                            filter(which_sens != 'Main') %>%
                             mutate(duration = paste0(duration, ' week'),
                                    duration = if_else(str_detect(duration, '1 '), duration, paste0(duration, 's'))) %>%
                             mutate(duration = factor(duration, levels = c('1 week', '4 weeks', '13 weeks'))) %>%
@@ -469,7 +493,7 @@ p_acc_granger12 <- ggplot(data = acc_byparam_granger_v1v2 %>%
   scale_color_brewer(palette = 'Set1') +
   labs(title = 'Granger Causality (V1 -> V2)', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p_acc_granger21 <- ggplot(data = acc_byparam_granger_v2v1 %>%
-                            filter(!(which_sens %in% c('Main', 'reporting_high'))) %>%
+                            filter(which_sens != 'Main') %>%
                             mutate(duration = paste0(duration, ' week'),
                                    duration = if_else(str_detect(duration, '1 '), duration, paste0(duration, 's'))) %>%
                             mutate(duration = factor(duration, levels = c('1 week', '4 weeks', '13 weeks'))) %>%
@@ -492,7 +516,7 @@ p_acc_granger21 <- ggplot(data = acc_byparam_granger_v2v1 %>%
   labs(title = 'Granger Causality (V2 -> V1)', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 
 p_acc_te12 <- ggplot(data = acc_byparam_te_v1v2 %>%
-                       filter(!(which_sens %in% c('Main', 'reporting_high'))) %>%
+                       filter(which_sens != 'Main') %>%
                        mutate(duration = paste0(duration, ' week'),
                               duration = if_else(str_detect(duration, '1 '), duration, paste0(duration, 's'))) %>%
                        mutate(duration = factor(duration, levels = c('1 week', '4 weeks', '13 weeks'))) %>%
@@ -514,7 +538,7 @@ p_acc_te12 <- ggplot(data = acc_byparam_te_v1v2 %>%
   scale_color_brewer(palette = 'Set1') +
   labs(title = 'Transfer Entropy (V1 -> V2)', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p_acc_te21 <- ggplot(data = acc_byparam_te_v2v1 %>%
-                       filter(!(which_sens %in% c('Main', 'reporting_high'))) %>%
+                       filter(which_sens != 'Main') %>%
                        mutate(duration = paste0(duration, ' week'),
                               duration = if_else(str_detect(duration, '1 '), duration, paste0(duration, 's'))) %>%
                        mutate(duration = factor(duration, levels = c('1 week', '4 weeks', '13 weeks'))) %>%
@@ -537,7 +561,7 @@ p_acc_te21 <- ggplot(data = acc_byparam_te_v2v1 %>%
   labs(title = 'Transfer Entropy (V2 -> V1)', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 
 p_acc_ccm1_12 <- ggplot(data = acc_byparam_ccm1_v1v2 %>%
-                          filter(!(which_sens %in% c('Main', 'reporting_high'))) %>%
+                          filter(which_sens != 'Main') %>%
                           mutate(duration = paste0(duration, ' week'),
                                  duration = if_else(str_detect(duration, '1 '), duration, paste0(duration, 's'))) %>%
                           mutate(duration = factor(duration, levels = c('1 week', '4 weeks', '13 weeks'))) %>%
@@ -559,7 +583,7 @@ p_acc_ccm1_12 <- ggplot(data = acc_byparam_ccm1_v1v2 %>%
   scale_color_brewer(palette = 'Set1') +
   labs(title = 'CCM (Method 1) (V1 -> V2)', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p_acc_ccm1_21 <- ggplot(data = acc_byparam_ccm1_v2v1 %>%
-                          filter(!(which_sens %in% c('Main', 'reporting_high'))) %>%
+                          filter(which_sens != 'Main') %>%
                           mutate(duration = paste0(duration, ' week'),
                                  duration = if_else(str_detect(duration, '1 '), duration, paste0(duration, 's'))) %>%
                           mutate(duration = factor(duration, levels = c('1 week', '4 weeks', '13 weeks'))) %>%
@@ -582,7 +606,7 @@ p_acc_ccm1_21 <- ggplot(data = acc_byparam_ccm1_v2v1 %>%
   labs(title = 'CCM (Method 1) (V2 -> V1)', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 
 p_acc_ccm2_12 <- ggplot(data = acc_byparam_ccm2_v1v2 %>%
-                          filter(!(which_sens %in% c('Main', 'reporting_high'))) %>%
+                          filter(which_sens != 'Main') %>%
                           mutate(duration = paste0(duration, ' week'),
                                  duration = if_else(str_detect(duration, '1 '), duration, paste0(duration, 's'))) %>%
                           mutate(duration = factor(duration, levels = c('1 week', '4 weeks', '13 weeks'))) %>%
@@ -604,7 +628,7 @@ p_acc_ccm2_12 <- ggplot(data = acc_byparam_ccm2_v1v2 %>%
   scale_color_brewer(palette = 'Set1') +
   labs(title = 'CCM (Method 2) (V1 -> V2)', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
 p_acc_ccm2_21 <- ggplot(data = acc_byparam_ccm2_v2v1 %>%
-                          filter(!(which_sens %in% c('Main', 'reporting_high'))) %>%
+                          filter(which_sens != 'Main') %>%
                           mutate(duration = paste0(duration, ' week'),
                                  duration = if_else(str_detect(duration, '1 '), duration, paste0(duration, 's'))) %>%
                           mutate(duration = factor(duration, levels = c('1 week', '4 weeks', '13 weeks'))) %>%
@@ -643,12 +667,12 @@ df_assoc <- df_assoc %>%
 df_assoc <- df_assoc %>%
   mutate(which_sens = case_when(which_sens == '20y' ~ '20 years',
                                 which_sens == 'forcing_high' ~ 'High forcing',
-                                which_sens == 'forcing_none' ~ 'No forcing',
+                                which_sens == 'forcing_low' ~ 'Low forcing',
                                 which_sens == 'obs_noise_high' ~ 'High obs noise',
-                                which_sens == 'obs_noise_low' ~ 'Low obs noise',
+                                which_sens == 'obs_noise_low' ~ 'No obs noise',
                                 which_sens == 'process_noise_low' ~ 'Low process noise',
                                 .default = which_sens)) %>%
-  mutate(which_sens = factor(which_sens, levels = c('Main', 'High forcing', 'No forcing', 'Low process noise', 'High obs noise', 'Low obs noise', '20 years'))) %>%
+  mutate(which_sens = factor(which_sens, levels = c('Main', 'High forcing', 'Low forcing', 'Low process noise', 'High obs noise', 'No obs noise', '20 years'))) %>%
   filter(!is.na(which_sens))
 
 p_assoc <- df_assoc %>%
