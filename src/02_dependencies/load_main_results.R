@@ -20,8 +20,8 @@ rm(i)
 # Label each results list with run number:
 where_run <- which(!is.na(as.numeric(str_split(res_filenames_T, '_')[[1]])))
 
-names(results_T) <- unlist(map(str_split(res_filenames_T, '_'), where_run))
-names(results_F) <- unlist(map(str_split(res_filenames_F, '_'), where_run))
+names(results_T) <- unlist(purrr::map(str_split(res_filenames_T, '_'), where_run))
+names(results_F) <- unlist(purrr::map(str_split(res_filenames_F, '_'), where_run))
 
 rm(res_filenames_T, res_filenames_F, where_run)
 
