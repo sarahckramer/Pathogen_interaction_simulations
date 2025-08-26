@@ -324,7 +324,9 @@ double s2 = 1 + A2 * cos(omega * (t - phi2));
 double lambda1 = beta1 * (p1 / N) * s1; // virus 1
 double lambda2 = beta2 * (p2 / N) * s2; // virus 2
 
-Rprintf("beta1=%f, beta2=%f, p1=%f, p2=%f, lambda1=%f, lambda2=%f\n", beta1, beta2, p1, p2, lambda1, lambda2);
+if (debug) {
+  Rprintf("beta1=%f, beta2=%f, p1=%f, p2=%f, lambda1=%f, lambda2=%f\n", beta1, beta2, p1, p2, lambda1, lambda2);
+}
 
 // adjust w1 and w2 according to delta1/delta2
 double w1_prime = 1 / ((1 / w1) - (1 / delta1));
@@ -359,7 +361,7 @@ for(int i = 0; i < nsurges; i++){
 
 double N_sum = X_SS + X_SE + X_SI + X_ST + X_SR + X_ES + X_EE + X_EI + X_ET + X_ER + X_IS + X_IE + X_II + X_IT + X_IR + X_TS + X_TE + X_TI + X_TT + X_TR + X_RS + X_RE + X_RI + X_RT + X_RR;
 if (debug) {
-Rprintf("N_sum=%.4f\n", N_sum);
+  Rprintf("N_sum=%.4f\n", N_sum);
 }
 
 // ODEs
@@ -470,14 +472,14 @@ double w1_s;
 // assigning the loss in immunity depending on the number of surges we have
 //Rprintf("t=%.2f\n", t);
 for(int i = 0; i < nsurges; i++){
-    if(floor(t) == nearbyint(t_vec[i])) { // if t is a surge time point the add the surge in loss of immunity
-      w1_s = w1_prime + w_delta_vec[i];
-      //Rprintf("Surge point found: %.3f\n", w1_s);
-      break; // exit if we find a surge point
-   } else{
-      w1_s = w1_prime; // if we don't find a surge point then just set the constant immunity loss
-      //Rprintf("No surge found: %.3f\n", w1_s);
-   }
+  if(floor(t) == nearbyint(t_vec[i])) { // if t is a surge time point the add the surge in loss of immunity
+    w1_s = w1_prime + w_delta_vec[i];
+    //Rprintf("Surge point found: %.3f\n", w1_s);
+    break; // exit if we find a surge point
+  } else{
+    w1_s = w1_prime; // if we don't find a surge point then just set the constant immunity loss
+    //Rprintf("No surge found: %.3f\n", w1_s);
+  }
 }
 
 if (debug) {
