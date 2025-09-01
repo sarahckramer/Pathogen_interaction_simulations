@@ -257,15 +257,12 @@ plot(p.int.impact)
 # Process accuracy of results (correlation coefficients)
 
 # Calculate sensitivity/specificity:
+sens_test <- binom.test(res_corr %>% filter((int_true == 'pos' & int_est == 'pos') | (int_true == 'neg' & int_est == 'neg')) %>% nrow(), res_corr %>% filter(int_true == 'pos' | int_true == 'neg') %>% nrow())
+spec_test <- binom.test(res_corr %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), res_corr %>% filter(int_true == 'none') %>% nrow())
+
 df_acc <- as_tibble(data.frame(method = 'Corr. Coef.',
-                               sens_pos = (res_corr %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow()) / (res_corr %>% filter(int_true == 'pos') %>% nrow()),
-                               sens_neg = (res_corr %>% filter(int_true == 'neg' & int_est == 'neg') %>% nrow()) / (res_corr %>% filter(int_true == 'neg') %>% nrow()),
-                               sens = (res_corr %>% filter((int_true == 'pos' & int_est == 'pos') | (int_true == 'neg' & int_est == 'neg')) %>% nrow()) / (res_corr %>% filter(int_true == 'pos' | int_true == 'neg') %>% nrow()),
-                               spec = (res_corr %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_corr %>% filter(int_true == 'none') %>% nrow()),
-                               mcc = mcc(res_corr %>% filter(int_true != 'none' & int_est != 'none') %>% nrow(),
-                                         res_corr %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(),
-                                         res_corr %>% filter(int_true == 'none' & int_est != 'none') %>% nrow(),
-                                         res_corr %>% filter(int_true != 'none' & int_est == 'none') %>% nrow())))
+                               sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                               spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
 
 # Calculate sensitivity/specificity (by true params):
 acc_corr <- calculate_accuracy_matrix(res_corr)
@@ -357,15 +354,12 @@ rm(res_corr, res_corr_sum, acc_corr)
 # Process accuracy of results (GAMs)
 
 # Calculate sensitivity/specificity:
+sens_test <- binom.test(res_gam %>% filter((int_true == 'pos' & int_est == 'pos') | (int_true == 'neg' & int_est == 'neg')) %>% nrow(), res_gam %>% filter(int_true == 'pos' | int_true == 'neg') %>% nrow())
+spec_test <- binom.test(res_gam %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), res_gam %>% filter(int_true == 'none') %>% nrow())
+
 df_acc <- bind_rows(df_acc, data.frame(method = 'GAMs',
-                                       sens_pos = (res_gam %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow()) / (res_gam %>% filter(int_true == 'pos') %>% nrow()),
-                                       sens_neg = (res_gam %>% filter(int_true == 'neg' & int_est == 'neg') %>% nrow()) / (res_gam %>% filter(int_true == 'neg') %>% nrow()),
-                                       sens = (res_gam %>% filter((int_true == 'pos' & int_est == 'pos') | (int_true == 'neg' & int_est == 'neg')) %>% nrow()) / (res_gam %>% filter(int_true == 'pos' | int_true == 'neg') %>% nrow()),
-                                       spec = (res_gam %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_gam %>% filter(int_true == 'none') %>% nrow()),
-                                       mcc = mcc(res_gam %>% filter(int_true != 'none' & int_est != 'none') %>% nrow(),
-                                                 res_gam %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(),
-                                                 res_gam %>% filter(int_true == 'none' & int_est != 'none') %>% nrow(),
-                                                 res_gam %>% filter(int_true != 'none' & int_est == 'none') %>% nrow())))
+                                       sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                                       spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
 
 # Calculate sensitivity/specificity (by true params):
 acc_gam <- calculate_accuracy_matrix(res_gam)
@@ -428,15 +422,15 @@ rm(res_gam, res_gam_sum, acc_gam)
 # Calculate sensitivity/specificity:
 for (i in 1:length(res_granger_LIST)) {
   
+  sens_test <- binom.test(res_granger_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow(), res_granger_LIST[[i]] %>% filter(int_true != 'none') %>% nrow())
+  spec_test <- binom.test(res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), res_granger_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
+  
   df_acc <- bind_rows(df_acc, data.frame(method = paste0('GC ', names(res_granger_LIST)[i]),
-                                         sens_pos = (res_granger_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow()),
-                                         sens_neg = (res_granger_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow()),
-                                         sens = (res_granger_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true != 'none') %>% nrow()),
-                                         spec = (res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_granger_LIST[[i]] %>% filter(int_true == 'none') %>% nrow()),
-                                         mcc = mcc(res_granger_LIST[[i]] %>% filter(int_true != 'none' & int_est != 'none') %>% nrow(),
-                                                   res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(),
-                                                   res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est != 'none') %>% nrow(),
-                                                   res_granger_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'none') %>% nrow())))
+                                         sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                                         spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
+  
+}
+rm(i)
   
 }
 rm(i)
@@ -574,15 +568,15 @@ rm(res_granger_LIST, res_granger_sum, acc_granger_LIST)
 # Calculate sensitivity/specificity:
 for (i in 1:length(res_te_LIST)) {
   
+  sens_test <- binom.test(res_te_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow(), res_te_LIST[[i]] %>% filter(int_true != 'none') %>% nrow())
+  spec_test <- binom.test(res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), res_te_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
+  
   df_acc <- bind_rows(df_acc, data.frame(method = paste0('TE ', names(res_te_LIST)[i]),
-                                         sens_pos = (res_te_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow()),
-                                         sens_neg = (res_te_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow()),
-                                         sens = (res_te_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true != 'none') %>% nrow()),
-                                         spec = (res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_te_LIST[[i]] %>% filter(int_true == 'none') %>% nrow()),
-                                         mcc = mcc(res_te_LIST[[i]] %>% filter(int_true != 'none' & int_est != 'none') %>% nrow(),
-                                                   res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(),
-                                                   res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est != 'none') %>% nrow(),
-                                                   res_te_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'none') %>% nrow())))
+                                         sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                                         spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
+  
+}
+rm(i)
   
 }
 rm(i)
@@ -721,15 +715,15 @@ p.te.2.2 <- ggplot(res_te_sum[[4]] %>%
 # Calculate sensitivity/specificity:
 for (i in 1:length(res_ccm_LIST)) {
   
+  sens_test <- binom.test(res_ccm_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow(), res_ccm_LIST[[i]] %>% filter(int_true != 'none') %>% nrow())
+  spec_test <- binom.test(res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), res_ccm_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
+  
   df_acc <- bind_rows(df_acc, data.frame(method = paste0('CCM ', names(res_ccm_LIST)[i]),
-                                         sens_pos = (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow()),
-                                         sens_neg = (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow()),
-                                         sens = (res_ccm_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true != 'none') %>% nrow()),
-                                         spec = (res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (res_ccm_LIST[[i]] %>% filter(int_true == 'none') %>% nrow()),
-                                         mcc = mcc(res_ccm_LIST[[i]] %>% filter(int_true != 'none' & int_est != 'none') %>% nrow(),
-                                                   res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(),
-                                                   res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est != 'none') %>% nrow(),
-                                                   res_ccm_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'none') %>% nrow())))
+                                         sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                                         spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
+  
+}
+rm(i)
   
 }
 rm(i)
@@ -925,30 +919,63 @@ df_acc <- df_acc %>% bind_rows(df_acc[1:2, ] %>%
 
 df_acc %>%
   filter(!is.na(method)) %>%
-  select(method, direction, mcc, sens_pos:spec) %>%
+  select(method, direction, sens:upper_spec) %>%
   print()
 
-p.comb.1 <- ggplot(df_acc %>% filter(!is.na(method)) %>%
-                     mutate(lab_x = if_else(str_detect(method, 'TE'), sens + 0.03, sens)) %>%
-                     mutate(lab_y = if_else(str_detect(method, 'TE'), spec + 0.04, spec)),
-                   aes(x = sens, y = spec, shape = method, col = method)) +
-  geom_point(size = 3) +
-  facet_wrap(~ direction, nrow = 1) +
-  # geom_label(aes(label = method, x = lab_x, y = lab_y), nudge_x = -0.03, hjust = 1, fontface = 'bold') +
+p.comb.1a <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v1 -> v2') %>%
+                      mutate(lab_x = if_else(str_detect(method, 'TE'), sens + 0.03, sens)) %>%
+                      mutate(lab_y = if_else(str_detect(method, 'TE'), spec + 0.04, spec)),
+                    aes(x = sens, y = spec, shape = method, col = method)) +
+  geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec)) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens)) +
+  geom_point(size = 2.5) +
   theme_bw() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
-        # legend.position = 'none',
-        legend.title = element_text(size = 14),
-        legend.text = element_text(size = 12),
-        legend.position = 'right') +
+        plot.tag = element_text(size = 24),
+        plot.tag.position = c(0.008, 0.975),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
   scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
   scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
-  scale_shape_manual(values = c(18, 17, 15, 3, 8, 8, 8)) +
-  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +#, '#006d2c')) +
-  labs(x = 'Sensitivity', y = 'Specificity', shape = 'Method', col = 'Method')
+  scale_shape_manual(values = c(18, 17, 15, 16, 4, 4)) +
+  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
+  labs(x = 'Sensitivity', y = 'Specificity', tag = 'A')
+p.comb.1b <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v2 -> v1') %>%
+                      mutate(lab_x = if_else(str_detect(method, 'TE'), sens + 0.03, sens)) %>%
+                      mutate(lab_y = if_else(str_detect(method, 'TE'), spec + 0.04, spec)),
+                    aes(x = sens, y = spec, shape = method, col = method)) +
+  geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec)) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens)) +
+  geom_point(size = 2.5) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 24),
+        plot.tag.position = c(0.008, 0.975),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_shape_manual(values = c(18, 17, 15, 16, 4, 4)) +
+  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
+  labs(x = 'Sensitivity', y = 'Specificity', tag = 'B')
+
+p.comb.1.legend <- ggplot(df_acc %>% filter(!is.na(method)),
+                          aes(x = sens, y = spec, shape = method, col = method)) +
+  geom_point(size = 3) +
+  theme_classic() +
+  theme(legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        legend.position = 'right') +
+  scale_shape_manual(values = c(18, 17, 15, 16, 4, 4)) +
+  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
+  labs(shape = 'Method', col = 'Method')
+p.comb.1.legend <- ggplotGrob(p.comb.1.legend)$grobs[[which(sapply(ggplotGrob(p.comb.1.legend)$grobs, function(x) x$name) == 'guide-box')]]
+
+p.comb.1 <- arrangeGrob(p.comb.1a, p.comb.1b, p.comb.1.legend, widths = c(1, 1, 0.4), nrow = 1)
 plot(p.comb.1)
-# ggsave(filename = 'results/plots/overall_accuracy_by_method.svg', p.comb.1, height = 6, width = 11)
+# ggsave(filename = 'results/plots/figures/Figure3.svg', p.comb.1, height = 3.5, width = 10)
 
 # Plot accuracy by method, strength, and duration:
 p.comb.2 <- arrangeGrob(p.corr.1, p.gam.1, p.granger.1.3, p.granger.1.4, p.te.1.3, p.te.1.4, p.ccm.1.1, p.ccm.1.4, p.ccm.1.2, p.ccm.1.5, p.legend.1,
