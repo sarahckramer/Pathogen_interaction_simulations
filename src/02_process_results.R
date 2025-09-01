@@ -1100,28 +1100,120 @@ df_assoc <- df_assoc %>%
 df_assoc <- df_assoc %>%
   mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC (w/ Seas)', 'TE (w/ Seas)', 'CCM')))
 
-p3.1 <- df_assoc %>% filter(direction == 'v1 -> v2') %>% mutate(delta = factor(delta)) %>%
-  ggplot(aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
+df_assoc <- df_assoc %>%
+  mutate(delta = factor(delta))
+
+p3.a <- ggplot(df_assoc %>% filter(method == 'Corr. Coef.'),
+               aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
   geom_vline(xintercept = 1.0, lty = 2) +
   geom_pointrange() +
   theme_classic() +
-  theme(legend.position = 'none') +
-  facet_wrap(~ method, ncol = 1) +
-  scale_x_continuous(n.breaks = 6) +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(x = 'Relative Change in Point Estimate Due to 2x Change in True Strength', y = 'Duration')
-p3.2 <- df_assoc %>% filter(direction == 'v2 -> v1') %>% mutate(delta = factor(delta)) %>%
-  ggplot(aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
+  labs(tag = 'A', x = NULL, y = '')
+p3.b <- ggplot(df_assoc %>% filter(method == 'GAMs'),
+               aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
   geom_vline(xintercept = 1.0, lty = 2) +
   geom_pointrange() +
   theme_classic() +
-  theme(legend.position = 'none') +
-  facet_wrap(~ method, ncol = 1) +
-  scale_x_continuous(n.breaks = 6) +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
   scale_color_brewer(palette = 'Set1') +
-  labs(x = 'Relative Change in Point Estimate Due to 2x Change in True Strength', y = 'Duration')
-p.comb.3 <- arrangeGrob(p3.1, p3.2, nrow = 1)
+  labs(tag = 'B', x = NULL, y = '')
+p3.c <- ggplot(df_assoc %>% filter(method == 'GC (w/ Seas)', direction == 'v1 -> v2'),
+               aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
+  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_pointrange() +
+  theme_classic() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'C', x = NULL, y = '')
+p3.d <- ggplot(df_assoc %>% filter(method == 'GC (w/ Seas)', direction == 'v2 -> v1'),
+               aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
+  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_pointrange() +
+  theme_classic() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'D', x = NULL, y = '')
+p3.e <- ggplot(df_assoc %>% filter(method == 'TE (w/ Seas)', direction == 'v1 -> v2'),
+               aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
+  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_pointrange() +
+  theme_classic() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'E', x = NULL, y = '')
+p3.f <- ggplot(df_assoc %>% filter(method == 'TE (w/ Seas)', direction == 'v2 -> v1'),
+               aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
+  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_pointrange() +
+  theme_classic() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'F', x = NULL, y = '')
+p3.g <- ggplot(df_assoc %>% filter(method == 'CCM', direction == 'v1 -> v2'),
+               aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
+  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_pointrange() +
+  theme_classic() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'G', x = NULL, y = '')
+p3.h <- ggplot(df_assoc %>% filter(method == 'CCM', direction == 'v2 -> v1'),
+               aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
+  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_pointrange() +
+  theme_classic() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
+  scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'H', x = NULL, y = '')
+
+y_lab <- textGrob('Duration', rot = 90, hjust = -0, gp = gpar(fontsize = 14))
+x_lab <- textGrob('Change in Point Estimate w/ 2x Change in True Strength', gp = gpar(fontsize = 14, hjust = 1))
+
+p.comb.3 <- arrangeGrob(p3.a, p3.b, p3.c, p3.d, p3.e, p3.f, p3.g, p3.h, ncol = 2, left = y_lab, bottom = x_lab)
 plot(p.comb.3)
+# ggsave(filename = 'results/plots/figures/Figure5.svg', p.comb.3, width = 8, height = 5.5)
 
 # Plot metric values vs. true interaction strength by duration:
 p.comb.4 <- arrangeGrob(p.corr.2, p.gam.2, p.granger.2.1, p.granger.2.2, p.te.2.1, p.te.2.2, p.ccm.2.1, p.ccm.2.2, p.legend.2,
