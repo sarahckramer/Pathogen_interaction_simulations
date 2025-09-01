@@ -143,6 +143,12 @@ res_gam <- res_gam %>%
   mutate(int_est = if_else(cor_median > 0, 'pos', 'neg'),
          int_est = if_else(CI_lower95 > 0 | CI_upper95 < 0, int_est, 'none'))
 
+to_remove_GAM <- res_gam %>%
+  filter(if_any(b_V1obsln_Intercept:lp__, ~ . > 1.05) | n_div > 0) %>%
+  select(run, .id) %>%
+  distinct() %>%
+  mutate(delete = TRUE)
+
 res_gam <- res_gam %>%
   # filter(!if_any(b_V1obsln_Intercept:rescor__V1obsln__V2obsln, ~ . > 1.01)) %>%
   filter(!if_any(b_V1obsln_Intercept:lp__, ~ . > 1.05)) %>%

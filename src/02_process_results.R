@@ -264,6 +264,19 @@ df_acc <- as_tibble(data.frame(method = 'Corr. Coef.',
                                sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
                                spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
 
+# Sensitivity analysis - remove any runs where GAMs did not fit successfully:
+res_CHECK <- res_corr %>%
+  left_join(to_remove_GAM, by = c('run', '.id')) %>%
+  filter(is.na(delete)) %>%
+  select(-delete)
+
+sens_test <- binom.test(res_CHECK %>% filter((int_true == 'pos' & int_est == 'pos') | (int_true == 'neg' & int_est == 'neg')) %>% nrow(), res_CHECK %>% filter(int_true == 'pos' | int_true == 'neg') %>% nrow())
+spec_test <- binom.test(res_CHECK %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), res_CHECK %>% filter(int_true == 'none') %>% nrow())
+
+df_acc_CHECK <- as_tibble(data.frame(method = 'Corr. Coef.',
+                                     sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                                     spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
+
 # Calculate sensitivity/specificity (by true params):
 acc_corr <- calculate_accuracy_matrix(res_corr)
 
@@ -431,6 +444,25 @@ for (i in 1:length(res_granger_LIST)) {
   
 }
 rm(i)
+
+# Sensitivity analysis - remove any runs where GAMs did not fit successfully:
+res_ccm_LIST_CHECK <- res_ccm_LIST[c(1:2, 4:5)]
+res_ccm_LIST_CHECK <- lapply(res_ccm_LIST_CHECK, function(ix) {
+  ix %>%
+    mutate(.id = as.numeric(.id)) %>%
+    left_join(to_remove_GAM, by = c('run', '.id')) %>%
+    filter(is.na(delete)) %>%
+    select(-delete)
+})
+
+for (i in 1:length(res_ccm_LIST_CHECK)) {
+  
+  sens_test <- binom.test(res_ccm_LIST_CHECK[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow(), res_ccm_LIST_CHECK[[i]] %>% filter(int_true != 'none') %>% nrow())
+  spec_test <- binom.test(res_ccm_LIST_CHECK[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), res_ccm_LIST_CHECK[[i]] %>% filter(int_true == 'none') %>% nrow())
+  
+  df_acc_CHECK <- bind_rows(df_acc_CHECK, data.frame(method = paste0('CCM ', names(res_ccm_LIST_CHECK)[i]),
+                                                     sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                                                     spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   
 }
 rm(i)
@@ -577,6 +609,25 @@ for (i in 1:length(res_te_LIST)) {
   
 }
 rm(i)
+
+# Sensitivity analysis - remove any runs where GAMs did not fit successfully:
+res_granger_LIST_CHECK <- res_granger_LIST[3:4]
+res_granger_LIST_CHECK <- lapply(res_granger_LIST_CHECK, function(ix) {
+  ix %>%
+    mutate(.id = as.numeric(.id)) %>%
+    left_join(to_remove_GAM, by = c('run', '.id')) %>%
+    filter(is.na(delete)) %>%
+    select(-delete)
+})
+
+for (i in 1:length(res_granger_LIST_CHECK)) {
+  
+  sens_test <- binom.test(res_granger_LIST_CHECK[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow(), res_granger_LIST_CHECK[[i]] %>% filter(int_true != 'none') %>% nrow())
+  spec_test <- binom.test(res_granger_LIST_CHECK[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), res_granger_LIST_CHECK[[i]] %>% filter(int_true == 'none') %>% nrow())
+  
+  df_acc_CHECK <- bind_rows(df_acc_CHECK, data.frame(method = paste0('GC ', names(res_granger_LIST_CHECK)[i]),
+                                                     sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                                                     spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   
 }
 rm(i)
@@ -724,6 +775,25 @@ for (i in 1:length(res_ccm_LIST)) {
   
 }
 rm(i)
+
+# Sensitivity analysis - remove any runs where GAMs did not fit successfully:
+res_te_LIST_CHECK <- res_te_LIST[3:4]
+res_te_LIST_CHECK <- lapply(res_te_LIST_CHECK, function(ix) {
+  ix %>%
+    mutate(.id = as.numeric(.id)) %>%
+    left_join(to_remove_GAM, by = c('run', '.id')) %>%
+    filter(is.na(delete)) %>%
+    select(-delete)
+})
+
+for (i in 1:length(res_te_LIST_CHECK)) {
+  
+  sens_test <- binom.test(res_te_LIST_CHECK[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow(), res_te_LIST_CHECK[[i]] %>% filter(int_true != 'none') %>% nrow())
+  spec_test <- binom.test(res_te_LIST_CHECK[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), res_te_LIST_CHECK[[i]] %>% filter(int_true == 'none') %>% nrow())
+  
+  df_acc_CHECK <- bind_rows(df_acc_CHECK, data.frame(method = paste0('TE ', names(res_te_LIST_CHECK)[i]),
+                                                     sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                                                     spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   
 }
 rm(i)
