@@ -224,8 +224,11 @@ rm(res_MAIN)
 acc_corr <- res_corr %>%
   split(~ .$sens) %>%
   lapply(function(ix) {
-    as_tibble(data.frame(sens = (ix %>% filter((int_true == 'pos' & int_est == 'pos') | (int_true == 'neg' & int_est == 'neg')) %>% nrow()) / (ix %>% filter(int_true == 'pos' | int_true == 'neg') %>% nrow()),
-                         spec = (ix %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (ix %>% filter(int_true == 'none') %>% nrow())))
+    sens_test <- binom.test(ix %>% filter((int_true == 'pos' & int_est == 'pos') | (int_true == 'neg' & int_est == 'neg')) %>% nrow(), ix %>% filter(int_true == 'pos' | int_true == 'neg') %>% nrow())
+    spec_test <- binom.test(ix %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), ix %>% filter(int_true == 'none') %>% nrow())
+    
+    as_tibble(data.frame(sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                         spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   }) %>%
   bind_rows(.id = 'which_sens')
 
@@ -236,8 +239,11 @@ assoc_corr <- res_corr %>% split(~ .$sens) %>% lapply(function(ix) calculate_ass
 acc_gam <- res_gam %>%
   split(~ .$sens) %>%
   lapply(function(ix) {
-    as_tibble(data.frame(sens = (ix %>% filter((int_true == 'pos' & int_est == 'pos') | (int_true == 'neg' & int_est == 'neg')) %>% nrow()) / (ix %>% filter(int_true == 'pos' | int_true == 'neg') %>% nrow()),
-                         spec = (ix %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (ix %>% filter(int_true == 'none') %>% nrow())))
+    sens_test <- binom.test(ix %>% filter((int_true == 'pos' & int_est == 'pos') | (int_true == 'neg' & int_est == 'neg')) %>% nrow(), ix %>% filter(int_true == 'pos' | int_true == 'neg') %>% nrow())
+    spec_test <- binom.test(ix %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), ix %>% filter(int_true == 'none') %>% nrow())
+    
+    as_tibble(data.frame(sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                         spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   }) %>%
   bind_rows(.id = 'which_sens')
 
@@ -251,15 +257,21 @@ res_granger_v2v1 <- res_granger %>% filter(direction == 'v2 -> v1')
 acc_granger_v1v2 <- res_granger_v1v2 %>%
   split(~ .$sens) %>%
   lapply(function(ix) {
-    as_tibble(data.frame(sens = (ix %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow()) / (ix %>% filter(int_true != 'none') %>% nrow()),
-                         spec = (ix %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (ix %>% filter(int_true == 'none') %>% nrow())))
+    sens_test <- binom.test(ix %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow(), ix %>% filter(int_true != 'none') %>% nrow())
+    spec_test <- binom.test(ix %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), ix %>% filter(int_true == 'none') %>% nrow())
+    
+    as_tibble(data.frame(sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                         spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   }) %>%
   bind_rows(.id = 'which_sens')
 acc_granger_v2v1 <- res_granger_v2v1 %>%
   split(~ .$sens) %>%
   lapply(function(ix) {
-    as_tibble(data.frame(sens = (ix %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow()) / (ix %>% filter(int_true != 'none') %>% nrow()),
-                         spec = (ix %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (ix %>% filter(int_true == 'none') %>% nrow())))
+    sens_test <- binom.test(ix %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow(), ix %>% filter(int_true != 'none') %>% nrow())
+    spec_test <- binom.test(ix %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), ix %>% filter(int_true == 'none') %>% nrow())
+    
+    as_tibble(data.frame(sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                         spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   }) %>%
   bind_rows(.id = 'which_sens')
 
@@ -276,15 +288,21 @@ res_te_v2v1 <- res_te %>% filter(direction == 'v2 -> v1')
 acc_te_v1v2 <- res_te_v1v2 %>%
   split(~ .$sens) %>%
   lapply(function(ix) {
-    as_tibble(data.frame(sens = (ix %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow()) / (ix %>% filter(int_true != 'none') %>% nrow()),
-                         spec = (ix %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (ix %>% filter(int_true == 'none') %>% nrow())))
+    sens_test <- binom.test(ix %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow(), ix %>% filter(int_true != 'none') %>% nrow())
+    spec_test <- binom.test(ix %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), ix %>% filter(int_true == 'none') %>% nrow())
+    
+    as_tibble(data.frame(sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                         spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   }) %>%
   bind_rows(.id = 'which_sens')
 acc_te_v2v1 <- res_te_v2v1 %>%
   split(~ .$sens) %>%
   lapply(function(ix) {
-    as_tibble(data.frame(sens = (ix %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow()) / (ix %>% filter(int_true != 'none') %>% nrow()),
-                         spec = (ix %>% filter(int_true == 'none' & int_est == 'none') %>% nrow()) / (ix %>% filter(int_true == 'none') %>% nrow())))
+    sens_test <- binom.test(ix %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow(), ix %>% filter(int_true != 'none') %>% nrow())
+    spec_test <- binom.test(ix %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), ix %>% filter(int_true == 'none') %>% nrow())
+    
+    as_tibble(data.frame(sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                         spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   }) %>%
   bind_rows(.id = 'which_sens')
 
@@ -301,30 +319,42 @@ res_ccm_v2v1 <- res_ccm %>% filter(direction == 'v2 -> v1')
 acc_ccm1_v1v2 <- res_ccm_v1v2 %>%
   split(~ .$sens) %>%
   lapply(function(ix) {
-    as_tibble(data.frame(sens = (ix %>% filter(int_true != 'none' & int_est_1 == 'interaction') %>% nrow()) / (ix %>% filter(int_true != 'none') %>% nrow()),
-                         spec = (ix %>% filter(int_true == 'none' & int_est_1 == 'none') %>% nrow()) / (ix %>% filter(int_true == 'none') %>% nrow())))
+    sens_test <- binom.test(ix %>% filter(int_true != 'none' & int_est_1 == 'interaction') %>% nrow(), ix %>% filter(int_true != 'none') %>% nrow())
+    spec_test <- binom.test(ix %>% filter(int_true == 'none' & int_est_1 == 'none') %>% nrow(), ix %>% filter(int_true == 'none') %>% nrow())
+    
+    as_tibble(data.frame(sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                         spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   }) %>%
   bind_rows(.id = 'which_sens')
 acc_ccm1_v2v1 <- res_ccm_v2v1 %>%
   split(~ .$sens) %>%
   lapply(function(ix) {
-    as_tibble(data.frame(sens = (ix %>% filter(int_true != 'none' & int_est_1 == 'interaction') %>% nrow()) / (ix %>% filter(int_true != 'none') %>% nrow()),
-                         spec = (ix %>% filter(int_true == 'none' & int_est_1 == 'none') %>% nrow()) / (ix %>% filter(int_true == 'none') %>% nrow())))
+    sens_test <- binom.test(ix %>% filter(int_true != 'none' & int_est_1 == 'interaction') %>% nrow(), ix %>% filter(int_true != 'none') %>% nrow())
+    spec_test <- binom.test(ix %>% filter(int_true == 'none' & int_est_1 == 'none') %>% nrow(), ix %>% filter(int_true == 'none') %>% nrow())
+    
+    as_tibble(data.frame(sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                         spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   }) %>%
   bind_rows(.id = 'which_sens')
 
 acc_ccm2_v1v2 <- res_ccm_v1v2 %>%
   split(~ .$sens) %>%
   lapply(function(ix) {
-    as_tibble(data.frame(sens = (ix %>% filter(int_true != 'none' & int_est_2 == 'interaction') %>% nrow()) / (ix %>% filter(int_true != 'none') %>% nrow()),
-                         spec = (ix %>% filter(int_true == 'none' & int_est_2 == 'none') %>% nrow()) / (ix %>% filter(int_true == 'none') %>% nrow())))
+    sens_test <- binom.test(ix %>% filter(int_true != 'none' & int_est_2 == 'interaction') %>% nrow(), ix %>% filter(int_true != 'none') %>% nrow())
+    spec_test <- binom.test(ix %>% filter(int_true == 'none' & int_est_2 == 'none') %>% nrow(), ix %>% filter(int_true == 'none') %>% nrow())
+    
+    as_tibble(data.frame(sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                         spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   }) %>%
   bind_rows(.id = 'which_sens')
 acc_ccm2_v2v1 <- res_ccm_v2v1 %>%
   split(~ .$sens) %>%
   lapply(function(ix) {
-    as_tibble(data.frame(sens = (ix %>% filter(int_true != 'none' & int_est_2 == 'interaction') %>% nrow()) / (ix %>% filter(int_true != 'none') %>% nrow()),
-                         spec = (ix %>% filter(int_true == 'none' & int_est_2 == 'none') %>% nrow()) / (ix %>% filter(int_true == 'none') %>% nrow())))
+    sens_test <- binom.test(ix %>% filter(int_true != 'none' & int_est_2 == 'interaction') %>% nrow(), ix %>% filter(int_true != 'none') %>% nrow())
+    spec_test <- binom.test(ix %>% filter(int_true == 'none' & int_est_2 == 'none') %>% nrow(), ix %>% filter(int_true == 'none') %>% nrow())
+    
+    as_tibble(data.frame(sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                         spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   }) %>%
   bind_rows(.id = 'which_sens')
 
