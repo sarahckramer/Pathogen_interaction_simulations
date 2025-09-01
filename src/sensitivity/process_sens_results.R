@@ -7,6 +7,7 @@
 # Load packages
 library(tidyverse)
 library(gridExtra)
+library(grid)
 library(testthat)
 library(viridis)
 
@@ -376,18 +377,19 @@ rm(res_corr, res_gam, res_granger, res_granger_v1v2, res_granger_v2v1, res_te, r
 # Plot overall accuracy:
 df_acc <- acc_corr %>% mutate(method = 'Corr. Coef.') %>%
   bind_rows(acc_gam %>% mutate(method = 'GAMs')) %>%
-  bind_rows(acc_granger_v1v2 %>% mutate(method = 'GC (V1 -> V2)')) %>%
-  bind_rows(acc_granger_v2v1 %>% mutate(method = 'GC (V2 -> V1)')) %>%
-  bind_rows(acc_te_v1v2 %>% mutate(method = 'TE (V1 -> V2)')) %>%
-  bind_rows(acc_te_v2v1 %>% mutate(method = 'TE (V2 -> V1)')) %>%
-  bind_rows(acc_ccm1_v1v2 %>% mutate(method = 'CCM (Method 1) (V1 -> V2)')) %>%
-  bind_rows(acc_ccm1_v2v1 %>% mutate(method = 'CCM (Method 1) (V2 -> V1)')) %>%
-  bind_rows(acc_ccm2_v1v2 %>% mutate(method = 'CCM (Method 2) (V1 -> V2)')) %>%
-  bind_rows(acc_ccm2_v2v1 %>% mutate(method = 'CCM (Method 2) (V2 -> V1)'))
+  bind_rows(acc_granger_v1v2 %>% mutate(method = 'GC (A %->% B)')) %>%
+  bind_rows(acc_granger_v2v1 %>% mutate(method = 'GC (B %->% A)')) %>%
+  bind_rows(acc_te_v1v2 %>% mutate(method = 'TE (A %->% B)')) %>%
+  # bind_rows(acc_te_v1v2 %>% mutate(method = expression(paste0('TE (', A %->% B, ')')))) %>%
+  bind_rows(acc_te_v2v1 %>% mutate(method = 'TE (B %->% A)')) %>%
+  bind_rows(acc_ccm1_v1v2 %>% mutate(method = 'CCM (Method 1) (A %->% B)')) %>%
+  bind_rows(acc_ccm1_v2v1 %>% mutate(method = 'CCM (Method 1) (B %->% A)')) %>%
+  bind_rows(acc_ccm2_v1v2 %>% mutate(method = 'CCM (Method 2) (A %->% B)')) %>%
+  bind_rows(acc_ccm2_v2v1 %>% mutate(method = 'CCM (Method 2) (B %->% A)'))
 
 df_acc <- df_acc %>%
-  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC (V1 -> V2)', 'GC (V2 -> V1)', 'TE (V1 -> V2)', 'TE (V2 -> V1)',
-                                            'CCM (Method 1) (V1 -> V2)', 'CCM (Method 1) (V2 -> V1)', 'CCM (Method 2) (V1 -> V2)', 'CCM (Method 2) (V2 -> V1)')))
+  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC (A %->% B)', 'GC (B %->% A)', 'TE (A %->% B)', 'TE (B %->% A)',
+                                            'CCM (Method 1) (A %->% B)', 'CCM (Method 1) (B %->% A)', 'CCM (Method 2) (A %->% B)', 'CCM (Method 2) (B %->% A)')))
 
 df_by_amp <- df_acc %>%
   filter(which_sens == 'Main' | str_detect(which_sens, 'forcing')) %>%
@@ -397,29 +399,206 @@ df_by_amp <- df_acc %>%
                              which_sens == 'forcing_mid_high' ~ 0.4,
                              which_sens == 'forcing_very_high' ~ 0.5))
 
-p_acc_forcing <- ggplot(data = df_by_amp %>% arrange(forcing) %>% mutate(line_col = forcing + 0.05), aes(x = sens, y = spec, shape = method)) +
-  geom_vline(data = df_acc %>% filter(which_sens == 'Main'),
+p_acc_forcing_a <- ggplot(data = df_by_amp %>% arrange(forcing) %>% mutate(line_col = forcing + 0.05) %>% filter(method == 'Corr. Coef.'),
+                          aes(x = sens, y = spec)) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'Corr. Coef.'),
              aes(xintercept = sens), lty = 2) +
-  geom_hline(data = df_acc %>% filter(which_sens == 'Main'),
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'Corr. Coef.'),
              aes(yintercept = spec), lty = 2) +
   geom_path(aes(col = line_col)) +
-  geom_point(aes(col = forcing), size = 3) +
-  facet_wrap(~ method, ncol = 2) +
+  geom_point(aes(col = forcing), size = 3, shape = 18) +
   theme_bw() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
-        strip.text = element_text(size = 12),
-        strip.background = element_rect(fill = 'gray90'),
-        legend.title = element_text(size = 14),
-        legend.text = element_text(size = 12),
-        legend.position = 'right') +
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
   scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
   scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
-  scale_shape_manual(values = c(18, 17, 15, 15, 3, 3, 8, 8, 8, 8), guide = 'none') +
   scale_color_viridis(limits = c(0, 0.5)) +
-  labs(x = 'Sensitivity', y = 'Specificity', col = 'Amplitude')
-print(p_acc_forcing)
-# ggsave(filename = 'results/plots/figures/FigureS8.svg', p_acc_forcing, width = 8.5, height = 11.5)
+  labs(x = NULL, y = NULL, title = 'Corr. Coef.')
+p_acc_forcing_b <- ggplot(data = df_by_amp %>% arrange(forcing) %>% mutate(line_col = forcing + 0.05) %>% filter(method == 'GAMs'),
+                          aes(x = sens, y = spec)) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'GAMs'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'GAMs'),
+             aes(yintercept = spec), lty = 2) +
+  geom_path(aes(col = line_col)) +
+  geom_point(aes(col = forcing), size = 3, shape = 17) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_viridis(limits = c(0, 0.5)) +
+  labs(x = NULL, y = NULL, title = 'GAMs')
+p_acc_forcing_c <- ggplot(data = df_by_amp %>% arrange(forcing) %>% mutate(line_col = forcing + 0.05) %>% filter(method == 'GC (A %->% B)'),
+                          aes(x = sens, y = spec)) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'GC (A %->% B)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'GC (A %->% B)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_path(aes(col = line_col)) +
+  geom_point(aes(col = forcing), size = 3, shape = 15) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_viridis(limits = c(0, 0.5)) +
+  labs(x = NULL, y = NULL, title = expression('GC (A' %->% 'B)'))
+p_acc_forcing_d <- ggplot(data = df_by_amp %>% arrange(forcing) %>% mutate(line_col = forcing + 0.05) %>% filter(method == 'GC (B %->% A)'),
+                          aes(x = sens, y = spec)) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'GC (B %->% A)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'GC (B %->% A)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_path(aes(col = line_col)) +
+  geom_point(aes(col = forcing), size = 3, shape = 15) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_viridis(limits = c(0, 0.5)) +
+  labs(x = NULL, y = NULL, title = expression('GC (B' %->% 'A)'))
+p_acc_forcing_e <- ggplot(data = df_by_amp %>% arrange(forcing) %>% mutate(line_col = forcing + 0.05) %>% filter(method == 'TE (A %->% B)'),
+                          aes(x = sens, y = spec)) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'TE (A %->% B)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'TE (A %->% B)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_path(aes(col = line_col)) +
+  geom_point(aes(col = forcing), size = 3, shape = 16) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_viridis(limits = c(0, 0.5)) +
+  labs(x = NULL, y = NULL, title = expression('TE (A' %->% 'B)'))
+p_acc_forcing_f <- ggplot(data = df_by_amp %>% arrange(forcing) %>% mutate(line_col = forcing + 0.05) %>% filter(method == 'TE (B %->% A)'),
+                          aes(x = sens, y = spec)) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'TE (B %->% A)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'TE (B %->% A)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_path(aes(col = line_col)) +
+  geom_point(aes(col = forcing), size = 3, shape = 16) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_viridis(limits = c(0, 0.5)) +
+  labs(x = NULL, y = NULL, title = expression('TE (B' %->% 'A)'))
+p_acc_forcing_g <- ggplot(data = df_by_amp %>% arrange(forcing) %>% mutate(line_col = forcing + 0.05) %>% filter(method == 'CCM (Method 1) (A %->% B)'),
+                          aes(x = sens, y = spec)) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 1) (A %->% B)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 1) (A %->% B)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_path(aes(col = line_col)) +
+  geom_point(aes(col = forcing), size = 3, shape = 4) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_viridis(limits = c(0, 0.5)) +
+  labs(x = NULL, y = NULL, title = expression('CCM (Method 1) (A' %->% 'B)'))
+p_acc_forcing_h <- ggplot(data = df_by_amp %>% arrange(forcing) %>% mutate(line_col = forcing + 0.05) %>% filter(method == 'CCM (Method 1) (B %->% A)'),
+                          aes(x = sens, y = spec)) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 1) (B %->% A)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 1) (B %->% A)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_path(aes(col = line_col)) +
+  geom_point(aes(col = forcing), size = 3, shape = 4) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_viridis(limits = c(0, 0.5)) +
+  labs(x = NULL, y = NULL, title = expression('CCM (Method 1) (B' %->% 'A)'))
+p_acc_forcing_i <- ggplot(data = df_by_amp %>% arrange(forcing) %>% mutate(line_col = forcing + 0.05) %>% filter(method == 'CCM (Method 2) (A %->% B)'),
+                          aes(x = sens, y = spec)) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 2) (A %->% B)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 2) (A %->% B)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_path(aes(col = line_col)) +
+  geom_point(aes(col = forcing), size = 3, shape = 4) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_viridis(limits = c(0, 0.5)) +
+  labs(x = NULL, y = NULL, title = expression('CCM (Method 2) (A' %->% 'B)'))
+p_acc_forcing_j <- ggplot(data = df_by_amp %>% arrange(forcing) %>% mutate(line_col = forcing + 0.05) %>% filter(method == 'CCM (Method 2) (B %->% A)'),
+                          aes(x = sens, y = spec)) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 2) (B %->% A)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 2) (B %->% A)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_path(aes(col = line_col)) +
+  geom_point(aes(col = forcing), size = 3, shape = 4) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_viridis(limits = c(0, 0.5)) +
+  labs(x = NULL, y = NULL, title = expression('CCM (Method 2) (B' %->% 'A)'))
+
+p_acc_forcing_legend <- ggplot(data = df_by_amp %>% arrange(forcing), aes(x = sens, y = spec)) +
+  geom_point(aes(col = forcing), size = 3) +
+  theme_bw() +
+  theme(legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        legend.position = 'right') +
+  scale_color_viridis(limits = c(0, 0.5)) +
+  labs(col = 'Amplitude')
+p_acc_forcing_legend <- ggplotGrob(p_acc_forcing_legend)$grobs[[which(sapply(ggplotGrob(p_acc_forcing_legend)$grobs, function(x) x$name) == 'guide-box')]]
+
+y_lab <- textGrob('Specificity', rot = 90, gp = gpar(fontsize = 14))
+x_lab <- textGrob('Sensitivity', gp = gpar(fontsize = 14, hjust = 1))
+
+p_acc_forcing <- arrangeGrob(arrangeGrob(p_acc_forcing_a, p_acc_forcing_b, p_acc_forcing_c, p_acc_forcing_d,
+                                         p_acc_forcing_e, p_acc_forcing_f, p_acc_forcing_g, p_acc_forcing_h, p_acc_forcing_i, p_acc_forcing_j,
+                                         ncol = 2),
+                             p_acc_forcing_legend, ncol = 2, widths = c(1, 0.15), left = y_lab, bottom = x_lab)
+plot(p_acc_forcing)
+# ggsave(filename = 'results/plots/figures/FigureS7.svg', p_acc_forcing, width = 9, height = 13)
 
 df_acc <- df_acc %>%
   mutate(which_sens = case_when(which_sens == '20y' ~ '20 years',
@@ -430,32 +609,204 @@ df_acc <- df_acc %>%
   mutate(which_sens = factor(which_sens, levels = c('Main', 'Low process noise', 'High obs noise', 'No obs noise', '20 years'))) %>%
   filter(!is.na(which_sens))
 
-p_acc <- ggplot(data = df_acc %>% filter(which_sens != 'Main')) +
-  # geom_point(data = df_acc %>% filter(which_sens == 'Main'),
-  #            aes(x = sens, y = spec, shape = method), size = 3) +
-  geom_vline(data = df_acc %>% filter(which_sens == 'Main'),
+p_acc_a <- ggplot(data = df_acc %>% filter(which_sens != 'Main', method == 'Corr. Coef.')) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'Corr. Coef.'),
              aes(xintercept = sens), lty = 2) +
-  geom_hline(data = df_acc %>% filter(which_sens == 'Main'),
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'Corr. Coef.'),
              aes(yintercept = spec), lty = 2) +
-  geom_point(aes(x = sens, y = spec, shape = method, col = which_sens, alpha = method), size = 3) +
-  facet_wrap(~ method, ncol = 2) +
+  geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec, col = which_sens), alpha = 0.7) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens, col = which_sens), alpha = 0.7) +
+  geom_point(aes(x = sens, y = spec, col = which_sens), size = 2.5, shape = 18, alpha = 0.7) +
   theme_bw() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
-        strip.text = element_text(size = 12),
-        strip.background = element_rect(fill = 'gray90'),
-        legend.title = element_text(size = 14),
-        legend.text = element_text(size = 12),
-        legend.position = 'right') +
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
   scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
   scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
-  scale_shape_manual(values = c(18, 17, 15, 15, 3, 3, 8, 8, 8, 8), guide = 'none') +
-  # scale_color_manual(values = c('#d95f02', '#e6ab02', '#7570b3', '#1b9e77', '#66a61e', '#e7298a')) +
   scale_color_manual(values = c('#e6ab02', '#7570b3', '#1b9e77', '#e7298a')) +
-  scale_alpha_manual(values = c(0.7, 0.7, 0.7, 0.7, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0), guide = 'none') +
-  labs(x = 'Sensitivity', y = 'Specificity', col = 'Analysis')
-print(p_acc)
-# ggsave(filename = 'results/plots/figures/FigureS7.svg', p_acc, width = 9.325, height = 11.5)
+  labs(x = NULL, y = NULL, title = 'Corr. Coef.')
+p_acc_b <- ggplot(data = df_acc %>% filter(which_sens != 'Main', method == 'GAMs')) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'GAMs'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'GAMs'),
+             aes(yintercept = spec), lty = 2) +
+  geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec, col = which_sens), alpha = 0.7) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens, col = which_sens), alpha = 0.7) +
+  geom_point(aes(x = sens, y = spec, col = which_sens), size = 2.5, shape = 17, alpha = 0.7) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_manual(values = c('#e6ab02', '#7570b3', '#1b9e77', '#e7298a')) +
+  labs(x = NULL, y = NULL, title = 'GAMs')
+p_acc_c <- ggplot(data = df_acc %>% filter(which_sens != 'Main', method == 'GC (A %->% B)')) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'GC (A %->% B)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'GC (A %->% B)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec, col = which_sens), alpha = 0.7) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens, col = which_sens), alpha = 0.7) +
+  geom_point(aes(x = sens, y = spec, col = which_sens), size = 2.5, shape = 15, alpha = 0.7) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_manual(values = c('#e6ab02', '#7570b3', '#1b9e77', '#e7298a')) +
+  labs(x = NULL, y = NULL, title = expression('GC (A' %->% 'B)'))
+p_acc_d <- ggplot(data = df_acc %>% filter(which_sens != 'Main', method == 'GC (B %->% A)')) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'GC (B %->% A)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'GC (B %->% A)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec, col = which_sens), alpha = 0.7) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens, col = which_sens), alpha = 0.7) +
+  geom_point(aes(x = sens, y = spec, col = which_sens), size = 2.5, shape = 15, alpha = 0.7) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_manual(values = c('#e6ab02', '#7570b3', '#1b9e77', '#e7298a')) +
+  labs(x = NULL, y = NULL, title = expression('GC (B' %->% 'A)'))
+p_acc_e <- ggplot(data = df_acc %>% filter(which_sens != 'Main', method == 'TE (A %->% B)')) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'TE (A %->% B)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'TE (A %->% B)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec, col = which_sens), alpha = 0.7) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens, col = which_sens), alpha = 0.7) +
+  geom_point(aes(x = sens, y = spec, col = which_sens), size = 2.5, shape = 16, alpha = 0.7) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_manual(values = c('#e6ab02', '#7570b3', '#1b9e77', '#e7298a')) +
+  # scale_shape_manual(values = c(15, 15, 3, 3, 8, 8, 8, 8), guide = 'none') +
+  labs(x = NULL, y = NULL, title = expression('TE (A' %->% 'B)'))
+p_acc_f <- ggplot(data = df_acc %>% filter(which_sens != 'Main', method == 'TE (B %->% A)')) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'TE (B %->% A)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'TE (B %->% A)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec, col = which_sens), alpha = 0.7) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens, col = which_sens), alpha = 0.7) +
+  geom_point(aes(x = sens, y = spec, col = which_sens), size = 2.5, shape = 16, alpha = 0.7) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_manual(values = c('#e6ab02', '#7570b3', '#1b9e77', '#e7298a')) +
+  # scale_shape_manual(values = c(15, 15, 3, 3, 8, 8, 8, 8), guide = 'none') +
+  labs(x = NULL, y = NULL, title = expression('TE (B' %->% 'A)'))
+p_acc_g <- ggplot(data = df_acc %>% filter(which_sens != 'Main', method == 'CCM (Method 1) (A %->% B)')) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 1) (A %->% B)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 1) (A %->% B)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec, col = which_sens)) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens, col = which_sens)) +
+  geom_point(aes(x = sens, y = spec, col = which_sens), size = 2.5, shape = 4) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_manual(values = c('#e6ab02', '#7570b3', '#1b9e77', '#e7298a')) +
+  labs(x = NULL, y = NULL, title = expression('CCM (Method 1) (A' %->% 'B)'))
+p_acc_h <- ggplot(data = df_acc %>% filter(which_sens != 'Main', method == 'CCM (Method 1) (B %->% A)')) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 1) (B %->% A)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 1) (B %->% A)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec, col = which_sens)) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens, col = which_sens)) +
+  geom_point(aes(x = sens, y = spec, col = which_sens), size = 2.5, shape = 4) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_manual(values = c('#e6ab02', '#7570b3', '#1b9e77', '#e7298a')) +
+  labs(x = NULL, y = NULL, title = expression('CCM (Method 1) (B' %->% 'A)'))
+p_acc_i <- ggplot(data = df_acc %>% filter(which_sens != 'Main', method == 'CCM (Method 2) (A %->% B)')) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 2) (A %->% B)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 2) (A %->% B)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec, col = which_sens)) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens, col = which_sens)) +
+  geom_point(aes(x = sens, y = spec, col = which_sens), size = 2.5, shape = 4) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_manual(values = c('#e6ab02', '#7570b3', '#1b9e77', '#e7298a')) +
+  labs(x = NULL, y = NULL, title = expression('CCM (Method 2) (A' %->% 'B)'))
+p_acc_j <- ggplot(data = df_acc %>% filter(which_sens != 'Main', method == 'CCM (Method 2) (B %->% A)')) +
+  geom_vline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 2) (B %->% A)'),
+             aes(xintercept = sens), lty = 2) +
+  geom_hline(data = df_acc %>% filter(which_sens == 'Main', method == 'CCM (Method 2) (B %->% A)'),
+             aes(yintercept = spec), lty = 2) +
+  geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec, col = which_sens)) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens, col = which_sens)) +
+  geom_point(aes(x = sens, y = spec, col = which_sens), size = 2.5, shape = 4) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        title = element_text(size = 11),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_color_manual(values = c('#e6ab02', '#7570b3', '#1b9e77', '#e7298a')) +
+  labs(x = NULL, y = NULL, title = expression('CCM (Method 2) (B' %->% 'A)'))
+
+p_acc_legend <- ggplot(data = df_acc %>% filter(which_sens != 'Main')) +
+  geom_point(aes(x = sens, y = spec, col = which_sens), size = 3) +
+  theme_bw() +
+  theme(legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        legend.position = 'right') +
+  scale_color_manual(values = c('#e6ab02', '#7570b3', '#1b9e77', '#e7298a')) +
+  labs(col = 'Analysis')
+p_acc_legend <- ggplotGrob(p_acc_legend)$grobs[[which(sapply(ggplotGrob(p_acc_legend)$grobs, function(x) x$name) == 'guide-box')]]
+
+p_acc <- arrangeGrob(arrangeGrob(p_acc_a, p_acc_b, p_acc_c, p_acc_d, p_acc_e, p_acc_f, p_acc_g, p_acc_h, p_acc_i, p_acc_j,
+                                 ncol = 2),
+                     p_acc_legend, ncol = 2, widths = c(1, 0.25), left = y_lab, bottom = x_lab)
+plot(p_acc)
+ggsave(filename = 'results/plots/figures/FigureS6.svg', p_acc, width = 9.75, height = 13)
 
 # Plot accuracy by true interaction parameters:
 p_acc_corr <- ggplot(data = acc_byparam_corr %>%
@@ -687,16 +1038,16 @@ p_acc_ccm2_21 <- ggplot(data = acc_byparam_ccm2_v2v1 %>%
 # Plot association between strength and point estimates:
 df_assoc <- assoc_corr %>% mutate(method = 'Corr. Coef.') %>%
   bind_rows(assoc_gam %>% mutate(method = 'GAMs')) %>%
-  bind_rows(assoc_granger_v1v2 %>% mutate(method = 'GC (V1 -> V2)')) %>%
-  bind_rows(assoc_granger_v2v1 %>% mutate(method = 'GC (V2 -> V1)')) %>%
-  bind_rows(assoc_te_v1v2 %>% mutate(method = 'TE (V1 -> V2)')) %>%
-  bind_rows(assoc_te_v2v1 %>% mutate(method = 'TE (V2 -> V1)')) %>%
-  bind_rows(assoc_ccm_v1v2 %>% mutate(method = 'CCM (V1 -> V2)')) %>%
-  bind_rows(assoc_ccm_v2v1 %>% mutate(method = 'CCM (V2 -> V1)'))
+  bind_rows(assoc_granger_v1v2 %>% mutate(method = 'GC (A %->% B)')) %>%
+  bind_rows(assoc_granger_v2v1 %>% mutate(method = 'GC (B %->% A)')) %>%
+  bind_rows(assoc_te_v1v2 %>% mutate(method = 'TE (A %->% B)')) %>%
+  bind_rows(assoc_te_v2v1 %>% mutate(method = 'TE (B %->% A)')) %>%
+  bind_rows(assoc_ccm_v1v2 %>% mutate(method = 'CCM (A %->% B)')) %>%
+  bind_rows(assoc_ccm_v2v1 %>% mutate(method = 'CCM (B %->% A)'))
 
 df_assoc <- df_assoc %>%
-  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC (V1 -> V2)', 'GC (V2 -> V1)',
-                                            'TE (V1 -> V2)', 'TE (V2 -> V1)', 'CCM (V1 -> V2)', 'CCM (V2 -> V1)')))
+  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC (A %->% B)', 'GC (B %->% A)',
+                                            'TE (A %->% B)', 'TE (B %->% A)', 'CCM (A %->% B)', 'CCM (B %->% A)')))
 
 df_assoc <- df_assoc %>%
   mutate(which_sens = case_when(which_sens == '20y' ~ '20 years',
@@ -735,7 +1086,7 @@ p_asym <- ggplot(data = acc_byparam_gam %>%
   geom_point(size = 3.5) +
   facet_wrap(~ duration, ncol = 1) +
   theme_classic() +
-  theme(axis.title = element_text(size = 13),
+  theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
         strip.text = element_text(size = 12),
         legend.position = 'none') +
@@ -746,12 +1097,12 @@ p_asym <- ggplot(data = acc_byparam_gam %>%
   scale_color_brewer(palette = 'Set1') +
   labs(x = 'True Strength', y = '% Correct')
 print(p_asym)
-# ggsave(filename = 'results/plots/figures/FigureS6.svg', p_asym, width = 5, height = 5)
+# ggsave(filename = 'results/plots/figures/FigureS5.svg', p_asym, width = 5, height = 5)
 
 # Print all plots:
 pdf(file = 'results/plots/plot_sensitivity.pdf', width = 16, height = 12)
-print(p_acc_forcing)
-print(p_acc)
+plot(p_acc_forcing)
+plot(p_acc)
 print(p_acc_corr)
 print(p_acc_gam)
 grid.arrange(p_acc_granger12, p_acc_granger21, nrow = 1)
