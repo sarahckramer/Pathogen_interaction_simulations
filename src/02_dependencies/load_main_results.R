@@ -169,11 +169,11 @@ res_granger <- res_granger %>% left_join(to_remove,
   select(-delete)
 
 res_corr<- res_corr %>% left_join(to_remove %>% mutate(.id = as.integer(.id)),
-                       by = c('run', '.id')) %>%
+                                  by = c('run', '.id')) %>%
   filter(is.na(delete)) %>%
   select(!delete)
 res_gam <- res_gam %>% left_join(to_remove %>% mutate(.id = as.integer(.id)),
-                       by = c('run', '.id')) %>%
+                                 by = c('run', '.id')) %>%
   filter(is.na(delete)) %>%
   select(!delete)
 
