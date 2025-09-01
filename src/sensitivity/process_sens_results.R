@@ -806,7 +806,7 @@ p_acc <- arrangeGrob(arrangeGrob(p_acc_a, p_acc_b, p_acc_c, p_acc_d, p_acc_e, p_
                                  ncol = 2),
                      p_acc_legend, ncol = 2, widths = c(1, 0.25), left = y_lab, bottom = x_lab)
 plot(p_acc)
-ggsave(filename = 'results/plots/figures/FigureS6.svg', p_acc, width = 9.75, height = 13)
+# ggsave(filename = 'results/plots/figures/FigureS6.svg', p_acc, width = 9.75, height = 13)
 
 # Plot accuracy by true interaction parameters:
 p_acc_corr <- ggplot(data = acc_byparam_corr %>%
