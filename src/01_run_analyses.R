@@ -40,6 +40,7 @@ print(detectCores())
 # Get cluster environmental variables:
 jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size
 run_local <- as.logical(Sys.getenv("RUNLOCAL")); print(run_local)
+sens <- as.character(Sys.getenv("SENS")); print(sens)
 
 #---- run local or on cluster? ----#
 if (is.na(run_local)) {
@@ -149,7 +150,7 @@ if (run_local) {
   
   tic <- Sys.time()
   
-  cl <- makeCluster(8, type = 'SOCK')
+  cl <- makeCluster(12, type = 'SOCK')
   registerDoSNOW(cl)
   res_te_1 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
     source('src/01_methods/transfer_entropy_jidt.R')
@@ -157,7 +158,7 @@ if (run_local) {
   }
   stopCluster(cl)
   
-  cl <- makeCluster(8, type = 'SOCK')
+  cl <- makeCluster(12, type = 'SOCK')
   registerDoSNOW(cl)
   res_te_2 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
     source('src/01_methods/transfer_entropy_jidt.R')
@@ -165,7 +166,7 @@ if (run_local) {
   }
   stopCluster(cl)
   
-  cl <- makeCluster(8, type = 'SOCK')
+  cl <- makeCluster(12, type = 'SOCK')
   registerDoSNOW(cl)
   res_te_4 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
     source('src/01_methods/transfer_entropy_jidt.R')
@@ -173,7 +174,7 @@ if (run_local) {
   }
   stopCluster(cl)
   
-  cl <- makeCluster(8, type = 'SOCK')
+  cl <- makeCluster(12, type = 'SOCK')
   registerDoSNOW(cl)
   res_te_13 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
     source('src/01_methods/transfer_entropy_jidt.R')
@@ -205,7 +206,7 @@ if (!run_local) {
 }
 
 # save out results
-write_rds(results, file=sprintf('results/results_%s_%s.rds', jobid, run_local))
+write_rds(results, file=sprintf('results/results_%s_%s_%s.rds', jobid, run_local, sens))
 
 #---- Clean up ----#
 toc_all <- Sys.time()

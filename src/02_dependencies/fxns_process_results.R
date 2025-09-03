@@ -58,27 +58,28 @@ calculate_assoc_true_strength <- function(df, method, met) {
   # print(p1)
   
   # Fit model and get confidence intervals:
-  m1 <- lm(ln_y ~ ln_x*delta, data = df)
+  # m1 <- lm(ln_y ~ ln_x * delta, data = df)
+  m1 <- lmer(ln_y ~ ln_x * delta + (1 | .id), data = df %>% mutate(.id = factor(.id)))
   
-  coefs <- m1$coefficients
+  coefs <- summary(m1)$coefficients[, 'Estimate']
   coefs_var <- vcov(m1)
   
-  assoc_lm <- c(coefs['ln_x'], confint(m1)['ln_x', ])
+  assoc_lmer <- c(coefs['ln_x'], confint(m1)['ln_x', ])
   
-  plusminus_4 <- qt(0.975, df = nrow(df) - 6) * sqrt(coefs_var['ln_x', 'ln_x'] + coefs_var['ln_x:delta4', 'ln_x:delta4'] + 2 * coefs_var['ln_x', 'ln_x:delta4'])
-  plusminus_13 <- qt(0.975, df = nrow(df) - 6) * sqrt(coefs_var['ln_x', 'ln_x'] + coefs_var['ln_x:delta13', 'ln_x:delta13'] + 2 * coefs_var['ln_x', 'ln_x:delta13'])
+  plusminus_4 <- qt(0.975, df = nrow(df) - 7) * sqrt(coefs_var['ln_x', 'ln_x'] + coefs_var['ln_x:delta4', 'ln_x:delta4'] + 2 * coefs_var['ln_x', 'ln_x:delta4'])
+  plusminus_13 <- qt(0.975, df = nrow(df) - 7) * sqrt(coefs_var['ln_x', 'ln_x'] + coefs_var['ln_x:delta13', 'ln_x:delta13'] + 2 * coefs_var['ln_x', 'ln_x:delta13'])
   
   # print(c(qt(0.975, df = nrow(df) - 6) * sqrt(coefs_var['ln_x', 'ln_x']), plusminus_4, plusminus_13))
   
-  assoc_lm <- assoc_lm %>%
+  assoc_lmer <- assoc_lmer %>%
     rbind(c(coefs['ln_x'] + coefs['ln_x:delta4'], coefs['ln_x'] + coefs['ln_x:delta4'] - plusminus_4, coefs['ln_x'] + coefs['ln_x:delta4'] + plusminus_4)) %>%
     rbind(c(coefs['ln_x'] + coefs['ln_x:delta13'], coefs['ln_x'] + coefs['ln_x:delta13'] - plusminus_13, coefs['ln_x'] + coefs['ln_x:delta13'] + plusminus_13)) %>%
     as_tibble()
-  names(assoc_lm) <- c('coef', 'lower', 'upper')
+  names(assoc_lmer) <- c('coef', 'lower', 'upper')
   
-  assoc_lm <- assoc_lm %>% mutate(delta = c(1, 4, 13))
+  assoc_lmer <- assoc_lmer %>% mutate(delta = c(1, 4, 13))
   
-  return(assoc_lm)
+  return(assoc_lmer)
   
 }
 
