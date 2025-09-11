@@ -10,6 +10,7 @@ library(gridExtra)
 library(grid)
 library(testthat)
 library(viridis)
+library(lme)
 
 # Load functions:
 source('src/02_dependencies/fxns_process_results.R')
