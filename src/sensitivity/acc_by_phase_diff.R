@@ -193,7 +193,7 @@ p4 <- ggplot(data = pred_data %>% filter(method == 'TE'),
         panel.grid.minor = element_blank(),
         plot.margin = unit(c(5.5, 8, 5.5, 5.5), 'pt')) +
   labs(x = NULL, y = NULL, title = 'TE')
-p5 <- ggplot(data = pred_data %>% filter(method == 'CCM1'),
+p5 <- ggplot(data = pred_data %>% filter(method == 'CCM2'),
              aes(x = pt_diff, y = fitted - 0.4)) +
   geom_density(data = res_ccm1 %>% group_by(.id) %>% summarise(pt_diff = unique(pt_diff)),
                aes(x = pt_diff), inherit.aes = FALSE, adjust = 0.5, fill = 'gray95', col = 'gray80') +
@@ -208,7 +208,7 @@ p5 <- ggplot(data = pred_data %>% filter(method == 'CCM1'),
         panel.grid.minor = element_blank(),
         plot.margin = unit(c(5.5, 8, 5.5, 5.5), 'pt')) +
   labs(x = NULL, y = NULL, title = 'CCM (Method 1)')
-p6 <- ggplot(data = pred_data %>% filter(method == 'CCM2'),
+p6 <- ggplot(data = pred_data %>% filter(method == 'CCM1'),
              aes(x = pt_diff, y = fitted - 0.4)) +
   geom_density(data = res_ccm2 %>% group_by(.id) %>% summarise(pt_diff = unique(pt_diff)),
                aes(x = pt_diff), inherit.aes = FALSE, adjust = 0.5, fill = 'gray95', col = 'gray80') +

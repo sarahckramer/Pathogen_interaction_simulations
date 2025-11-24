@@ -82,120 +82,102 @@ for (i in ids_to_plot) {
   
 }
 
-p1 <- ggplot(data = dat_plot %>%
-               filter(.id == 54) %>%
-               mutate(theta_lambda = as.character(theta_lambda),
-                      delta = as.character(7 / delta)) %>%
-               filter((theta_lambda %in% c(0, 4)) |
-                        (theta_lambda == 1 & delta == 7)) %>%
-               mutate(theta_lambda = paste0('Interaction Strength: ', theta_lambda)),
+dat_plot_TEMP <- dat_plot %>%
+  mutate(theta_lambda = as.character(theta_lambda),
+         delta = as.character(7 / delta)) %>%
+  filter((theta_lambda %in% c(0, 4)) |
+           (theta_lambda == 1 & delta == 7))
+
+p1 <- ggplot(data = dat_plot_TEMP %>% filter(.id == 54),
              aes(x = date, y = obs, group = paste(virus, delta), color = paste(virus, delta))) +
   geom_line(linewidth = 0.75) +
   geom_vline(xintercept = year_breaks, lty = 2, col = 'gray60') +
-  facet_wrap(~ theta_lambda, ncol = 1) +
+  facet_wrap(~ theta_lambda, ncol = 1, labeller = label_bquote(theta[lambda]==.(theta_lambda))) +
   theme_classic() +
   theme(legend.position = 'none',
         axis.title = element_text(size = 13.5),
         axis.text = element_text(size = 11),
         strip.text = element_text(size = 12),
         plot.tag = element_text(size = 24),
-        plot.tag.position = c(0.008, 0.975)) +
-  scale_x_continuous(breaks = NULL) +
+        plot.tag.position = c(0.008, 0.975),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank()) +
   # scale_color_manual(values = c('#e31a1c', '#fb9a99', '#1f78b4', '#a6cee3')) +
-  scale_color_manual(values = c('#fc9272', '#de2d26', '#fee0d2', '#6baed6', '#2171b5', '#bdd7e7')) +
-  labs(x = '', y = 'Incidence (per 1000)', col = '', tag = 'A')
+  # scale_color_manual(values = c('#fc9272', '#de2d26', '#fee0d2', '#6baed6', '#2171b5', '#bdd7e7')) +
+  scale_color_manual(values = c('red', '#99000d', '#fc9272', '#6baed6', '#08519c', '#bdd7e7')) +
+  labs(x = 'Time', y = 'Incidence (per 1000)', col = '', tag = 'A')
 
-s_p1 <- ggplot(data = dat_plot %>%
-                 filter(.id == 70) %>%
-                 mutate(theta_lambda = as.character(theta_lambda),
-                        delta = as.character(7 / delta)) %>%
-                 filter((theta_lambda %in% c(0, 4)) |
-                          (theta_lambda == 1 & delta == 7)) %>%
-                 mutate(theta_lambda = paste0('Interaction Strength: ', theta_lambda)),
+s_p1 <- ggplot(data = dat_plot_TEMP %>% filter(.id == 70),
                aes(x = date, y = obs, group = paste(virus, delta), color = paste(virus, delta))) +
   geom_line(linewidth = 0.75) +
   geom_vline(xintercept = year_breaks, lty = 2, col = 'gray60') +
-  facet_wrap(~ theta_lambda, ncol = 1) +
+  facet_wrap(~ theta_lambda, ncol = 1, labeller = label_bquote(theta[lambda]==.(theta_lambda))) +
   theme_classic() +
   theme(legend.position = 'none',
         axis.title = element_text(size = 13.5),
         axis.text = element_text(size = 11),
         strip.text = element_text(size = 12),
         plot.tag = element_text(size = 24),
-        plot.tag.position = c(0.008, 0.975)) +
-  scale_x_continuous(breaks = NULL) +
+        plot.tag.position = c(0.008, 0.975),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank()) +
   scale_y_continuous(limits = c(0, 32)) +
-  scale_color_manual(values = c('#fc9272', '#de2d26', '#fee0d2', '#6baed6', '#2171b5', '#bdd7e7')) +
-  labs(x = '', y = 'Incidence (per 1000)', col = '', tag = 'A')
-s_p2 <- ggplot(data = dat_plot %>%
-                 filter(.id == 96) %>%
-                 mutate(theta_lambda = as.character(theta_lambda),
-                        delta = as.character(7 / delta)) %>%
-                 filter((theta_lambda %in% c(0, 4)) |
-                          (theta_lambda == 1 & delta == 7)) %>%
-                 mutate(theta_lambda = paste0('Interaction Strength: ', theta_lambda)),
+  scale_color_manual(values = c('red', '#99000d', '#fc9272', '#6baed6', '#08519c', '#bdd7e7')) +
+  labs(x = 'Time', y = 'Incidence (per 1000)', col = '', tag = 'A')
+s_p2 <- ggplot(data = dat_plot_TEMP %>% filter(.id == 96),
                aes(x = date, y = obs, group = paste(virus, delta), color = paste(virus, delta))) +
   geom_line(linewidth = 0.75) +
   geom_vline(xintercept = year_breaks, lty = 2, col = 'gray60') +
-  facet_wrap(~ theta_lambda, ncol = 1) +
+  facet_wrap(~ theta_lambda, ncol = 1, labeller = label_bquote(theta[lambda]==.(theta_lambda))) +
   theme_classic() +
   theme(legend.position = 'none',
         axis.title = element_text(size = 13.5),
         axis.text = element_text(size = 11),
         strip.text = element_text(size = 12),
         plot.tag = element_text(size = 24),
-        plot.tag.position = c(0.008, 0.975)) +
-  scale_x_continuous(breaks = NULL) +
+        plot.tag.position = c(0.008, 0.975),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank()) +
   scale_y_continuous(limits = c(0, 32)) +
-  scale_color_manual(values = c('#fc9272', '#de2d26', '#fee0d2', '#6baed6', '#2171b5', '#bdd7e7')) +
-  labs(x = '', y = 'Incidence (per 1000)', col = '', tag = 'B')
-s_p3 <- ggplot(data = dat_plot %>%
-                 filter(.id == 89) %>%
-                 mutate(theta_lambda = as.character(theta_lambda),
-                        delta = as.character(7 / delta)) %>%
-                 filter((theta_lambda %in% c(0, 4)) |
-                          (theta_lambda == 1 & delta == 7)) %>%
-                 mutate(theta_lambda = paste0('Interaction Strength: ', theta_lambda)),
+  scale_color_manual(values = c('red', '#99000d', '#fc9272', '#6baed6', '#08519c', '#bdd7e7')) +
+  labs(x = 'Time', y = 'Incidence (per 1000)', col = '', tag = 'B')
+s_p3 <- ggplot(data = dat_plot_TEMP %>% filter(.id == 89),
                aes(x = date, y = obs, group = paste(virus, delta), color = paste(virus, delta))) +
   geom_line(linewidth = 0.75) +
   geom_vline(xintercept = year_breaks, lty = 2, col = 'gray60') +
-  facet_wrap(~ theta_lambda, ncol = 1) +
+  facet_wrap(~ theta_lambda, ncol = 1, labeller = label_bquote(theta[lambda]==.(theta_lambda))) +
   theme_classic() +
   theme(legend.position = 'none',
         axis.title = element_text(size = 13.5),
         axis.text = element_text(size = 11),
         strip.text = element_text(size = 12),
         plot.tag = element_text(size = 24),
-        plot.tag.position = c(0.008, 0.975)) +
-  scale_x_continuous(breaks = NULL) +
+        plot.tag.position = c(0.008, 0.975),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank()) +
   scale_y_continuous(limits = c(0, 32)) +
-  scale_color_manual(values = c('#fc9272', '#de2d26', '#fee0d2', '#6baed6', '#2171b5', '#bdd7e7')) +
-  labs(x = '', y = 'Incidence (per 1000)', col = '', tag = 'C')
-s_p4 <- ggplot(data = dat_plot %>%
-                 filter(.id == 27) %>%
-                 mutate(theta_lambda = as.character(theta_lambda),
-                        delta = as.character(7 / delta)) %>%
-                 filter((theta_lambda %in% c(0, 4)) |
-                          (theta_lambda == 1 & delta == 7)) %>%
-                 mutate(theta_lambda = paste0('Interaction Strength: ', theta_lambda)),
+  scale_color_manual(values = c('red', '#99000d', '#fc9272', '#6baed6', '#08519c', '#bdd7e7')) +
+  labs(x = 'Time', y = 'Incidence (per 1000)', col = '', tag = 'C')
+s_p4 <- ggplot(data = dat_plot_TEMP %>% filter(.id == 27),
                aes(x = date, y = obs, group = paste(virus, delta), color = paste(virus, delta))) +
   geom_line(linewidth = 0.75) +
   geom_vline(xintercept = year_breaks, lty = 2, col = 'gray60') +
-  facet_wrap(~ theta_lambda, ncol = 1) +
+  facet_wrap(~ theta_lambda, ncol = 1, labeller = label_bquote(theta[lambda]==.(theta_lambda))) +
   theme_classic() +
   theme(legend.position = 'none',
         axis.title = element_text(size = 13.5),
         axis.text = element_text(size = 11),
         strip.text = element_text(size = 12),
         plot.tag = element_text(size = 24),
-        plot.tag.position = c(0.008, 0.975)) +
-  scale_x_continuous(breaks = NULL) +
+        plot.tag.position = c(0.008, 0.975),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank()) +
   scale_y_continuous(limits = c(0, 32)) +
-  scale_color_manual(values = c('#fc9272', '#de2d26', '#fee0d2', '#6baed6', '#2171b5', '#bdd7e7')) +
-  labs(x = '', y = 'Incidence (per 1000)', col = '', tag = 'D')
+  scale_color_manual(values = c('red', '#99000d', '#fc9272', '#6baed6', '#08519c', '#bdd7e7')) +
+  labs(x = 'Time', y = 'Incidence (per 1000)', col = '', tag = 'D')
 p.rep.data <- arrangeGrob(s_p1, s_p2, s_p3, s_p4, nrow = 2)
 plot(p.rep.data)
-# ggsave(filename = 'results/plots/figures/FigureS1.svg', p.rep.data, width = 18, height = 9.5)
+# ggsave(filename = 'results/plots/figures/FigureS1.svg', p.rep.data, width = 18, height = 9.75)
 
 rm(dat_plot, ids_to_plot)
 
@@ -264,7 +246,7 @@ p2a <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
               aes(x = change_ar2_mean, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 1.0, lty = 2) +
-  facet_wrap(~ theta_lambda, ncol = 1) +
+  facet_wrap(~ theta_lambda, ncol = 1, labeller = label_bquote(theta[lambda]==.(theta_lambda))) +
   theme_classic() +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
@@ -274,15 +256,17 @@ p2a <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
         plot.tag = element_text(size = 24),
         plot.tag.position = c(0.03, 0.975),
         legend.position = 'none') +
-  scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
+  scale_fill_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  # scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
   scale_x_continuous(n.breaks = 5) +
-  labs(x = 'Relative AR', y = '', tag = 'B')
+  labs(x = 'Relative AR', y = 'Density', tag = 'B')
 p2b <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
               # met %>% filter(theta_lambda != 1 & theta_lambda != 0.25),
               aes(x = change_ar2_sd, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 1.0, lty = 2) +
-  facet_wrap(~ theta_lambda, ncol = 1) +
+  facet_wrap(~ theta_lambda, ncol = 1, labeller = label_bquote(theta[lambda]==.(theta_lambda))) +
   theme_classic() +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
@@ -290,7 +274,8 @@ p2b <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
         axis.text = element_text(size = 11),
         strip.text = element_text(size = 12),
         legend.position = 'none') +
-  scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
+  scale_fill_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   scale_x_continuous(n.breaks = 10) +
   labs(x = 'Relative sd(AR)', y = '')
 p2c <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
@@ -298,7 +283,7 @@ p2c <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
               aes(x = change_pt2_mean, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 0, lty = 2) +
-  facet_wrap(~ theta_lambda, ncol = 1) +
+  facet_wrap(~ theta_lambda, ncol = 1, labeller = label_bquote(theta[lambda]==.(theta_lambda))) +
   theme_classic() +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
@@ -306,7 +291,8 @@ p2c <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
         axis.text = element_text(size = 11),
         strip.text = element_text(size = 12),
         legend.position = 'none') +
-  scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
+  scale_fill_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   scale_x_continuous(n.breaks = 10) +
   labs(x = 'Change in PT', y = '')
 p2d <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
@@ -314,7 +300,7 @@ p2d <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
               aes(x = change_pt2_sd, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 0, lty = 2) +
-  facet_wrap(~ theta_lambda, ncol = 1) +
+  facet_wrap(~ theta_lambda, ncol = 1, labeller = label_bquote(theta[lambda]==.(theta_lambda))) +
   theme_classic() +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
@@ -322,11 +308,15 @@ p2d <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
         axis.text = element_text(size = 11),
         strip.text = element_text(size = 12),
         legend.position = 'none') +
-  scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
+  scale_fill_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   scale_x_continuous(n.breaks = 10) +
   labs(x = 'Change in sd(PT)', y = '')
 
-p.legend <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
+p.legend <- ggplot(met %>%
+                     filter(theta_lambda %in% c(0, 4)) %>%
+                     mutate(delta = if_else(delta == '1', paste0(delta, ' week'), paste0(delta, ' weeks'))) %>%
+                     mutate(delta = factor(delta, levels = c('1 week', '4 weeks', '13 weeks'))),
                    aes(x = change_ar1_mean, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   theme_classic() +
@@ -337,13 +327,14 @@ p.legend <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
         legend.key.width = unit(1.0, 'cm'),
         legend.position = 'right') +
   # guides(fill = guide_legend(byrow = TRUE)) +
-  scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
-  labs(fill = 'Duration')
+  scale_fill_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(fill = expression(7/delta))
 p.legend <- ggplotGrob(p.legend)$grobs[[which(sapply(ggplotGrob(p.legend)$grobs, function(x) x$name) == 'guide-box')]]
 
-p.int.impact <- arrangeGrob(p1, arrangeGrob(p2a, p2b, p2c, p2d, p.legend, nrow = 1, widths = c(1, 1, 1, 1, 0.26)), heights = c(1, 0.9), ncol = 1)
+p.int.impact <- arrangeGrob(p1, arrangeGrob(p2a, p2b, p2c, p2d, p.legend, nrow = 1, widths = c(1, 1, 1, 1, 0.5)), heights = c(1, 0.92), ncol = 1)
 plot(p.int.impact)
-# ggsave(filename = 'results/plots/figures/Figure2.svg', p.int.impact, width = 12, height = 9)
+# ggsave(filename = 'results/plots/figures/Figure2.svg', p.int.impact, width = 12.5, height = 9)
 
 # Also plot impact on pathogen A (for supplement):
 p2a_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
@@ -351,7 +342,7 @@ p2a_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
                    aes(x = change_ar1_mean, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 1.0, lty = 2) +
-  facet_wrap(~ theta_lambda, ncol = 1) +
+  facet_wrap(~ theta_lambda, ncol = 1, labeller = label_bquote(theta[lambda]==.(theta_lambda))) +
   theme_classic() +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
@@ -361,15 +352,16 @@ p2a_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
         # plot.tag = element_text(size = 24),
         # plot.tag.position = c(0.03, 0.975),
         legend.position = 'none') +
-  scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
+  scale_fill_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   scale_x_continuous(n.breaks = 5) +
-  labs(x = 'Relative AR', y = '')
+  labs(x = 'Relative AR', y = 'Density')
 p2b_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
                    # met %>% filter(theta_lambda != 1 & theta_lambda != 0.25),
                    aes(x = change_ar1_sd, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 1.0, lty = 2) +
-  facet_wrap(~ theta_lambda, ncol = 1) +
+  facet_wrap(~ theta_lambda, ncol = 1, labeller = label_bquote(theta[lambda]==.(theta_lambda))) +
   theme_classic() +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
@@ -377,7 +369,8 @@ p2b_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
         axis.text = element_text(size = 11),
         strip.text = element_text(size = 12),
         legend.position = 'none') +
-  scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
+  scale_fill_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   scale_x_continuous(n.breaks = 10) +
   labs(x = 'Relative sd(AR)', y = '')
 p2c_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
@@ -385,7 +378,7 @@ p2c_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
                    aes(x = change_pt1_mean, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 0, lty = 2) +
-  facet_wrap(~ theta_lambda, ncol = 1) +
+  facet_wrap(~ theta_lambda, ncol = 1, labeller = label_bquote(theta[lambda]==.(theta_lambda))) +
   theme_classic() +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
@@ -393,7 +386,8 @@ p2c_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
         axis.text = element_text(size = 11),
         strip.text = element_text(size = 12),
         legend.position = 'none') +
-  scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
+  scale_fill_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   scale_x_continuous(n.breaks = 10) +
   labs(x = 'Change in PT', y = '')
 p2d_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
@@ -401,7 +395,7 @@ p2d_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
                    aes(x = change_pt1_sd, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 0, lty = 2) +
-  facet_wrap(~ theta_lambda, ncol = 1) +
+  facet_wrap(~ theta_lambda, ncol = 1, labeller = label_bquote(theta[lambda]==.(theta_lambda))) +
   theme_classic() +
   theme(axis.ticks.y = element_blank(),
         axis.text.y = element_blank(),
@@ -409,13 +403,14 @@ p2d_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
         axis.text = element_text(size = 11),
         strip.text = element_text(size = 12),
         legend.position = 'none') +
-  scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
+  scale_fill_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   scale_x_continuous(n.breaks = 10) +
   labs(x = 'Change in sd(PT)', y = '')
 
-p.int.impact_supp <- arrangeGrob(p2a_supp, p2b_supp, p2c_supp, p2d_supp, p.legend, nrow = 1, widths = c(1, 1, 1, 1, 0.26))
+p.int.impact_supp <- arrangeGrob(p2a_supp, p2b_supp, p2c_supp, p2d_supp, p.legend, nrow = 1, widths = c(1, 1, 1, 1, 0.45))
 plot(p.int.impact_supp)
-# ggsave(filename = 'results/plots/figures/FigureS2.svg', p.int.impact_supp, width = 12, height = 4.26)
+# ggsave(filename = 'results/plots/figures/FigureS2.svg', p.int.impact_supp, width = 12.5, height = 4.3)
 
 # ------------------------------------------------------------------------------
 
@@ -449,21 +444,42 @@ acc_corr <- calculate_accuracy_matrix(res_corr)
 assoc_corr <- calculate_assoc_true_strength(res_corr, method = 'corr', met = 'cor')
 
 # Plot:
-p.corr.1 <- ggplot(data = acc_corr %>%
-                     mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
+p.corr.1a <- ggplot(data = acc_corr %>%
+                      mutate(strength = as.numeric(strength)) %>%
+                      filter(strength > '1'),
+                    aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
+  geom_point(size = 3.5, alpha = 0.7) +
+  theme_classic() +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 1.12),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  # scale_color_viridis(option = 'C', discrete = TRUE) +
+  scale_shape_manual(values = c(16, 17, 15)) +
+  labs(tag = 'A', x = NULL, y = '', title = NULL)
+p.corr.1b <- ggplot(data = acc_corr %>%
+                      mutate(strength = as.numeric(strength)) %>%
+                      filter(strength < 1) %>%
+                      mutate(strength = if_else(strength == 0, 8, 1 / as.numeric(strength))),
+                    aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
+  geom_line(linetype = 2) +
   geom_point(size = 3.5) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
-        plot.tag = element_text(size = 16),
-        plot.tag.position = c(0.0075, 0.995),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'A', x = 'Strength', y = '% Correct   ')
+  scale_x_continuous(breaks = c(2, 4, 8), labels = c('0.5', '0.25', '0')) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_shape_manual(values = c(1, 2, 0)) +
+  labs(x = NULL, y = '', title = NULL)
 
 p.legend.1 <- ggplot(data = acc_corr %>%
                        mutate(duration = paste0(duration, ' week'),
@@ -476,7 +492,8 @@ p.legend.1 <- ggplot(data = acc_corr %>%
   theme(legend.title = element_text(size = 13),
         legend.text = element_text(size = 12),
         legend.position = 'bottom') +
-  scale_color_brewer(palette = 'Set1') +
+  # scale_color_viridis(discrete = TRUE) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   labs(shape = 'Duration', color = 'Duration')
 p.legend.1 <- ggplotGrob(p.legend.1)$grobs[[which(sapply(ggplotGrob(p.legend.1)$grobs, function(x) x$name) == 'guide-box')]]
 
@@ -507,8 +524,8 @@ p.corr.2 <- ggplot(res_corr_sum %>%
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(n.breaks = 6) +#, limits = c(-1.0, 1.0)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'A', x = 'True Interaction Strength', y = expression(r[Pearson]))
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'A', x = 'True Interaction Strength', y = expression(r[Pearson]), title = 'Corr. Coef.')
 
 p.legend.2 <- ggplot(res_corr_sum %>%
                        mutate(delta = factor(1 / delta)) %>%
@@ -521,7 +538,7 @@ p.legend.2 <- ggplot(res_corr_sum %>%
   theme(legend.title = element_text(size = 13.5),
         legend.text = element_text(size = 12),
         legend.position = 'bottom') +
-  scale_color_brewer(palette = 'Set1') +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   labs(col = 'True Interaction Duration')
 p.legend.2 <- ggplotGrob(p.legend.2)$grobs[[which(sapply(ggplotGrob(p.legend.2)$grobs, function(x) x$name) == 'guide-box')]]
 
@@ -546,21 +563,42 @@ acc_gam <- calculate_accuracy_matrix(res_gam)
 assoc_gam <- calculate_assoc_true_strength(res_gam, method = 'gam', met = 'cor_median')
 
 # Plot:
-p.gam.1 <- ggplot(data = acc_gam %>%
-                    mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                  aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
+p.gam.1a <- ggplot(data = acc_gam %>%
+                     mutate(strength = as.numeric(strength)) %>%
+                     filter(strength > '1'),
+                   aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
-  geom_point(size = 3) +
+  geom_point(size = 3.5, alpha = 0.7) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
-        plot.tag = element_text(size = 16),
-        plot.tag.position = c(0.0075, 0.995),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 1.12),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'B', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
+  scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  # scale_color_viridis(option = 'C', discrete = TRUE) +
+  scale_shape_manual(values = c(16, 17, 15)) +
+  labs(tag = 'B', x = NULL, y = '', title = NULL)
+p.gam.1b <- ggplot(data = acc_gam %>%
+                     mutate(strength = as.numeric(strength)) %>%
+                     filter(strength < 1) %>%
+                     mutate(strength = if_else(strength == 0, 8, 1 / as.numeric(strength))),
+                   aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
+  geom_line(linetype = 2) +
+  geom_point(size = 3.5) +
+  theme_classic() +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(2, 4, 8), labels = c('0.5', '0.25', '0')) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_shape_manual(values = c(1, 2, 0)) +
+  labs(x = NULL, y = '', title = NULL)
 
 res_gam_sum <- res_gam %>%
   mutate(delta = if_else(theta_lambda == 1, 1, delta)) %>%
@@ -588,8 +626,8 @@ p.gam.2 <- ggplot(res_gam_sum %>%
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(n.breaks = 6) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'B', x = 'True Interaction Strength', y = expression(r[GAM]))
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'B', x = 'True Interaction Strength', y = expression(r[GAM]), title = 'GAMs')
 
 rm(res_gam, res_gam_sum, acc_gam)
 
@@ -650,64 +688,79 @@ for (i in 1:length(assoc_granger_LIST)) {
 rm(i)
 
 # Plot:
-p.granger.1.1 <- ggplot(data = acc_granger_LIST[[1]] %>%
-                          mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
+p.granger.1.3a <- ggplot(data = acc_granger_LIST[[3]] %>%
+                           mutate(strength = as.numeric(strength)) %>%
+                           filter(strength > '1'),
+                         aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
-  geom_point(size = 3) +
+  geom_point(size = 3.5, alpha = 0.7) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
-        plot.tag = element_text(size = 16),
-        plot.tag.position = c(0.0075, 0.995),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 1.12),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'C', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
-p.granger.1.2 <- ggplot(data = acc_granger_LIST[[2]] %>%
-                          mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
-  geom_line() +
-  geom_point(size = 3) +
+  scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  # scale_color_viridis(option = 'C', discrete = TRUE) +
+  scale_shape_manual(values = c(16, 17, 15)) +
+  labs(tag = 'C', x = NULL, y = '', title = NULL)
+p.granger.1.3b <- ggplot(data = acc_granger_LIST[[3]] %>%
+                           mutate(strength = as.numeric(strength)) %>%
+                           filter(strength < 1) %>%
+                           mutate(strength = if_else(strength == 0, 8, 1 / as.numeric(strength))),
+                         aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
+  geom_line(linetype = 2) +
+  geom_point(size = 3.5) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
-p.granger.1.3 <- ggplot(data = acc_granger_LIST[[3]] %>%
-                          mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
+  scale_x_continuous(breaks = c(2, 4, 8), labels = c('0.5', '0.25', '0')) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_shape_manual(values = c(1, 2, 0)) +
+  labs(x = NULL, y = '', title = NULL)
+
+p.granger.1.4a <- ggplot(data = acc_granger_LIST[[4]] %>%
+                           mutate(strength = as.numeric(strength)) %>%
+                           filter(strength > '1'),
+                         aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
-  geom_point(size = 3) +
+  geom_point(size = 3.5, alpha = 0.7) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
-        plot.tag = element_text(size = 16),
-        plot.tag.position = c(0.0075, 0.995),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 1.12),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'C', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
-p.granger.1.4 <- ggplot(data = acc_granger_LIST[[4]] %>%
-                          mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                        aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
-  geom_line() +
-  geom_point(size = 3) +
+  scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  # scale_color_viridis(option = 'C', discrete = TRUE) +
+  scale_shape_manual(values = c(16, 17, 15)) +
+  labs(tag = 'D', x = NULL, y = '', title = NULL)
+p.granger.1.4b <- ggplot(data = acc_granger_LIST[[4]] %>%
+                           mutate(strength = as.numeric(strength)) %>%
+                           filter(strength < 1) %>%
+                           mutate(strength = if_else(strength == 0, 8, 1 / as.numeric(strength))),
+                         aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
+  geom_line(linetype = 2) +
+  geom_point(size = 3.5) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
-        plot.tag = element_text(size = 16),
-        plot.tag.position = c(0.0075, 0.995),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'D', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
+  scale_x_continuous(breaks = c(2, 4, 8), labels = c('0.5', '0.25', '0')) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_shape_manual(values = c(1, 2, 0)) +
+  labs(x = NULL, y = '', title = NULL)
 
 res_granger_sum <- lapply(res_granger_LIST, function(ix) {
   ix %>% mutate(delta = if_else(theta_lambda == 1, 1, delta)) %>% group_by(theta_lambda, delta) %>%
@@ -735,8 +788,8 @@ p.granger.2.1 <- ggplot(res_granger_sum[[3]] %>%
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(n.breaks = 7) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'C', x = 'True Interaction Strength', y = expression(G[x %->% y]))
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'C', x = 'True Interaction Strength', y = expression(G[x %->% y]), title = 'Granger Causality (A \u279E B)')
 p.granger.2.2 <- ggplot(res_granger_sum[[4]] %>%
                           mutate(delta = factor(7 / delta)) %>%
                           mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
@@ -755,8 +808,8 @@ p.granger.2.2 <- ggplot(res_granger_sum[[4]] %>%
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
   scale_y_continuous(n.breaks = 4) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'D', x = 'True Interaction Strength', y = expression(G[y %->% x]))
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'D', x = 'True Interaction Strength', y = expression(G[y %->% x]), title = 'Granger Causality (B \u279E A)')
 
 rm(res_granger_LIST, res_granger_sum, acc_granger_LIST)
 
@@ -817,66 +870,79 @@ for (i in 1:length(res_te_LIST)) {
 rm(i)
 
 # Plot:
-p.te.1.1 <- ggplot(data = acc_te_LIST[[1]] %>%
-                     mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
+p.te.1.3a <- ggplot(data = acc_te_LIST[[3]] %>%
+                      mutate(strength = as.numeric(strength)) %>%
+                      filter(strength > '1'),
+                    aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
-  geom_point(size = 3) +
+  geom_point(size = 3.5, alpha = 0.7) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
-        plot.tag = element_text(size = 16),
-        plot.tag.position = c(0.0075, 0.995),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 1.12),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'E', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
-p.te.1.2 <- ggplot(data = acc_te_LIST[[2]] %>%
-                     mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
-  geom_line() +
-  geom_point(size = 3) +
+  scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  # scale_color_viridis(option = 'C', discrete = TRUE) +
+  scale_shape_manual(values = c(16, 17, 15)) +
+  labs(tag = 'E', x = NULL, y = '', title = NULL)
+p.te.1.3b <- ggplot(data = acc_te_LIST[[3]] %>%
+                      mutate(strength = as.numeric(strength)) %>%
+                      filter(strength < 1) %>%
+                      mutate(strength = if_else(strength == 0, 8, 1 / as.numeric(strength))),
+                    aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
+  geom_line(linetype = 2) +
+  geom_point(size = 3.5) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
-        plot.tag = element_text(size = 16),
-        plot.tag.position = c(0.0075, 0.995),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'F', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
-p.te.1.3 <- ggplot(data = acc_te_LIST[[3]] %>%
-                     mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
+  scale_x_continuous(breaks = c(2, 4, 8), labels = c('0.5', '0.25', '0')) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_shape_manual(values = c(1, 2, 0)) +
+  labs(x = NULL, y = '', title = NULL)
+
+p.te.1.4a <- ggplot(data = acc_te_LIST[[4]] %>%
+                      mutate(strength = as.numeric(strength)) %>%
+                      filter(strength > '1'),
+                    aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
-  geom_point(size = 3) +
+  geom_point(size = 3.5, alpha = 0.7) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
-        plot.tag = element_text(size = 16),
-        plot.tag.position = c(0.0075, 0.995),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 1.12),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'E', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
-p.te.1.4 <- ggplot(data = acc_te_LIST[[4]] %>%
-                     mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                   aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
-  geom_line() +
-  geom_point(size = 3) +
+  scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  # scale_color_viridis(option = 'C', discrete = TRUE) +
+  scale_shape_manual(values = c(16, 17, 15)) +
+  labs(tag = 'F', x = NULL, y = '', title = NULL)
+p.te.1.4b <- ggplot(data = acc_te_LIST[[4]] %>%
+                      mutate(strength = as.numeric(strength)) %>%
+                      filter(strength < 1) %>%
+                      mutate(strength = if_else(strength == 0, 8, 1 / as.numeric(strength))),
+                    aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
+  geom_line(linetype = 2) +
+  geom_point(size = 3.5) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
-        plot.tag = element_text(size = 16),
-        plot.tag.position = c(0.0075, 0.995),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'F', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
+  scale_x_continuous(breaks = c(2, 4, 8), labels = c('0.5', '0.25', '0')) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_shape_manual(values = c(1, 2, 0)) +
+  labs(x = NULL, y = '', title = NULL)
 
 res_te_sum <- lapply(res_te_LIST, function(ix) {
   ix %>%
@@ -887,7 +953,6 @@ res_te_sum <- lapply(res_te_LIST, function(ix) {
               upper = quantile(te, p = 0.9)) %>%
     ungroup()
 })
-
 
 p.te.2.1 <- ggplot(res_te_sum[[3]] %>%
                      mutate(delta = factor(7 / delta)) %>%
@@ -906,8 +971,8 @@ p.te.2.1 <- ggplot(res_te_sum[[3]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'E', x = 'True Interaction Strength', y = expression(T[x %->% y]))
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'E', x = 'True Interaction Strength', y = expression(T[x %->% y]), title = 'Transfer Entropy (A \u279E B)')
 p.te.2.2 <- ggplot(res_te_sum[[4]] %>%
                      mutate(delta = factor(7 / delta)) %>%
                      mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
@@ -925,10 +990,10 @@ p.te.2.2 <- ggplot(res_te_sum[[4]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'F', x = 'True Interaction Strength', y = expression(T[y %->% x]))
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'F', x = 'True Interaction Strength', y = expression(T[y %->% x]), title = 'Transfer Entropy (B \u279E A)')
 
-# rm(res_te_LIST, res_te_sum, acc_te_LIST)
+rm(res_te_LIST, res_te_sum, acc_te_LIST)
 
 # ------------------------------------------------------------------------------
 
@@ -1002,94 +1067,153 @@ p.ccm.surr <- res_ccm_surr %>%
 rm(res_ccm_surr, p.ccm.surr)
 
 # Plot:
-p.ccm.1.1 <- ggplot(data = acc_ccm_LIST[[1]] %>%
-                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
+p.ccm.1.1a <- ggplot(data = acc_ccm_LIST[[1]] %>%
+                       mutate(strength = as.numeric(strength)) %>%
+                       filter(strength > '1'),
+                     aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
-  geom_point(size = 3) +
+  geom_point(size = 3.5, alpha = 0.7) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
-        plot.tag = element_text(size = 16),
-        plot.tag.position = c(0.0075, 0.995),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 1.12),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'G', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
-p.ccm.1.2 <- ggplot(data = acc_ccm_LIST[[2]] %>%
-                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
-  geom_line() +
-  geom_point(size = 3) +
+  scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  # scale_color_viridis(option = 'C', discrete = TRUE) +
+  scale_shape_manual(values = c(16, 17, 15)) +
+  labs(tag = 'I', x = NULL, y = '', title = NULL)
+p.ccm.1.1b <- ggplot(data = acc_ccm_LIST[[1]] %>%
+                       mutate(strength = as.numeric(strength)) %>%
+                       filter(strength < 1) %>%
+                       mutate(strength = if_else(strength == 0, 8, 1 / as.numeric(strength))),
+                     aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
+  geom_line(linetype = 2) +
+  geom_point(size = 3.5) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
-        plot.tag = element_text(size = 16),
-        plot.tag.position = c(0.0075, 0.995),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'I', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
-p.ccm.1.3 <- ggplot(data = acc_ccm_LIST[[3]] %>%
-                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
+  scale_x_continuous(breaks = c(2, 4, 8), labels = c('0.5', '0.25', '0')) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_shape_manual(values = c(1, 2, 0)) +
+  labs(x = NULL, y = '', title = NULL)
+
+p.ccm.1.2a <- ggplot(data = acc_ccm_LIST[[2]] %>%
+                       mutate(strength = as.numeric(strength)) %>%
+                       filter(strength > '1'),
+                     aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
-  geom_point(size = 3) +
+  geom_point(size = 3.5, alpha = 0.7) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
-        plot.tag = element_text(size = 16),
-        plot.tag.position = c(0.0075, 0.995),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 1.12),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
-p.ccm.1.4 <- ggplot(data = acc_ccm_LIST[[4]] %>%
-                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
-  geom_line() +
-  geom_point(size = 3) +
+  scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  # scale_color_viridis(option = 'C', discrete = TRUE) +
+  scale_shape_manual(values = c(16, 17, 15)) +
+  labs(tag = 'G', x = NULL, y = '', title = NULL)
+p.ccm.1.2b <- ggplot(data = acc_ccm_LIST[[2]] %>%
+                       mutate(strength = as.numeric(strength)) %>%
+                       filter(strength < 1) %>%
+                       mutate(strength = if_else(strength == 0, 8, 1 / as.numeric(strength))),
+                     aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
+  geom_line(linetype = 2) +
+  geom_point(size = 3.5) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
-        plot.tag = element_text(size = 16),
-        plot.tag.position = c(0.0075, 0.995),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'H', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
-p.ccm.1.5 <- ggplot(data = acc_ccm_LIST[[5]] %>%
-                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
+  scale_x_continuous(breaks = c(2, 4, 8), labels = c('0.5', '0.25', '0')) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_shape_manual(values = c(1, 2, 0)) +
+  labs(x = NULL, y = '', title = NULL)
+
+p.ccm.1.4a <- ggplot(data = acc_ccm_LIST[[4]] %>%
+                       mutate(strength = as.numeric(strength)) %>%
+                       filter(strength > '1'),
+                     aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
   geom_line() +
-  geom_point(size = 3) +
+  geom_point(size = 3.5, alpha = 0.7) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
-        plot.tag = element_text(size = 16),
-        plot.tag.position = c(0.0075, 0.995),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 1.12),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'J', x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
-p.ccm.1.6 <- ggplot(data = acc_ccm_LIST[[6]] %>%
-                      mutate(strength_proxy = rank(strength, ties.method = 'min')),
-                    aes(x = strength_proxy, y = perc_correct, shape = duration, color = duration)) +
-  geom_line() +
-  geom_point(size = 3) +
+  scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  # scale_color_viridis(option = 'C', discrete = TRUE) +
+  scale_shape_manual(values = c(16, 17, 15)) +
+  labs(tag = 'J', x = NULL, y = '', title = NULL)
+p.ccm.1.4b <- ggplot(data = acc_ccm_LIST[[4]] %>%
+                       mutate(strength = as.numeric(strength)) %>%
+                       filter(strength < 1) %>%
+                       mutate(strength = if_else(strength == 0, 8, 1 / as.numeric(strength))),
+                     aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
+  geom_line(linetype = 2) +
+  geom_point(size = 3.5) +
   theme_classic() +
   theme(axis.title = element_text(size = 13),
         axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
         legend.position = 'none') +
-  scale_x_continuous(breaks = c(1, 4, 7, 10, 13, 16), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(x = 'Strength', y = '% Correct   ', shape = 'Duration', color = 'Duration')
+  scale_x_continuous(breaks = c(2, 4, 8), labels = c('0.5', '0.25', '0')) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_shape_manual(values = c(1, 2, 0)) +
+  labs(x = NULL, y = '', title = NULL)
+
+p.ccm.1.5a <- ggplot(data = acc_ccm_LIST[[5]] %>%
+                       mutate(strength = as.numeric(strength)) %>%
+                       filter(strength > '1'),
+                     aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
+  geom_line() +
+  geom_point(size = 3.5, alpha = 0.7) +
+  theme_classic() +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 1.12),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  # scale_color_viridis(option = 'C', discrete = TRUE) +
+  scale_shape_manual(values = c(16, 17, 15)) +
+  labs(tag = 'H', x = NULL, y = '', title = NULL)
+p.ccm.1.5b <- ggplot(data = acc_ccm_LIST[[5]] %>%
+                       mutate(strength = as.numeric(strength)) %>%
+                       filter(strength < 1) %>%
+                       mutate(strength = if_else(strength == 0, 8, 1 / as.numeric(strength))),
+                     aes(x = strength, y = perc_correct, shape = duration, color = duration)) +
+  geom_line(linetype = 2) +
+  geom_point(size = 3.5) +
+  theme_classic() +
+  theme(axis.title = element_text(size = 13),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 20),
+        plot.tag.position = c(0.025, 0.975),
+        legend.position = 'none') +
+  scale_x_continuous(breaks = c(2, 4, 8), labels = c('0.5', '0.25', '0')) +
+  scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  scale_shape_manual(values = c(1, 2, 0)) +
+  labs(x = NULL, y = '', title = NULL)
 
 res_ccm_sum <- lapply(res_ccm_LIST, function(ix) {
   ix %>%
@@ -1118,8 +1242,8 @@ p.ccm.2.1 <- ggplot(res_ccm_sum[[1]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'G', x = 'True Interaction Strength', y = expression(rho))
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'G', x = 'True Interaction Strength', y = expression(rho), title = 'CCM (A \u279E B)')
 p.ccm.2.2 <- ggplot(res_ccm_sum[[4]] %>%
                       mutate(delta = factor(7 / delta)) %>%
                       mutate(strength_proxy = rank(theta_lambda, ties.method = 'min')) %>%
@@ -1137,8 +1261,8 @@ p.ccm.2.2 <- ggplot(res_ccm_sum[[4]] %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'H', x = 'True Interaction Strength', y = expression(rho))
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'H', x = 'True Interaction Strength', y = expression(rho), title = 'CCM (B \u279E A)')
 
 rm(res_ccm_LIST, res_ccm_sum, res_ccm, acc_ccm_LIST)
 
@@ -1150,20 +1274,28 @@ rm(res_ccm_LIST, res_ccm_sum, res_ccm, acc_ccm_LIST)
 df_acc <- df_acc %>%
   mutate(direction = if_else(str_detect(method, 'v1 -> v2'), 'v1 -> v2', 'v2 -> v1')) %>%
   mutate(method = str_remove(method, 'v1 -> v2 ')) %>% mutate(method = str_remove(method, 'v2 -> v1 ')) %>%
-  mutate(confounding = if_else(str_detect(method, 'Seasonality'), ' (w/ Seas)', '')) %>%
-  mutate(method = if_else(!(method %in% c('Corr. Coef.', 'GAMs') | str_detect(method, 'CCM')), str_sub(method, 1, 2), method),
-         method = paste0(method, confounding)) %>%
-  select(-confounding)
+  mutate(confounding = if_else(str_detect(method, 'Seasonality'), '(w/ Seas)', '')) %>%
+  mutate(method = if_else(!(method %in% c('Corr. Coef.', 'GAMs') | str_detect(method, 'CCM')), str_sub(method, 1, 2), method)) %>%
+  mutate(sig = str_sub(method, 13, 13)) %>%
+  mutate(method = if_else(str_detect(method, 'CCM'), paste0('CCM', sig), method)) %>%
+  select(-sig)
 df_acc_STORE <- df_acc
 
 df_acc <- df_acc %>%
-  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC (w/ Seas)', 'TE (w/ Seas)', 'CCM (Method 1)', 'CCM (Method 2)')))
+  filter((method %in% c('GC', 'TE') & confounding == '(w/ Seas)') | !(method %in% c('GC', 'TE')),
+         method != 'CCM3') %>%
+  select(-confounding) %>%
+  mutate(method_new = method,
+         method_new = if_else(method == 'CCM1', 'CCM2', method_new),
+         method_new = if_else(method == 'CCM2', 'CCM1', method_new)) %>%
+  mutate(method = method_new) %>%
+  select(-method_new) %>%
+  mutate(method = factor(method, levels = c('Corr. Coef.', 'GAMs', 'GC', 'TE', 'CCM1', 'CCM2')))
 
 df_acc <- df_acc %>% bind_rows(df_acc[1:2, ] %>%
                                  mutate(direction = 'v1 -> v2'))
 
 df_acc %>%
-  filter(!is.na(method)) %>%
   select(method, direction, sens:upper_spec) %>%
   print()
 
@@ -1171,6 +1303,7 @@ p.comb.1a <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v
                       mutate(lab_x = if_else(str_detect(method, 'TE'), sens + 0.03, sens)) %>%
                       mutate(lab_y = if_else(str_detect(method, 'TE'), spec + 0.04, spec)),
                     aes(x = sens, y = spec, shape = method, col = method)) +
+  geom_abline(slope = 1, intercept = 0, lty = 2, col = 'gray70') +
   geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec)) +
   geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens)) +
   geom_point(size = 2.5) +
@@ -1181,15 +1314,17 @@ p.comb.1a <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v
         plot.tag.position = c(0.008, 0.975),
         panel.grid.minor = element_blank(),
         legend.position = 'none') +
-  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
-  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_x_continuous(limits = c(0.4, 1), n.breaks = 4) +
+  scale_y_continuous(limits = c(0, 0.8), n.breaks = 6) +
   scale_shape_manual(values = c(18, 17, 15, 16, 4, 4)) +
+  # scale_shape_manual(values = c(5, 2, 0, 1, 4, 4)) +
   scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
   labs(x = 'Sensitivity', y = 'Specificity', tag = 'A')
 p.comb.1b <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v2 -> v1') %>%
                       mutate(lab_x = if_else(str_detect(method, 'TE'), sens + 0.03, sens)) %>%
                       mutate(lab_y = if_else(str_detect(method, 'TE'), spec + 0.04, spec)),
                     aes(x = sens, y = spec, shape = method, col = method)) +
+  geom_abline(slope = 1, intercept = 0, lty = 2, col = 'gray70') +
   geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec)) +
   geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens)) +
   geom_point(size = 2.5) +
@@ -1200,9 +1335,10 @@ p.comb.1b <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v
         plot.tag.position = c(0.008, 0.975),
         panel.grid.minor = element_blank(),
         legend.position = 'none') +
-  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
-  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+  scale_x_continuous(limits = c(0.4, 1), n.breaks = 4) +
+  scale_y_continuous(limits = c(0, 0.8), n.breaks = 6) +
   scale_shape_manual(values = c(18, 17, 15, 16, 4, 4)) +
+  # scale_shape_manual(values = c(5, 2, 0, 1, 4, 4)) +
   scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
   labs(x = 'Sensitivity', y = 'Specificity', tag = 'B')
 
@@ -1212,30 +1348,56 @@ p.comb.1.legend <- ggplot(df_acc %>% filter(!is.na(method)),
   theme_classic() +
   theme(legend.title = element_text(size = 14),
         legend.text = element_text(size = 12),
-        legend.position = 'right') +
+        legend.position = 'top') +
+  guides(shape = guide_legend(nrow = 1)) +
   scale_shape_manual(values = c(18, 17, 15, 16, 4, 4)) +
+  # scale_shape_manual(values = c(5, 2, 0, 1, 4, 4)) +
   scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
   labs(shape = 'Method', col = 'Method')
 p.comb.1.legend <- ggplotGrob(p.comb.1.legend)$grobs[[which(sapply(ggplotGrob(p.comb.1.legend)$grobs, function(x) x$name) == 'guide-box')]]
 
-p.comb.1 <- arrangeGrob(p.comb.1a, p.comb.1b, p.comb.1.legend, widths = c(1, 1, 0.4), nrow = 1)
+p.comb.1 <- arrangeGrob(p.comb.1.legend, arrangeGrob(p.comb.1a, p.comb.1b, nrow = 1), heights = c(0.15, 1))
 plot(p.comb.1)
-# ggsave(filename = 'results/plots/figures/Figure3.svg', p.comb.1, height = 3.5, width = 10)
+# ggsave(filename = 'results/plots/figures/Figure3.svg', p.comb.1, height = 4.8, width = 7.5)
 
 # Plot accuracy by method, strength, and duration:
-p.comb.2 <- arrangeGrob(p.corr.1, p.gam.1, p.granger.1.3, p.granger.1.4, p.te.1.3, p.te.1.4, p.ccm.1.1, p.ccm.1.4, p.ccm.1.2, p.ccm.1.5, p.legend.1,
-                        layout_matrix = rbind(c(1, 2), c(3, 4), c(5, 6), c(7, 8), c(9, 10), c(11, 11)),
-                        heights = c(1, 1, 1, 1, 1, 0.25))
+x_lab <- textGrob('Strength', gp = gpar(fontsize = 14, hjust = 1))
+y_lab <- textGrob('Sensitivity', rot = 90, hjust = -0, gp = gpar(fontsize = 14))
+
+title_1 <- textGrob('Corr. Coef.', gp = gpar(fontsize = 13), hjust = 2.03)
+title_2 <- textGrob('GAMs', gp = gpar(fontsize = 13), hjust = 3.55)
+title_3 <- textGrob('Granger Causality (A \u279E B)', gp = gpar(fontsize = 13), hjust = 0.85)
+title_4 <- textGrob('Granger Causality (B \u279E A)', gp = gpar(fontsize = 13), hjust = 0.85)
+title_5 <- textGrob('Transfer Entropy (A \u279E B)', gp = gpar(fontsize = 13), hjust = 0.9)
+title_6 <- textGrob('Transfer Entropy (B \u279E A)', gp = gpar(fontsize = 13), hjust = 0.9)
+title_7 <- textGrob('CCM (Method 1) (A \u279E B)', gp = gpar(fontsize = 13), hjust = 0.9)
+title_8 <- textGrob('CCM (Method 1) (B \u279E A)', gp = gpar(fontsize = 13), hjust = 0.9)
+title_9 <- textGrob('CCM (Method 2) (A \u279E B)', gp = gpar(fontsize = 13), hjust = 0.9)
+title_0 <- textGrob('CCM (Method 2) (B \u279E A)', gp = gpar(fontsize = 13), hjust = 0.9)
+
+p.comb.2 <- arrangeGrob(arrangeGrob(arrangeGrob(p.corr.1a, p.corr.1b, nrow = 1, widths = c(0.8, 1), top = title_1),
+                                    arrangeGrob(p.gam.1a, p.gam.1b, nrow = 1, widths = c(0.8, 1), top = title_2),
+                                    arrangeGrob(p.granger.1.3a, p.granger.1.3b, nrow = 1, widths = c(0.8, 1), top = title_3),
+                                    arrangeGrob(p.granger.1.4a, p.granger.1.4b, nrow = 1, widths = c(0.8, 1), top = title_4),
+                                    arrangeGrob(p.te.1.3a, p.te.1.3b, nrow = 1, widths = c(0.8, 1), top = title_5),
+                                    arrangeGrob(p.te.1.4a, p.te.1.4b, nrow = 1, widths = c(0.8, 1), top = title_6),
+                                    arrangeGrob(p.ccm.1.2a, p.ccm.1.2b, nrow = 1, widths = c(0.8, 1), top = title_7),
+                                    arrangeGrob(p.ccm.1.5a, p.ccm.1.5b, nrow = 1, widths = c(0.8, 1), top = title_8),
+                                    arrangeGrob(p.ccm.1.1a, p.ccm.1.1b, nrow = 1, widths = c(0.8, 1), top = title_9),
+                                    arrangeGrob(p.ccm.1.4a, p.ccm.1.4b, nrow = 1, widths = c(0.8, 1), top = title_0),
+                                    ncol = 2, bottom = x_lab, left = y_lab),
+                        p.legend.1, heights = c(1, 0.05))
 plot(p.comb.2)
-# ggsave(filename = 'results/plots/figures/Figure4.svg', p.comb.2, width = 7.5, height = 8.25)
+# ggsave(filename = 'results/plots/figures/Figure4.svg', p.comb.2, width = 10, height = 10)
 rm(p.corr.1, p.gam.1, p.granger.1.1, p.granger.1.2, p.granger.1.3, p.granger.1.4, p.te.1.1, p.te.1.2,
    p.te.1.3, p.te.1.4, p.ccm.1.1, p.ccm.1.4, p.ccm.1.2, p.ccm.1.5, p.ccm.1.3, p.ccm.1.6, p.legend.1)
 
 # Plot accuracy for methods accounting for vs. not accounting for seasonality:
 p.seas <- ggplot(df_acc_STORE %>% filter(str_detect(method, 'GC') | str_detect(method, 'TE')) %>%
-                   mutate(seas = str_detect(method, 'Seas'), method = str_sub(method, 1, 2),
+                   mutate(seas = str_detect(confounding, 'Seas'), method = str_sub(method, 1, 2),
                           direction = if_else(direction == 'v1 -> v2', 'A %->% B', 'B %->% A')),
                  aes(x = sens, y = spec, shape = method, col = method, alpha = seas)) +
+  geom_abline(slope = 1, intercept = 0, lty = 2, col = 'gray70') +
   geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec)) +
   geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens)) +
   geom_point(size = 2.5) +
@@ -1246,15 +1408,15 @@ p.seas <- ggplot(df_acc_STORE %>% filter(str_detect(method, 'GC') | str_detect(m
         strip.text = element_text(size = 12),
         strip.background = element_rect(fill = 'gray90'),
         panel.grid.minor = element_blank(),
-        legend.position = 'right') +
-  scale_x_continuous(limits = c(0, 1), n.breaks = 10) +
-  scale_y_continuous(limits = c(0, 1), n.breaks = 10) +
+        legend.position = 'top') +
+  scale_x_continuous(limits = c(0.4, 1), n.breaks = 4) +
+  scale_y_continuous(limits = c(0, 1), n.breaks = 6) +
   scale_shape_manual(values = c(15, 16)) +
   scale_color_manual(values = c('#1f78b4', '#6a3d9a')) +
   scale_alpha_manual(values = c(0.4, 1.0), guide = 'none') +
   labs(x = 'Sensitivity', y = 'Specificity', shape = 'Method', col = 'Method')
 plot(p.seas)
-# ggsave(filename = 'results/plots/figures/FigureS3.svg', p.seas, height = 3.5, width = 8)
+# ggsave(filename = 'results/plots/figures/FigureS3.svg', p.seas, height = 4.5, width = 5)
 
 # Plot effect of true interaction strength on point estimates:
 df_assoc <- assoc_corr %>%
@@ -1287,122 +1449,159 @@ df_assoc <- df_assoc %>%
 
 p3.a <- ggplot(df_assoc %>% filter(method == 'Corr. Coef.'),
                aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
-  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_vline(xintercept = 2.0, lty = 1, col = 'red3') +
+  geom_vline(xintercept = 1.0, lty = 2, col = 'gray70') +
   geom_pointrange() +
   theme_classic() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
         plot.tag = element_text(size = 20),
         plot.tag.position = c(0.025, 0.975),
-        legend.position = 'none') +
+        legend.position = 'none',
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
   scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'A', x = NULL, y = '')
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  # scale_color_brewer(palette = 'Set1') +
+  labs(tag = 'A', x = NULL, y = '', title = 'Corr. Coef.')
 p3.b <- ggplot(df_assoc %>% filter(method == 'GAMs'),
                aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
-  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_vline(xintercept = 2.0, lty = 1, col = 'red3') +
+  geom_vline(xintercept = 1.0, lty = 2, col = 'gray70') +
   geom_pointrange() +
   theme_classic() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
         plot.tag = element_text(size = 20),
         plot.tag.position = c(0.025, 0.975),
-        legend.position = 'none') +
+        legend.position = 'none',
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
   scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'B', x = NULL, y = '')
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'B', x = NULL, y = '', title = 'GAMs')
 p3.c <- ggplot(df_assoc %>% filter(method == 'GC (w/ Seas)', direction == 'v1 -> v2'),
                aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
-  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_vline(xintercept = 2.0, lty = 1, col = 'red3') +
+  geom_vline(xintercept = 1.0, lty = 2, col = 'gray70') +
   geom_pointrange() +
   theme_classic() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
         plot.tag = element_text(size = 20),
         plot.tag.position = c(0.025, 0.975),
-        legend.position = 'none') +
+        legend.position = 'none',
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
   scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'C', x = NULL, y = '')
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'C', x = NULL, y = '', title = 'Granger Causality (A \u279E B)')
 p3.d <- ggplot(df_assoc %>% filter(method == 'GC (w/ Seas)', direction == 'v2 -> v1'),
                aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
-  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_vline(xintercept = 2.0, lty = 1, col = 'red3') +
+  geom_vline(xintercept = 1.0, lty = 2, col = 'gray70') +
   geom_pointrange() +
   theme_classic() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
         plot.tag = element_text(size = 20),
         plot.tag.position = c(0.025, 0.975),
-        legend.position = 'none') +
+        legend.position = 'none',
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
   scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'D', x = NULL, y = '')
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'D', x = NULL, y = '', title = 'Granger Causality (B \u279E A)')
 p3.e <- ggplot(df_assoc %>% filter(method == 'TE (w/ Seas)', direction == 'v1 -> v2'),
                aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
-  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_vline(xintercept = 2.0, lty = 1, col = 'red3') +
+  geom_vline(xintercept = 1.0, lty = 2, col = 'gray70') +
   geom_pointrange() +
   theme_classic() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
         plot.tag = element_text(size = 20),
         plot.tag.position = c(0.025, 0.975),
-        legend.position = 'none') +
+        legend.position = 'none',
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
   scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'E', x = NULL, y = '')
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'E', x = NULL, y = '', title = 'Transfer Entropy (A \u279E B)')
 p3.f <- ggplot(df_assoc %>% filter(method == 'TE (w/ Seas)', direction == 'v2 -> v1'),
                aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
-  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_vline(xintercept = 2.0, lty = 1, col = 'red3') +
+  geom_vline(xintercept = 1.0, lty = 2, col = 'gray70') +
   geom_pointrange() +
   theme_classic() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
         plot.tag = element_text(size = 20),
         plot.tag.position = c(0.025, 0.975),
-        legend.position = 'none') +
+        legend.position = 'none',
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
   scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'F', x = NULL, y = '')
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'F', x = NULL, y = '', title = 'Transfer Entropy (B \u279E A)')
 p3.g <- ggplot(df_assoc %>% filter(method == 'CCM', direction == 'v1 -> v2'),
                aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
-  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_vline(xintercept = 2.0, lty = 1, col = 'red3') +
+  geom_vline(xintercept = 1.0, lty = 2, col = 'gray70') +
   geom_pointrange() +
   theme_classic() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
         plot.tag = element_text(size = 20),
         plot.tag.position = c(0.025, 0.975),
-        legend.position = 'none') +
+        legend.position = 'none',
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
   scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'G', x = NULL, y = '')
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'G', x = NULL, y = '', title = 'CCM (A \u279E B)')
 p3.h <- ggplot(df_assoc %>% filter(method == 'CCM', direction == 'v2 -> v1'),
                aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +
-  geom_vline(xintercept = 1.0, lty = 2) +
+  geom_vline(xintercept = 2.0, lty = 1, col = 'red3') +
+  geom_vline(xintercept = 1.0, lty = 2, col = 'gray70') +
   geom_pointrange() +
   theme_classic() +
   theme(axis.title = element_text(size = 14),
         axis.text = element_text(size = 12),
         plot.tag = element_text(size = 20),
         plot.tag.position = c(0.025, 0.975),
-        legend.position = 'none') +
+        legend.position = 'none',
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank()) +
   scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
-  scale_color_brewer(palette = 'Set1') +
-  labs(tag = 'H', x = NULL, y = '')
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(tag = 'H', x = NULL, y = '', title = 'CCM (B \u279E A)')
 
-y_lab <- textGrob('Duration', rot = 90, hjust = -0, gp = gpar(fontsize = 14))
-x_lab <- textGrob('Change in Point Estimate w/ 2x Change in True Strength', gp = gpar(fontsize = 14, hjust = 1))
+p3.legend <- ggplot(df_assoc %>%
+                      mutate(delta = if_else(delta == '1', paste0(delta, ' week'), paste0(delta, ' weeks'))) %>%
+                      mutate(delta = factor(delta, levels = c('1 week', '4 weeks', '13 weeks'))),
+                    aes(x = 2**coef, y = delta, col = delta)) +
+  geom_point() +
+  theme_classic() +
+  theme(legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        legend.position = 'bottom') +
+  scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
+  labs(col = 'Duration')
+p3.legend <- ggplotGrob(p3.legend)$grobs[[which(sapply(ggplotGrob(p3.legend)$grobs, function(x) x$name) == 'guide-box')]]
 
-p.comb.3 <- arrangeGrob(p3.a, p3.b, p3.c, p3.d, p3.e, p3.f, p3.g, p3.h, ncol = 2, left = y_lab, bottom = x_lab)
+x_lab <- textGrob('Change in Point Estimate', gp = gpar(fontsize = 14, hjust = 1))
+
+p.comb.3 <- arrangeGrob(arrangeGrob(p3.a, p3.b, p3.c, p3.d, p3.e, p3.f, p3.g, p3.h, ncol = 2, bottom = x_lab), p3.legend, heights = c(1, 0.085))
 plot(p.comb.3)
-# ggsave(filename = 'results/plots/figures/Figure5.svg', p.comb.3, width = 8, height = 5.5)
+# ggsave(filename = 'results/plots/figures/Figure5.svg', p.comb.3, width = 8, height = 7.5)
 
 # Plot metric values vs. true interaction strength by duration:
 p.comb.4 <- arrangeGrob(p.corr.2, p.gam.2, p.granger.2.1, p.granger.2.2, p.te.2.1, p.te.2.2, p.ccm.2.1, p.ccm.2.2, p.legend.2,
                         layout_matrix = rbind(c(1, 2), c(3, 4), c(5, 6), c(7, 8), c(9, 9)),
                         heights = c(1, 1, 1, 1, 0.25))
 plot(p.comb.4)
-# ggsave(filename = 'results/plots/figures/FigureS4.svg', p.comb.4, width = 10, height = 8)
+# ggsave(filename = 'results/plots/figures/FigureS4.svg', p.comb.4, width = 10, height = 8.75)
 rm(p.corr.2, p.gam.2, p.granger.2.1, p.granger.2.2, p.te.2.1, p.te.2.2, p.ccm.2.1, p.ccm.2.2, p.legend.2)
 
 # Close pdf:
