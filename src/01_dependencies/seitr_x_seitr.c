@@ -1,16 +1,5 @@
 // -----------------------------------------------------------------------------------------------------//
-// Implementation of the SEITR x SEITR model for circulation of two respiratory 
-// viruses
-
-// For a pomp model we want to have inputs for: 
-// rinit - inital conditions
-// rmeasure - simulation of f_{Y_n|X_n} for measurement model
-// dmeasure - evaluation of f_{Y_n|X_n} for measurement model 
-// rprocess - simulation of f_{X_n|X_{n-1}} for the process model (specified in rsim)
-
-// Created by: Sarah Pirikahu
-// Creation date: 22 December 2022
-
+// Implementation of the SEITR x SEITR model for circulation of two respiratory viruses
 // -----------------------------------------------------------------------------------------------------//
 
 //------- GLOBAL FUNCTIONS -----//
@@ -101,11 +90,6 @@ T_t_vec[6] = logitCons(t_vec[6], 314, 366);
 T_t_vec[7] = logitCons(t_vec[7], 367, 418);
 T_t_vec[8] = logitCons(t_vec[8], 419, 470);
 T_t_vec[9] = logitCons(t_vec[9], 471, 522);
-//T_t_vec[5] = logitCons(t_vec[5], 522, 573);
-//T_t_vec[6] = logitCons(t_vec[6], 574, 626);
-//T_t_vec[7] = logitCons(t_vec[7], 627, 678);
-//T_t_vec[8] = logitCons(t_vec[8], 679, 730);
-//T_t_vec[9] = logitCons(t_vec[9], 731, 783);
 
 // surge in loss immunity
 double *w_delta_vec = (double *) &w_delta_i_1; 
@@ -177,11 +161,6 @@ t_vec[6] = expitCons(T_t_vec[6], 314, 366);
 t_vec[7] = expitCons(T_t_vec[7], 367, 418);
 t_vec[8] = expitCons(T_t_vec[8], 419, 470);
 t_vec[9] = expitCons(T_t_vec[9], 471, 522);
-//t_vec[5] = expitCons(T_t_vec[5], 522, 573);
-//t_vec[6] = expitCons(T_t_vec[6], 574, 626);
-//t_vec[7] = expitCons(T_t_vec[7], 627, 678);
-//t_vec[8] = expitCons(T_t_vec[8], 679, 730);
-//t_vec[9] = expitCons(T_t_vec[9], 731, 783);
 
 // surges in loss of immunity
 double *w_delta_vec = (double *) &w_delta_i_1;
@@ -193,7 +172,6 @@ for (int i = 0; i < (int) nsurges; i++) {
 double sum_init = 0.0;
 
 sum_init = exp(T_E01) + exp(T_E02) + exp(T_R01) + exp(T_R02) + exp(T_R012);
-//sum_init = exp(E01) + exp(E02) + exp(R01) + exp(R02) + exp(R012);
 E01 = exp(T_E01) / (1.0 + sum_init);
 E02 = exp(T_E02) / (1.0 + sum_init);
 R01 = exp(T_R01) / (1.0 + sum_init);
@@ -247,7 +225,6 @@ V2 = 0;
 // then re calculate the initial value of X_SS by doing N - all other
 // initial values for the other compartments
 if ((X_SS + X_ES + X_RS + X_SE + X_SR + X_RR) != N) {
-  //Rprintf("SS=%f, ES=%f, RS=%f, SE=%f, SR=%f, RR=%f, sum=%f, N=%f, E01=%f, E02=%f, R01=%f, R02=%f, R012=%f\n", X_SS, X_ES, X_RS, X_SE, X_SR, X_RR, X_SS + X_ES + X_RS + X_SE + X_SR + X_RR, N, E01, E02,R01,R02,R012);
   X_SS = nearbyint(N - X_ES - X_RS - X_SE - X_SR - X_RR);
 }
 if ((X_SS + X_ES + X_RS + X_SE + X_SR + X_RR) != N) {
@@ -437,17 +414,6 @@ if (debug) {
 
 beta1 = R0_1 * gamma1 * dW1 / dt;
 beta2 = R0_2 * gamma2 * dW2 / dt;
-
-// if (p1 > 0.0 && beta_sd1 > 0.0) { 
-//   beta1 = rgammawn(sqrt(R0_1 / (p1 * N * beta_sd1 * dt)), R0_1 * gamma1);
-// } else {
-//   beta1 = R0_1 * gamma1;
-// }
-// if (p2 > 0.0 && beta_sd2 > 0.0) {
-//   beta2 = rgammawn(sqrt(R0_2 / (p2 * N * beta_sd2 * dt)), R0_2 * gamma2);
-// } else {
-//   beta2 = R0_2 * gamma2;
-// }
 
 // incorporate seasonality parameter for each virus 
 // where A = amplitude, omega = annual angular frequency, t = time and phi = phase

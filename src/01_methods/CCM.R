@@ -1,14 +1,9 @@
-###############################################################
-#                 Convergent Cross Mapping       
-#
+# ---------------------------------------------------------------------------------------------------------------------
+# Code to run convergent cross-mapping (CCM)
+
 # Useful documentation describing CCM and giving examples:
 # https://ha0ye.github.io/rEDM/articles/rEDM.html
-# 
-# inputs: data = data with time, v1_obs, v2_obs 
-#
-# Created by: Sarah Pirikahu
-# Creation date: 24 March 2023
-###############################################################
+# ---------------------------------------------------------------------------------------------------------------------
 
 # load packages
 library(rEDM)
@@ -18,11 +13,7 @@ library(pracma)
 ccm_func <- function(data){
   
   print(unique(data$.id))
-  
-  # Log-transform and center data:
   data <- data %>%
-    mutate(V1_obs_ln = scale(log(V1_obs + 1), scale = FALSE),
-           V2_obs_ln = scale(log(V2_obs + 1), scale = FALSE)) %>%
     dplyr::select(time, V1_obs_ln, V2_obs_ln)
   
   #---- determine Embedding dimension (i.e. the number of lags used to build up the shadow manifold) ----#
@@ -46,30 +37,10 @@ ccm_func <- function(data){
                          lib = lib, pred = pred, maxE = 5, showPlot = FALSE)
   E_v2 <- E_v2 %>% slice_max(rho) %>% pull(E)
   
-  #---- check whether highest cross-map correlation is positive and for a negative lag ----#
-  vars <- c('V1_obs_ln', 'V2_obs_ln')
-  params <- expand.grid(lib_column = vars, target_column = vars, tp = -20:20) %>%
-    filter(lib_column != target_column) %>%
-    mutate(E = if_else(lib_column == 'V1_obs_ln', E_v1, E_v2))
-  
-  # explore prediction skill over range of tp values 
-  # for a single library size set it to max
-  lib_size_tp <- nrow(data) - (20 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
-  
-  output <- do.call(rbind, lapply(seq_len(nrow(params)), function(i) {
-    CCM(dataFrame = data, E = params$E[i], libSizes = lib_size_tp, random = FALSE,
-        columns = as.character(params$lib_column[i]), target = as.character(params$target_column[i]),
-        Tp = params$tp[i], verbose = FALSE) %>%
-      bind_cols(params[i, ])
-  }))
-  
-  optimal_tp_v1xv2_wide <- output %>% filter(target_column == 'V2_obs_ln') %>% filter(`V1_obs_ln:V2_obs_ln` == max(`V1_obs_ln:V2_obs_ln`)) %>% pull(tp)
-  optimal_tp_v2xv1_wide <- output %>% filter(target_column == 'V1_obs_ln') %>% filter(`V2_obs_ln:V1_obs_ln` == max(`V2_obs_ln:V1_obs_ln`)) %>% pull(tp)
-  
-  highest_crossmap_cor_v1xv2 <- output %>% filter(target_column == 'V2_obs_ln') %>% pull(`V1_obs_ln:V2_obs_ln`) %>% max()
-  highest_crossmap_cor_v2xv1 <- output %>% filter(target_column == 'V1_obs_ln') %>% pull(`V2_obs_ln:V1_obs_ln`) %>% max()
-  
   #---- determine if any time delay needs considering: i.e. tp parameter ----#
+  # consider only negative tp (causation must be past -> future)
+  vars <- c('V1_obs_ln', 'V2_obs_ln')
+  
   # generate all combinations of lib_column, target_column, tp
   params <- expand.grid(lib_column = vars, target_column = vars, tp = -20:0) %>%
     filter(lib_column != target_column) # remove cases where lib == target
@@ -79,6 +50,10 @@ ccm_func <- function(data){
   params <- params %>%
     mutate(E = if_else(lib_column == 'V1_obs_ln', E_v1, E_v2))
   
+  # set maximum possible library size
+  lib_size_tp <- nrow(data) - (20 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
+  
+  # explore prediction skill over a range of tp values
   output <- do.call(rbind, lapply(seq_len(nrow(params)), function(i) {
     CCM(dataFrame = data, E = params$E[i], libSizes = lib_size_tp, random = FALSE,
         columns = as.character(params$lib_column[i]), target = as.character(params$target_column[i]), 
@@ -90,6 +65,9 @@ ccm_func <- function(data){
   # note: lib_column xmap target column and E is based on lib_column
   optimal_tp_v1xv2 <- output %>% filter(target_column == 'V2_obs_ln') %>% filter(`V1_obs_ln:V2_obs_ln` == max(`V1_obs_ln:V2_obs_ln`)) %>% pull(tp)
   optimal_tp_v2xv1 <- output %>% filter(target_column == 'V1_obs_ln') %>% filter(`V2_obs_ln:V1_obs_ln` == max(`V2_obs_ln:V1_obs_ln`)) %>% pull(tp)
+  
+  highest_crossmap_cor_v1xv2 <- output %>% filter(target_column == 'V2_obs_ln') %>% pull(`V1_obs_ln:V2_obs_ln`) %>% max()
+  highest_crossmap_cor_v2xv1 <- output %>% filter(target_column == 'V1_obs_ln') %>% pull(`V2_obs_ln:V1_obs_ln`) %>% max()
   
   #----- run CCM ------#
   
@@ -108,7 +86,7 @@ ccm_func <- function(data){
   
   # pull out the mean rho for each library size
   mean_rho_v1_xmap_v2 <- v1_xmap_v2$LibMeans %>%
-    mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
+    mutate(LibSize = if_else(LibSize < 20, 12, LibSize)) # set smallest library size to some arbitrary but consistent value
   mean_rho_v2_xmap_v1 <- v2_xmap_v1$LibMeans %>%
     mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
   
@@ -271,7 +249,6 @@ ccm_func <- function(data){
   res <- bind_rows(res, surr_res) %>%
     mutate(E = if_else(direction == 'v2 -> v1', E_v1, E_v2),
            tp_use = if_else(direction == 'v2 -> v1', optimal_tp_v1xv2, optimal_tp_v2xv1),
-           tp_opt = if_else(direction == 'v2 -> v1', optimal_tp_v1xv2_wide, optimal_tp_v2xv1_wide),
            max_cmc = if_else(direction == 'v2 -> v1', highest_crossmap_cor_v1xv2, highest_crossmap_cor_v2xv1),
            p_conv = if_else(direction == 'v2 -> v1', p_conv_v1xv2, p_conv_v2xv1),
            p_surr = if_else(direction == 'v2 -> v1', p_surr_v1xv2, p_surr_v2xv1))

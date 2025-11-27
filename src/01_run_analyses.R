@@ -1,16 +1,6 @@
-##################################################################################################################
-# R code to run pomp model and each of the methods
-#
-# This code runs the following methods:
-#  - Pearson's correlation coefficient
-#  - GAM estimated correlation coefficient
-#  - Transfer entropy
-#  - Granger causality analysis 
-#  - convergent cross mapping
-# 
-# Created by: Sarah Pirikahu 
-# Creation date: 28 Feb 2024
-##################################################################################################################
+# ---------------------------------------------------------------------------------------------------------------------
+# Code to run main analysis, including all five tested methods
+# ---------------------------------------------------------------------------------------------------------------------
 
 # # Code to run through all jobids locally (uncomment and copy-paste in console):
 # for (jobid_use in 1:18) {
@@ -65,9 +55,16 @@ names(results) <- c('true_param', 'data', 'cor', 'gam_cor', 'granger', 'transfer
 results$true_param <- true_params
 results$data <- dat
 
-##################################################################################################################
+# ---------------------------------------------------------------------------------------------------------------------
 
 # Run various methods to determine causality
+
+#---- log-transform and center data ----#
+dat <- dat %>%
+  group_by(.id) %>%
+  mutate(V1_obs_ln = scale(log(V1_obs + 1), scale = FALSE),
+         V2_obs_ln = scale(log(V2_obs + 1), scale = FALSE)) %>%
+  ungroup()
 
 #---- Correlation coefficents ----#
 
@@ -78,9 +75,7 @@ corr_func <- function(data){
   # returns: Tibble of Pearson's r with confidence intervals and p-values
   
   cor_raw <- data %>% group_by(.id) %>%
-    dplyr::select(.id, V1_obs:V2_obs) %>%
-    mutate(V1_obs_ln = scale(log(V1_obs + 1), scale = FALSE),
-           V2_obs_ln = scale(log(V2_obs + 1), scale = FALSE)) %>%
+    dplyr::select(.id, V1_obs_ln:V2_obs_ln) %>%
     group_map(~ cor.test(.$V1_obs_ln, .$V2_obs_ln))
   
   temp_res <- bind_cols(cor = lapply(cor_raw, getElement, 'estimate') %>%
@@ -116,7 +111,7 @@ if (!run_local) {
   
   # apply the GAM correlation approach to each simulated data set and save the results
   tic <- Sys.time()
-  res_gam_cor <- foreach(i = 1:n_sim, .packages=c('tidyverse', 'mgcv', 'vars', 'boot')) %dopar% {
+  res_gam_cor <- foreach(i = 1:n_sim) %dopar% {
     
     dat %>% filter(.id == i) %>% gam_cor()
     

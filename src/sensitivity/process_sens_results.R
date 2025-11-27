@@ -18,8 +18,6 @@ source('src/02_dependencies/fxns_process_results.R')
 # ------------------------------------------------------------------------------ 
 
 # Read in all results
-# To process: forcing low/high, process noise low, obs noise high/low,
-# reporting high, 20y, asymmetric (GAM only)
 
 # Get file names:
 res_filenames <- list.files(path = 'results/sens/', pattern = 'rds', full.names = TRUE)

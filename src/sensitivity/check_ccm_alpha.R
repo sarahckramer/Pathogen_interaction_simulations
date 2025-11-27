@@ -62,8 +62,7 @@ rm(res_filenames_F, where_run, data_list, i, int_params, res_trueparams)
 res_0 <- lapply(results_F, getElement, 'CCM')
 rm(results_F)
 
-# Read in results using various values for alpha (0, 10, 30, 50):
-# res_filenames_ZERO <- list.files(path = 'results/sens_ccm_alpha/', pattern = 'ZERO', full.names = TRUE)
+# Read in results using various values for alpha (0, 0.1, 0.25, 0.5):
 res_filenames_TENTH <- list.files(path = 'results/sens_ccm_alpha/', pattern = 'TENTH', full.names = TRUE)
 res_filenames_QUARTER <- list.files(path = 'results/sens_ccm_alpha/', pattern = 'QUARTER', full.names = TRUE)
 res_filenames_HALF <- list.files(path = 'results/sens_ccm_alpha/', pattern = 'HALF', full.names = TRUE)
@@ -72,7 +71,6 @@ res_10 = res_25 = res_50 = vector('list', length = length(res_filenames_HALF))
 
 for (i in 1:length(res_filenames_HALF)) {
   
-  # res_0[[i]] <- read_rds(res_filenames_ZERO[i])
   res_10[[i]] <- read_rds(res_filenames_TENTH[i])$CCM
   res_25[[i]] <- read_rds(res_filenames_QUARTER[i])$CCM
   res_50[[i]] <- read_rds(res_filenames_HALF[i])$CCM

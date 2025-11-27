@@ -1,16 +1,6 @@
-################################################################################
-#                       Generalised additive model (GAM)         
-#
-# The idea is to run the GAM to get the joint covariance matrix and then from
-# that covariance matrix calculate the correlation matrix. Therefore we can 
-# calculate the correlation whilst taking into account the autocorrelation within
-# our data unlike simple Pearson's correlation
-#
-# input: data = dataset with time, v1_obs, v2_obs
-#
-# Created by: Sarah Pirikahu
-# Creation date: 25 Aug 2023
-################################################################################
+# ---------------------------------------------------------------------------------------------------------------------
+# Code to run generalized additive models (GAMs)
+# ---------------------------------------------------------------------------------------------------------------------
 
 # load packages
 library(mgcv)
@@ -26,11 +16,6 @@ gam_cor <- function(data){
     # calculate time of year:
     data <- data %>%
       mutate(week = week(date))
-    
-    # log-transform and center data:
-    data <- data %>%
-      mutate(V1_obs_ln = scale(log(V1_obs + 1), scale = FALSE),
-             V2_obs_ln = scale(log(V2_obs + 1), scale = FALSE))
     
     # run gam model (brms - Bayesian)
     mvn_mod_form <- bf(mvbind(V1_obs_ln, V2_obs_ln) ~ s(week, bs = 'cc', k = 53)) + set_rescor(TRUE)
