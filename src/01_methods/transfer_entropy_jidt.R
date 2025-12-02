@@ -1,18 +1,12 @@
-###############################################################
-#                 Transfer Entropy using jidt package
-# 
-# Java needs to be installed before this code will work. 
-# Installation procedure to just jidt can be found here: 
-# https://github.com/jlizier/jidt/tree/master
+# ---------------------------------------------------------------------------------------------------------------------
+# Code to run transfer entropy
+
 # Course and short tutorial can be found here:
 # https://github.com/jlizier/jidt/wiki/Tutorial
-#
-# Created by: Sarah Pirikahu
-# Creation date: 3 April 2024
-###############################################################
+# ---------------------------------------------------------------------------------------------------------------------
 
 # Load the rJava library and start the JVM
-library("rJava")
+library(rJava)
 .jinit()
 
 # pointing to where the package folder is sitting
@@ -22,17 +16,12 @@ te_jidt <- function(data, lag){
   
   if (nrow(data) > 0) {
     
-    # Log-transform and center data:
-    data <- data %>%
-      mutate(V1_obs_ln = scale(log(V1_obs + 1), scale = FALSE),
-             V2_obs_ln = scale(log(V2_obs + 1), scale = FALSE))
-    
     # Get relevant data:
     sourceArray <- data$V1_obs_ln
     destArray <- data$V2_obs_ln
     id <- unique(data$.id)
     
-    #---- Analysis w/o confounding ----#
+    #---- Analysis NOT accounting for seasonal confounding ----#
     
     # Create a TE calculator:
     teCalc <- .jnew('infodynamics/measures/continuous/kraskov/TransferEntropyCalculatorKraskov')
@@ -43,7 +32,7 @@ te_jidt <- function(data, lag){
     .jcall(teCalc, 'V', 'initialise')
     .jcall(teCalc, 'V', 'setObservations', sourceArray, destArray)
 
-    # SET EMBEDDING DIMENSIONS (source: 20, dest: 5)
+    # Set embedding dimensions (source: 20, dest: 5)
     .jcall(teCalc, 'V', 'setProperty', 'k_history', '5') # set destination embedding
     .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
 
@@ -59,7 +48,7 @@ te_jidt <- function(data, lag){
     .jcall(teCalc, 'V', 'initialise')
     .jcall(teCalc, 'V', 'setObservations', destArray, sourceArray)
 
-    # SET EMBEDDING DIMENSIONS (source: 20, dest: 2)
+    # Set embedding dimensions (source: 20, dest: 2)
     .jcall(teCalc, 'V', 'setProperty', 'k_history', '2') # set destination embedding
     .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
 
@@ -71,7 +60,7 @@ te_jidt <- function(data, lag){
     sd_null_v1_x_v2 <- .jcall(nullDist_v1_x_v2, 'D', 'getStdOfDistribution')
     p_value_v1_x_v2 <- nullDist_v1_x_v2$pValue
     
-    #---- Analysis w/ confounding ----#
+    #---- Analysis accounting for seasonal forcing (conditional transfer entropy) ----#
     
     # Calculate seasonal component:
     data <- data %>%
@@ -85,14 +74,14 @@ te_jidt <- function(data, lag){
     .jcall(teCalc, 'V', 'setProperty', 'k', '4') # use Kraskov parameter k = 4 for nearest 4 points
     .jcall(teCalc, 'V', 'setProperty', 'delay', lag) # lag between source and destination
     
-    # Use embedding dimension 1 for seasonal component:
     # TE calculation for V1 -> V2:
     .jcall(teCalc, 'V', 'initialise')
     .jcall(teCalc, 'V', 'setObservations', sourceArray, destArray, condArray)
     
-    # SET EMBEDDING DIMENSIONS (source: 20, dest: 5)
+    # Set embedding dimensions (source: 20, dest: 5)
     .jcall(teCalc, 'V', 'setProperty', 'k_history', '5') # set destination embedding
     .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
+    .jcall(teCalc, 'V', 'setProperty', 'cond_embed_lengths', '1') # set confounding embedding
     
     result_confound_v2_x_v1 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
     
@@ -106,9 +95,10 @@ te_jidt <- function(data, lag){
     .jcall(teCalc, 'V', 'initialise')
     .jcall(teCalc, 'V', 'setObservations', destArray, sourceArray, condArray)
     
-    # SET EMBEDDING DIMENSIONS (source: 20, dest: 2)
+    # Set embedding dimensions (source: 20, dest: 2)
     .jcall(teCalc, 'V', 'setProperty', 'k_history', '2') # set destination embedding
     .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
+    .jcall(teCalc, 'V', 'setProperty', 'cond_embed_lengths', '1') # set confounding embedding
     
     result_confound_v1_x_v2 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
     

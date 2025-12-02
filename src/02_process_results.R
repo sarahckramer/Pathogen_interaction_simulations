@@ -1,8 +1,5 @@
 # ------------------------------------------------------------------------------
 # Code to extract and process all results
-#
-# Created by: Sarah Pirikahu
-# Creation date: 13 March 2024
 # ------------------------------------------------------------------------------
 
 # Setup
@@ -47,7 +44,6 @@ ids_to_plot <- c(54, 70, 96, 89, 27)
 # Format data for plotting:
 dat_plot <- dat %>%
   filter(.id %in% ids_to_plot) %>%
-  # filter((theta_lambda == 0 & delta == 0.25) | (theta_lambda == 4 & delta == 0.25) | theta_lambda == 1) %>%
   pivot_longer(V1_obs:V2_obs, names_to = 'virus', values_to = 'obs') %>%
   mutate(virus = if_else(virus == 'V1_obs', 'Influenza', 'RSV')) %>%
   mutate(obs = obs / 5000000 * 1000)
@@ -75,7 +71,6 @@ for (i in ids_to_plot) {
           axis.text = element_text(size = 11),
           strip.text = element_text(size = 12)) +
     scale_x_continuous(breaks = NULL) +
-    # scale_color_manual(values = c('#e31a1c', '#fb9a99', '#1f78b4', '#a6cee3')) +
     scale_color_manual(values = c('#fc9272', '#de2d26', '#fee0d2', '#6baed6', '#2171b5', '#bdd7e7')) +
     labs(x = '', y = 'Incidence (per 1000)', col = '', title = i)
   print(p.data)
@@ -102,8 +97,6 @@ p1 <- ggplot(data = dat_plot_TEMP %>% filter(.id == 54),
         plot.tag.position = c(0.008, 0.975),
         axis.ticks.x = element_blank(),
         axis.text.x = element_blank()) +
-  # scale_color_manual(values = c('#e31a1c', '#fb9a99', '#1f78b4', '#a6cee3')) +
-  # scale_color_manual(values = c('#fc9272', '#de2d26', '#fee0d2', '#6baed6', '#2171b5', '#bdd7e7')) +
   scale_color_manual(values = c('red', '#99000d', '#fc9272', '#6baed6', '#08519c', '#bdd7e7')) +
   labs(x = 'Time', y = 'Incidence (per 1000)', col = '', tag = 'A')
 
@@ -234,15 +227,7 @@ met <- met %>%
 met <- met %>%
   mutate(delta = factor(1 / delta, levels = c('1', '4', '13')))
 
-# met %>%
-#   select(theta_lambda:delta, contains('change')) %>%
-#   filter(theta_lambda != 1) %>%
-#   pivot_longer(contains('change')) %>%
-#   ggplot(aes(x = theta_lambda, y = value, group = paste(theta_lambda, delta), fill = delta)) +
-#   geom_boxplot() + theme_classic() + facet_wrap(~ name, scales = 'free')
-
 p2a <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
-              # met %>% filter(theta_lambda != 1 & theta_lambda != 0.25),
               aes(x = change_ar2_mean, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 1.0, lty = 2) +
@@ -258,11 +243,9 @@ p2a <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
         legend.position = 'none') +
   scale_fill_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
-  # scale_fill_viridis(discrete = TRUE) + scale_color_viridis(discrete = TRUE) +
   scale_x_continuous(n.breaks = 5) +
   labs(x = 'Relative AR', y = 'Density', tag = 'B')
 p2b <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
-              # met %>% filter(theta_lambda != 1 & theta_lambda != 0.25),
               aes(x = change_ar2_sd, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 1.0, lty = 2) +
@@ -279,7 +262,6 @@ p2b <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
   scale_x_continuous(n.breaks = 10) +
   labs(x = 'Relative sd(AR)', y = '')
 p2c <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
-              # met %>% filter(theta_lambda != 1 & theta_lambda != 0.25),
               aes(x = change_pt2_mean, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 0, lty = 2) +
@@ -296,7 +278,6 @@ p2c <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
   scale_x_continuous(n.breaks = 10) +
   labs(x = 'Change in PT', y = '')
 p2d <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
-              # met %>% filter(theta_lambda != 1 & theta_lambda != 0.25),
               aes(x = change_pt2_sd, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 0, lty = 2) +
@@ -326,7 +307,6 @@ p.legend <- ggplot(met %>%
         legend.key.height = unit(1.0, 'cm'),
         legend.key.width = unit(1.0, 'cm'),
         legend.position = 'right') +
-  # guides(fill = guide_legend(byrow = TRUE)) +
   scale_fill_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   labs(fill = expression(7/delta))
@@ -338,7 +318,6 @@ plot(p.int.impact)
 
 # Also plot impact on pathogen A (for supplement):
 p2a_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
-                   # met %>% filter(theta_lambda != 1 & theta_lambda != 0.25),
                    aes(x = change_ar1_mean, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 1.0, lty = 2) +
@@ -349,15 +328,12 @@ p2a_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
         axis.title = element_text(size = 13.5),
         axis.text = element_text(size = 11),
         strip.text = element_text(size = 12),
-        # plot.tag = element_text(size = 24),
-        # plot.tag.position = c(0.03, 0.975),
         legend.position = 'none') +
   scale_fill_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   scale_x_continuous(n.breaks = 5) +
   labs(x = 'Relative AR', y = 'Density')
 p2b_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
-                   # met %>% filter(theta_lambda != 1 & theta_lambda != 0.25),
                    aes(x = change_ar1_sd, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 1.0, lty = 2) +
@@ -374,7 +350,6 @@ p2b_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
   scale_x_continuous(n.breaks = 10) +
   labs(x = 'Relative sd(AR)', y = '')
 p2c_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
-                   # met %>% filter(theta_lambda != 1 & theta_lambda != 0.25),
                    aes(x = change_pt1_mean, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 0, lty = 2) +
@@ -391,7 +366,6 @@ p2c_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
   scale_x_continuous(n.breaks = 10) +
   labs(x = 'Change in PT', y = '')
 p2d_supp <- ggplot(met %>% filter(theta_lambda %in% c(0, 4)),
-                   # met %>% filter(theta_lambda != 1 & theta_lambda != 0.25),
                    aes(x = change_pt1_sd, group = delta, fill = delta)) +
   geom_density(adjust = 0.75, linewidth = 0.5, alpha = 0.3, color = 'white') +
   geom_vline(xintercept = 0, lty = 2) +
@@ -459,7 +433,6 @@ p.corr.1a <- ggplot(data = acc_corr %>%
   scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
   scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
-  # scale_color_viridis(option = 'C', discrete = TRUE) +
   scale_shape_manual(values = c(16, 17, 15)) +
   labs(tag = 'A', x = NULL, y = '', title = NULL)
 p.corr.1b <- ggplot(data = acc_corr %>%
@@ -492,7 +465,6 @@ p.legend.1 <- ggplot(data = acc_corr %>%
   theme(legend.title = element_text(size = 13),
         legend.text = element_text(size = 12),
         legend.position = 'bottom') +
-  # scale_color_viridis(discrete = TRUE) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   labs(shape = 'Duration', color = 'Duration')
 p.legend.1 <- ggplotGrob(p.legend.1)$grobs[[which(sapply(ggplotGrob(p.legend.1)$grobs, function(x) x$name) == 'guide-box')]]
@@ -514,7 +486,6 @@ p.corr.2 <- ggplot(res_corr_sum %>%
   geom_pointrange(size = 0.5, linewidth = 1.0, aes(x = strength_proxy, y = median, ymin = lower, ymax = upper, col = delta)) +
   geom_pointrange(data = res_corr_sum %>% filter(theta_lambda == 1),
                   size = 0.5, linewidth = 1.0, x = 9.75, aes(y = median, ymin = lower, ymax = upper)) +
-  # geom_line(aes(x = strength_proxy, y = median, group = delta, col = delta)) +
   geom_hline(yintercept = 0, lty = 2, linewidth = 1.0, col = 'gray70') +
   theme_classic() +
   theme(axis.title = element_text(size = 13.5),
@@ -523,7 +494,7 @@ p.corr.2 <- ggplot(res_corr_sum %>%
         plot.tag.position = c(0.0075, 0.975),
         legend.position = 'none') +
   scale_x_continuous(breaks = c(1, 4, 7, 9.75, 12.5, 15.5), labels = c(0, 0.25, 0.5, 1.0, 2.0, 4.0)) +
-  scale_y_continuous(n.breaks = 6) +#, limits = c(-1.0, 1.0)) +
+  scale_y_continuous(n.breaks = 6) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   labs(tag = 'A', x = 'True Interaction Strength', y = expression(r[Pearson]), title = 'Corr. Coef.')
 
@@ -578,7 +549,6 @@ p.gam.1a <- ggplot(data = acc_gam %>%
   scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
   scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
-  # scale_color_viridis(option = 'C', discrete = TRUE) +
   scale_shape_manual(values = c(16, 17, 15)) +
   labs(tag = 'B', x = NULL, y = '', title = NULL)
 p.gam.1b <- ggplot(data = acc_gam %>%
@@ -703,7 +673,6 @@ p.granger.1.3a <- ggplot(data = acc_granger_LIST[[3]] %>%
   scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
   scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
-  # scale_color_viridis(option = 'C', discrete = TRUE) +
   scale_shape_manual(values = c(16, 17, 15)) +
   labs(tag = 'C', x = NULL, y = '', title = NULL)
 p.granger.1.3b <- ggplot(data = acc_granger_LIST[[3]] %>%
@@ -740,7 +709,6 @@ p.granger.1.4a <- ggplot(data = acc_granger_LIST[[4]] %>%
   scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
   scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
-  # scale_color_viridis(option = 'C', discrete = TRUE) +
   scale_shape_manual(values = c(16, 17, 15)) +
   labs(tag = 'D', x = NULL, y = '', title = NULL)
 p.granger.1.4b <- ggplot(data = acc_granger_LIST[[4]] %>%
@@ -885,7 +853,6 @@ p.te.1.3a <- ggplot(data = acc_te_LIST[[3]] %>%
   scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
   scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
-  # scale_color_viridis(option = 'C', discrete = TRUE) +
   scale_shape_manual(values = c(16, 17, 15)) +
   labs(tag = 'E', x = NULL, y = '', title = NULL)
 p.te.1.3b <- ggplot(data = acc_te_LIST[[3]] %>%
@@ -922,7 +889,6 @@ p.te.1.4a <- ggplot(data = acc_te_LIST[[4]] %>%
   scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
   scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
-  # scale_color_viridis(option = 'C', discrete = TRUE) +
   scale_shape_manual(values = c(16, 17, 15)) +
   labs(tag = 'F', x = NULL, y = '', title = NULL)
 p.te.1.4b <- ggplot(data = acc_te_LIST[[4]] %>%
@@ -1082,7 +1048,6 @@ p.ccm.1.1a <- ggplot(data = acc_ccm_LIST[[1]] %>%
   scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
   scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
-  # scale_color_viridis(option = 'C', discrete = TRUE) +
   scale_shape_manual(values = c(16, 17, 15)) +
   labs(tag = 'I', x = NULL, y = '', title = NULL)
 p.ccm.1.1b <- ggplot(data = acc_ccm_LIST[[1]] %>%
@@ -1119,7 +1084,6 @@ p.ccm.1.2a <- ggplot(data = acc_ccm_LIST[[2]] %>%
   scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
   scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
-  # scale_color_viridis(option = 'C', discrete = TRUE) +
   scale_shape_manual(values = c(16, 17, 15)) +
   labs(tag = 'G', x = NULL, y = '', title = NULL)
 p.ccm.1.2b <- ggplot(data = acc_ccm_LIST[[2]] %>%
@@ -1156,7 +1120,6 @@ p.ccm.1.4a <- ggplot(data = acc_ccm_LIST[[4]] %>%
   scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
   scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
-  # scale_color_viridis(option = 'C', discrete = TRUE) +
   scale_shape_manual(values = c(16, 17, 15)) +
   labs(tag = 'J', x = NULL, y = '', title = NULL)
 p.ccm.1.4b <- ggplot(data = acc_ccm_LIST[[4]] %>%
@@ -1193,7 +1156,6 @@ p.ccm.1.5a <- ggplot(data = acc_ccm_LIST[[5]] %>%
   scale_x_continuous(breaks = c(2, 4), limits = c(1.75, 4.25)) +
   scale_y_continuous(limits = c(0, 1.01), n.breaks = 5) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
-  # scale_color_viridis(option = 'C', discrete = TRUE) +
   scale_shape_manual(values = c(16, 17, 15)) +
   labs(tag = 'H', x = NULL, y = '', title = NULL)
 p.ccm.1.5b <- ggplot(data = acc_ccm_LIST[[5]] %>%
@@ -1317,7 +1279,6 @@ p.comb.1a <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v
   scale_x_continuous(limits = c(0.4, 1), n.breaks = 4) +
   scale_y_continuous(limits = c(0, 0.8), n.breaks = 6) +
   scale_shape_manual(values = c(18, 17, 15, 16, 4, 4)) +
-  # scale_shape_manual(values = c(5, 2, 0, 1, 4, 4)) +
   scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
   labs(x = 'Sensitivity', y = 'Specificity', tag = 'A')
 p.comb.1b <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v2 -> v1') %>%
@@ -1351,7 +1312,6 @@ p.comb.1.legend <- ggplot(df_acc %>% filter(!is.na(method)),
         legend.position = 'top') +
   guides(shape = guide_legend(nrow = 1)) +
   scale_shape_manual(values = c(18, 17, 15, 16, 4, 4)) +
-  # scale_shape_manual(values = c(5, 2, 0, 1, 4, 4)) +
   scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
   labs(shape = 'Method', col = 'Method')
 p.comb.1.legend <- ggplotGrob(p.comb.1.legend)$grobs[[which(sapply(ggplotGrob(p.comb.1.legend)$grobs, function(x) x$name) == 'guide-box')]]
@@ -1462,7 +1422,6 @@ p3.a <- ggplot(df_assoc %>% filter(method == 'Corr. Coef.'),
         axis.text.y = element_blank()) +
   scale_x_continuous(breaks = c(0.75, 1.0, 1.25, 1.5, 1.75, 2.0), limits = c(0.715, 2.0)) +
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
-  # scale_color_brewer(palette = 'Set1') +
   labs(tag = 'A', x = NULL, y = '', title = 'Corr. Coef.')
 p3.b <- ggplot(df_assoc %>% filter(method == 'GAMs'),
                aes(x = 2**coef, xmin = 2**lower, xmax = 2**upper, y = delta, col = delta)) +

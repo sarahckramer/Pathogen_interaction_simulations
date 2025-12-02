@@ -1,37 +1,22 @@
-################################################################################
-#                       Granger causality analysis        
-#
-# To run Granger analysis we need the time series to be covariance and mean 
-# stationary
-#
-# inputs: data = data with time, v1_obs, v2_obs
-#
-# Created by: Sarah Pirikahu
-# Creation date: 23 March 2023
-################################################################################
+# ---------------------------------------------------------------------------------------------------------------------
+# Code to run Granger causality analysis
+# ---------------------------------------------------------------------------------------------------------------------
 
 # load packages
 library(tseries)
 library(lmtest) 
 library(vars)
 library(VARtests)
-library(boot)
 
 granger_func <- function(data){
   
   # automatically determine the best lag doing several models with lags
   # 1-12 (approximately 3 month) then choose the best lag number based on BIC
   
-  # log-transform and center data
-  data <- data %>%
-    mutate(V1_obs_ln = scale(log(V1_obs + 1), scale = FALSE),
-           V2_obs_ln = scale(log(V2_obs + 1), scale = FALSE))
-  
   # determine the number of lags for each simulated dataset
   df <- data %>% dplyr::select(V1_obs_ln, V2_obs_ln)
   
   lags <- lapply(df, VARselect, lag.max = 20)
-  # rm(df)
   
   # pull out the lag with lowest BIC
   # regardless of whether raw of normalised data used the lag chosen is the same
@@ -64,9 +49,6 @@ granger_func <- function(data){
     dplyr::select(time, V1_obs_ln, V2_obs_ln) %>%
     mutate(seasonal_component = 1 + 0.2 * cos((2 * pi) / 52.25 * (time - 26))) %>%
     mutate(seasonal_component = scale(log(seasonal_component), scale = FALSE))
-  
-  # # specifying the lag to be the minimum of the two series
-  # p <- min(lag_v1, lag_v2)
   
   # get lag value for further analyses
   p <- as.numeric(VARselect(df, lag.max = 20)$selection[3])

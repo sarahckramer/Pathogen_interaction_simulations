@@ -46,8 +46,7 @@ int_params <- expand.grid(theta_lambda1, theta_lambda2, delta1, delta2) %>%
          'delta1' = 'Var3',
          'delta2' = 'Var4') %>%
   filter(theta_lambda1 == theta_lambda2,
-         delta1 == delta2)# %>%
-# filter(!(theta_lambda1 == 1 & theta_lambda2 == 1 & delta1 < 1))
+         delta1 == delta2)
 rm(theta_lambda1, theta_lambda2, delta1, delta2)
 
 #---- generate timing of surges in immunity loss ----#
@@ -76,7 +75,6 @@ for (i in 1:n_sim) {
     t_si[8:10] <- t_si[8:10] + 1 # account for years with 53 weeks
   }
   
-  # w_delta_i <- runif(n = length(t_si), min = 0.005 * 7, max = 0.075 * 7) # yearly surge in rate of immunity loss
   w_delta_i <- runif(n = length(t_si), min = 0.05, max = 0.3) # yearly surge in rate of immunity loss
   
   t_si_mat[, i] <- t_si
@@ -86,7 +84,7 @@ for (i in 1:n_sim) {
 
 rm(mu_Imloss, sd_Imloss)
 
-#---- generate range of values for Ri1/Ri2/w2/R02 ----#
+#---- generate range of values for Ri1/Ri2/w2 ----#
 r_eff_vals <- sobol_design(lower = setNames(c(1.05, 1.6, 1/(52.25 * 1.0)), c('Ri1', 'Ri2', 'w2')),
                            upper = setNames(c(1.4, 2.0, 1/(52.25 * 0.6)), c('Ri1', 'Ri2', 'w2')),
                            nseq = n_sim)
@@ -94,25 +92,26 @@ r_eff_vals <- sobol_design(lower = setNames(c(1.05, 1.6, 1/(52.25 * 1.0)), c('Ri
 #---- set all true parameter values ----#
 true_int_params <- int_params[jobid, ]
 
-true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2],
-                      sigma1 = 7, sigma2 = 7/5,
-                      gamma1 = 7/5, gamma2 = 7/10,
-                      w1 = 1/52.25, w2 = 1/52.25,
-                      mu = 0.0002, nu = 0.0002,
-                      rho1 = 0.15, rho2 = 0.05,
-                      theta_lambda1 = true_int_params$theta_lambda1,
-                      theta_lambda2 = true_int_params$theta_lambda2,
-                      delta1 = true_int_params$delta1,
-                      delta2 = true_int_params$delta2,
-                      A1=0.20, phi1=26,
-                      A2=0.20, phi2=26,
-                      k1 = 0.04, k2 = 0.02,
-                      beta_sd1 = 0.1 * 0.1, beta_sd2 = 0.05 * 0.1,
-                      N = 5000000,
-                      E01 = 0.001, E02 = 0.001,
-                      R01 = 0.30, R02 = 0.25, R012 = 0.001,
-                      nsurges = n_surge,
-                      t_si_ = t_si_mat[, 1], w_delta_i_ = w_delta_i_mat[, 1])
+true_params_init <- c(Ri1 = r_eff_vals[1, 1], Ri2 = r_eff_vals[1, 2], # initial effective reproductive number
+                      sigma1 = 7, sigma2 = 7/5, # inverse of latent period
+                      gamma1 = 7/5, gamma2 = 7/10, # inverse of infectious period
+                      w1 = 1/52.25, w2 = 1/52.25, # rate of loss of immunity
+                      mu = 0.0002, nu = 0.0002, # natural birth and death rates
+                      rho1 = 0.15, rho2 = 0.05, # reporting rates
+                      theta_lambda1 = true_int_params$theta_lambda1, # strength of interaction effect (A->B)
+                      theta_lambda2 = true_int_params$theta_lambda2, # strength of interaction effect (B->A)
+                      delta1 = true_int_params$delta1, # inverse of duration of interaction effect (A->B)
+                      delta2 = true_int_params$delta2, # inverse duration of interaction effect (B->A)
+                      A1=0.20, phi1=26, # amplitude and phase of seasonality for pathogen A
+                      A2=0.20, phi2=26, # amplitude and phase of seasonality for pathogen B
+                      k1 = 0.04, k2 = 0.02, # dispersion parameters for observation model
+                      beta_sd1 = 0.1 * 0.1, beta_sd2 = 0.05 * 0.1, # standard deviation of extrademographic stochasticity
+                      N = 5000000, # population size
+                      E01 = 0.001, E02 = 0.001, # initial proportion exposed
+                      R01 = 0.30, R02 = 0.25, R012 = 0.001, # initial proportion immune to pathogen A, B, and both
+                      nsurges = n_surge, # number of surges in immune loss for pathogen A
+                      t_si_ = t_si_mat[, 1], w_delta_i_ = w_delta_i_mat[, 1] # timing and magnitude of surges in immune loss
+)
 
 if (sens == 'forcing_low') {
   true_params_init['A1'] <- 0.05
@@ -167,8 +166,8 @@ true_params[str_detect(rownames(true_params), 'w_delta_i_'), ] <- w_delta_i_mat
 # Create model and synthetic data
 
 #---- create pomp model object ----#
-resp_mod <- create_SEITRxSEITR_mod(tot_weeks, start_time = -1043, true_params_init, debug_bool = debug_bool)
-# 25 years burn-in: -1304; 50 years burn-in: -2609
+burn_in_start <- -1043 # 20 years of burn in
+resp_mod <- create_SEITRxSEITR_mod(tot_weeks, start_time = burn_in_start, true_params_init, debug_bool = debug_bool)
 
 #---- test pomp model ----#
 check_transformations(resp_mod) # check parameter transformations
@@ -227,7 +226,7 @@ if (sens == '20y') {
     group_by(season, .id) %>%
     summarise(V1 = sum(V1),
               V2 = sum(V2)) %>%
-    filter(V1 < 300000)
+    filter(V1 < 300000) # check that attack rate for V1 is at least 300000 / N
   
 } else {
   
@@ -238,11 +237,11 @@ if (sens == '20y') {
     group_by(season, .id) %>%
     summarise(V1 = sum(V1),
               V2 = sum(V2)) %>%
-    filter(V1 < 300000)
+    filter(V1 < 300000) # check that attack rate for V1 is at least 300000 / N
   
 }
 
-if (true_int_params$theta_lambda1 == 1.0 & true_int_params$theta_lambda2 == 1.0 & true_int_params$delta1 == 1.0) {
+if (true_int_params$theta_lambda1 == 1.0 && true_int_params$theta_lambda2 == 1.0 && true_int_params$delta1 == 1.0) {
   expect_true(nrow(dat_red) == 0)
 }
 rm(dat_red, season_breaks)

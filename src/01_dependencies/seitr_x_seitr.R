@@ -6,6 +6,7 @@ create_SEITRxSEITR_mod <- function(n_weeks, start_time, parms, debug_bool = FALS
   
   # Function to create pomp object
   # param n_weeks: Number of weeks to run model
+  # param start_time: How many weeks of burn-in to run?
   # param parms: True values of all model parameters
   # param debug_bool: Should information for debugging be printed?
   # returns: pomp object with all parameters set to "true" values
