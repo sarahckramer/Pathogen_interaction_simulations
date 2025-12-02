@@ -15,7 +15,29 @@ Dependencies
 
 All code was run in R version 4.4.0. The following packages are used by this repository:
 
-* 
+* tidyverse (version 2.0.0)
+* testthat (version 3.2.3)
+* pomp (version 6.1)
+* foreach (version 1.5.2)
+* doParallel (version 1.0.17)
+* doSNOW (version 1.0.20)
+* doMC (version 1.3.8)
+* mgcv (version 1.9.1)
+* gratia (version 0.10.0)
+* brms (version 2.22.0)
+* tseries (version 0.10.58)
+* lmtest (version 0.9.40)
+* vars (version 1.6.1)
+* VARtests (version 2.0.5)
+* rJava (version 1.0.11)
+* rEDM (version 1.15.4)
+* Kendall (version 2.2.1)
+* pracma (version 2.4.4)
+* gridExtra (version 2.3)
+* grid (version 4.4.0)
+* viridis (version 0.6.5)
+* lme4 (version 1.1.36)
+* lubridate (version 1.9.4)
 
 All models are run using the package "pomp," which has additional dependencies, depending on your operating system. Detailed installation instructions can be found [here](https://kingaa.github.io/pomp/install.html).
 
