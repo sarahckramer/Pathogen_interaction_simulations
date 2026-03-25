@@ -10,7 +10,7 @@ library(rEDM)
 library(Kendall)
 library(pracma)
 
-ccm_func <- function(data){
+ccm_func <- function(data, sensitivity){
   
   print(unique(data$.id))
   data <- data %>%
@@ -27,14 +27,24 @@ ccm_func <- function(data){
   pred <- paste('1', nrow(data), sep = ' ')
   
   # get E (embedding dimension - the number nearest neighbours to use for prediction) for v1 
-  # EmbedDimension is a wrapper around the simplex function to get out E only  
-  E_v1 <- EmbedDimension(dataFrame = data, columns = 'V1_obs_ln', target = 'V1_obs_ln',
-                         lib = lib, pred = pred, maxE = 2, showPlot = FALSE)
+  # EmbedDimension is a wrapper around the simplex function to get out E only
+  if (sensitivity) {
+    E_v1 <- EmbedDimension(dataFrame = data, columns = 'V1_obs_ln', target = 'V1_obs_ln',
+                           lib = lib, pred = pred, maxE = 37, showPlot = FALSE)
+  } else {
+    E_v1 <- EmbedDimension(dataFrame = data, columns = 'V1_obs_ln', target = 'V1_obs_ln',
+                           lib = lib, pred = pred, maxE = 2, showPlot = FALSE)
+  }
   E_v1 <- E_v1 %>% slice_max(rho) %>% pull(E) # keep the row with max prediction skill
   
   # get E for v2
-  E_v2 <- EmbedDimension(dataFrame = data, columns = "V2_obs_ln", target = "V2_obs_ln",
-                         lib = lib, pred = pred, maxE = 5, showPlot = FALSE)
+  if (sensitivity) {
+    E_v2 <- EmbedDimension(dataFrame = data, columns = "V2_obs_ln", target = "V2_obs_ln",
+                           lib = lib, pred = pred, maxE = 37, showPlot = FALSE)
+  } else {
+    E_v2 <- EmbedDimension(dataFrame = data, columns = "V2_obs_ln", target = "V2_obs_ln",
+                           lib = lib, pred = pred, maxE = 5, showPlot = FALSE)
+  }
   E_v2 <- E_v2 %>% slice_max(rho) %>% pull(E)
   
   #---- determine if any time delay needs considering: i.e. tp parameter ----#
@@ -42,8 +52,13 @@ ccm_func <- function(data){
   vars <- c('V1_obs_ln', 'V2_obs_ln')
   
   # generate all combinations of lib_column, target_column, tp
-  params <- expand.grid(lib_column = vars, target_column = vars, tp = -20:0) %>%
-    filter(lib_column != target_column) # remove cases where lib == target
+  if (sensitivity) {
+    params <- expand.grid(lib_column = vars, target_column = vars, tp = -50:0) %>%
+      filter(lib_column != target_column) # remove cases where lib == target
+  } else {
+    params <- expand.grid(lib_column = vars, target_column = vars, tp = -20:0) %>%
+      filter(lib_column != target_column) # remove cases where lib == target
+  }
   
   # want E to be that corresponding to the lib column variable (i.e. the names
   # of the input data used to create the library)
@@ -51,7 +66,11 @@ ccm_func <- function(data){
     mutate(E = if_else(lib_column == 'V1_obs_ln', E_v1, E_v2))
   
   # set maximum possible library size
-  lib_size_tp <- nrow(data) - (20 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
+  if (sensitivity) {
+    lib_size_tp <- nrow(data) - (50 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
+  } else {
+    lib_size_tp <- nrow(data) - (20 - 1) - (max(params$E) - 1) # total number of weeks of data - max tp - default tau (-1) - max embedding dimension
+  }
   
   # explore prediction skill over a range of tp values
   output <- do.call(rbind, lapply(seq_len(nrow(params)), function(i) {
@@ -76,19 +95,40 @@ ccm_func <- function(data){
   if (optimal_tp_v1xv2 == 0 & optimal_tp_v2xv1 == 0) lib_max <- lib_max - 1
   
   # run the ccm
-  v1_xmap_v2 <- CCM(dataFrame = data, E = E_v1, columns = 'V1_obs_ln', target = 'V2_obs_ln', 
-                    libSizes = c(E_v1 + 2, seq(30, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v1xv2, random = TRUE,
-                    sample = 100, includeData = TRUE, showPlot = FALSE)
-  
-  v2_xmap_v1 <- CCM(dataFrame = data, E = E_v2, columns = 'V2_obs_ln', target = 'V1_obs_ln', 
-                    libSizes = c(E_v2 + 2, seq(30, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v2xv1, random = TRUE,
-                    sample = 100, includeData = TRUE, showPlot = FALSE)
+  if (sensitivity) {
+    
+    v1_xmap_v2 <- CCM(dataFrame = data, E = E_v1, columns = 'V1_obs_ln', target = 'V2_obs_ln', 
+                      libSizes = c(E_v1 + 2, seq(40, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v1xv2, random = TRUE,
+                      sample = 100, includeData = TRUE, showPlot = FALSE)
+    
+    v2_xmap_v1 <- CCM(dataFrame = data, E = E_v2, columns = 'V2_obs_ln', target = 'V1_obs_ln', 
+                      libSizes = c(E_v2 + 2, seq(40, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v2xv1, random = TRUE,
+                      sample = 100, includeData = TRUE, showPlot = FALSE)
+    
+  } else {
+    
+    v1_xmap_v2 <- CCM(dataFrame = data, E = E_v1, columns = 'V1_obs_ln', target = 'V2_obs_ln', 
+                      libSizes = c(E_v1 + 2, seq(30, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v1xv2, random = TRUE,
+                      sample = 100, includeData = TRUE, showPlot = FALSE)
+    
+    v2_xmap_v1 <- CCM(dataFrame = data, E = E_v2, columns = 'V2_obs_ln', target = 'V1_obs_ln', 
+                      libSizes = c(E_v2 + 2, seq(30, 100, by = 10), seq(125, lib_max - 1, 25), lib_max), Tp = optimal_tp_v2xv1, random = TRUE,
+                      sample = 100, includeData = TRUE, showPlot = FALSE)
+    
+  }
   
   # pull out the mean rho for each library size
-  mean_rho_v1_xmap_v2 <- v1_xmap_v2$LibMeans %>%
-    mutate(LibSize = if_else(LibSize < 20, 12, LibSize)) # set smallest library size to some arbitrary but consistent value
-  mean_rho_v2_xmap_v1 <- v2_xmap_v1$LibMeans %>%
-    mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
+  if (sensitivity) {
+    mean_rho_v1_xmap_v2 <- v1_xmap_v2$LibMeans %>%
+      mutate(LibSize = if_else(LibSize < 40, 12, LibSize)) # set smallest library size to some arbitrary but consistent value
+    mean_rho_v2_xmap_v1 <- v2_xmap_v1$LibMeans %>%
+      mutate(LibSize = if_else(LibSize < 40, 12, LibSize))
+  } else {
+    mean_rho_v1_xmap_v2 <- v1_xmap_v2$LibMeans %>%
+      mutate(LibSize = if_else(LibSize < 20, 12, LibSize)) # set smallest library size to some arbitrary but consistent value
+    mean_rho_v2_xmap_v1 <- v2_xmap_v1$LibMeans %>%
+      mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
+  }
   
   # combine the means for the two
   res <- mean_rho_v1_xmap_v2 %>%
@@ -105,10 +145,17 @@ ccm_func <- function(data){
     mutate(direction = if_else(direction == 'mean_v1xv2', 'v2 -> v1', 'v1 -> v2'))
   
   # pull out all the predictions to get bootstrap CIs for the mean rho for each libsize
-  all_predictions_v1 <- v1_xmap_v2$CCM1_PredictStat %>%
-    mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
-  all_predictions_v2 <- v2_xmap_v1$CCM1_PredictStat %>%
-    mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
+  if (sensitivity) {
+    all_predictions_v1 <- v1_xmap_v2$CCM1_PredictStat %>%
+      mutate(LibSize = if_else(LibSize < 40, 12, LibSize))
+    all_predictions_v2 <- v2_xmap_v1$CCM1_PredictStat %>%
+      mutate(LibSize = if_else(LibSize < 40, 12, LibSize))
+  } else {
+    all_predictions_v1 <- v1_xmap_v2$CCM1_PredictStat %>%
+      mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
+    all_predictions_v2 <- v2_xmap_v1$CCM1_PredictStat %>%
+      mutate(LibSize = if_else(LibSize < 20, 12, LibSize))
+  }
   
   # calculate median as well as lower and upper bounds (2.5, 97.5%) on rho for each libsize
   intervals_perc_v1 <- all_predictions_v1 %>%

@@ -12,7 +12,7 @@ library(rJava)
 # pointing to where the package folder is sitting
 .jaddClassPath('infodynamics-dist-1.6.1/infodynamics.jar')
 
-te_jidt <- function(data, lag){
+te_jidt <- function(data, lag, sensitivity){
   
   if (nrow(data) > 0) {
     
@@ -27,33 +27,45 @@ te_jidt <- function(data, lag){
     teCalc <- .jnew('infodynamics/measures/continuous/kraskov/TransferEntropyCalculatorKraskov')
     .jcall(teCalc, 'V', 'setProperty', 'k', '4') # use Kraskov parameter k = 4 for nearest 4 points
     .jcall(teCalc, 'V', 'setProperty', 'delay', lag) # lag between source and destination
-
+    
     # TE calculation for V1 -> V2:
     .jcall(teCalc, 'V', 'initialise')
     .jcall(teCalc, 'V', 'setObservations', sourceArray, destArray)
-
+    
     # Set embedding dimensions (source: 20, dest: 5)
-    .jcall(teCalc, 'V', 'setProperty', 'k_history', '5') # set destination embedding
-    .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
-
+    if (sensitivity) {
+      .jcall(teCalc, 'V', 'setProperty', 'k_history', '37') # set destination embedding
+      .jcall(teCalc, 'V', 'setProperty', 'l_history', '50') # set source embedding
+      
+    } else {
+      .jcall(teCalc, 'V', 'setProperty', 'k_history', '5') # set destination embedding
+      .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
+      
+    }
+    
     result_v2_x_v1 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
-
+    
     nullDist_v2_x_v1 <- .jcall(teCalc, 'Linfodynamics/utils/EmpiricalMeasurementDistribution;',
                                'computeSignificance', 500L)
     mean_null_v2_x_v1 <- .jcall(nullDist_v2_x_v1, 'D', 'getMeanOfDistribution')
     sd_null_v2_x_v1 <- .jcall(nullDist_v2_x_v1, 'D', 'getStdOfDistribution')
     p_value_v2_x_v1 <- nullDist_v2_x_v1$pValue
-
+    
     # TE calculation for V2 -> V1:
     .jcall(teCalc, 'V', 'initialise')
     .jcall(teCalc, 'V', 'setObservations', destArray, sourceArray)
-
+    
     # Set embedding dimensions (source: 20, dest: 2)
-    .jcall(teCalc, 'V', 'setProperty', 'k_history', '2') # set destination embedding
-    .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
-
+    if (sensitivity) {
+      .jcall(teCalc, 'V', 'setProperty', 'k_history', '37') # set destination embedding
+      .jcall(teCalc, 'V', 'setProperty', 'l_history', '50') # set source embedding
+    } else {
+      .jcall(teCalc, 'V', 'setProperty', 'k_history', '2') # set destination embedding
+      .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
+    }
+    
     result_v1_x_v2 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
-
+    
     nullDist_v1_x_v2 <- .jcall(teCalc, 'Linfodynamics/utils/EmpiricalMeasurementDistribution;',
                                'computeSignificance', 500L)
     mean_null_v1_x_v2 <- .jcall(nullDist_v1_x_v2, 'D', 'getMeanOfDistribution')
@@ -79,8 +91,13 @@ te_jidt <- function(data, lag){
     .jcall(teCalc, 'V', 'setObservations', sourceArray, destArray, condArray)
     
     # Set embedding dimensions (source: 20, dest: 5)
-    .jcall(teCalc, 'V', 'setProperty', 'k_history', '5') # set destination embedding
-    .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
+    if (sensitivity) {
+      .jcall(teCalc, 'V', 'setProperty', 'k_history', '37') # set destination embedding
+      .jcall(teCalc, 'V', 'setProperty', 'l_history', '50') # set source embedding
+    } else {
+      .jcall(teCalc, 'V', 'setProperty', 'k_history', '5') # set destination embedding
+      .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
+    }
     .jcall(teCalc, 'V', 'setProperty', 'cond_embed_lengths', '1') # set confounding embedding
     
     result_confound_v2_x_v1 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
@@ -96,8 +113,13 @@ te_jidt <- function(data, lag){
     .jcall(teCalc, 'V', 'setObservations', destArray, sourceArray, condArray)
     
     # Set embedding dimensions (source: 20, dest: 2)
-    .jcall(teCalc, 'V', 'setProperty', 'k_history', '2') # set destination embedding
-    .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
+    if (sensitivity) {
+      .jcall(teCalc, 'V', 'setProperty', 'k_history', '37') # set destination embedding
+      .jcall(teCalc, 'V', 'setProperty', 'l_history', '50') # set source embedding
+    } else {
+      .jcall(teCalc, 'V', 'setProperty', 'k_history', '2') # set destination embedding
+      .jcall(teCalc, 'V', 'setProperty', 'l_history', '20') # set source embedding
+    }
     .jcall(teCalc, 'V', 'setProperty', 'cond_embed_lengths', '1') # set confounding embedding
     
     result_confound_v1_x_v2 <- .jcall(teCalc, 'D', 'computeAverageLocalOfObservations')
