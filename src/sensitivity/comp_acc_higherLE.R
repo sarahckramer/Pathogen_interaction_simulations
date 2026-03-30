@@ -165,7 +165,7 @@ p.comp <- ggplot(df_diff %>% mutate(direction = if_else(direction == 'V1 -> V2',
   scale_color_manual(values = c('#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
   labs(x = expression(Delta~'Sensitivity'), y = expression(Delta~'Specificity'), shape = 'Method', color = 'Method')
 plot(p.comp)
-ggsave(filename = 'results/plots/figures/FigureS4.svg', p.comp, height = 4.6, width = 7.4)
+# ggsave(filename = 'results/plots/figures/FigureS4.svg', p.comp, height = 4.6, width = 7.4)
 
 # Plot sensitivity by true interaction strength/duration:
 acc_granger <- bind_rows(acc_granger_LIST, .id = 'name') %>%
