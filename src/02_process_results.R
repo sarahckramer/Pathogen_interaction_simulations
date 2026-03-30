@@ -1560,7 +1560,7 @@ p.comb.4 <- arrangeGrob(p.corr.2, p.gam.2, p.granger.2.1, p.granger.2.2, p.te.2.
                         layout_matrix = rbind(c(1, 2), c(3, 4), c(5, 6), c(7, 8), c(9, 9)),
                         heights = c(1, 1, 1, 1, 0.25))
 plot(p.comb.4)
-# ggsave(filename = 'results/plots/figures/FigureS4.svg', p.comb.4, width = 10, height = 8.75)
+# ggsave(filename = 'results/plots/figures/FigureS5.svg', p.comb.4, width = 10, height = 8.75)
 rm(p.corr.2, p.gam.2, p.granger.2.1, p.granger.2.2, p.te.2.1, p.te.2.2, p.ccm.2.1, p.ccm.2.2, p.legend.2)
 
 # Close pdf:

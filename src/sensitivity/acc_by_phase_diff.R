@@ -229,4 +229,4 @@ x_lab <- textGrob('Peak Timing Difference', gp = gpar(fontsize = 14, hjust = 1))
 
 p <- arrangeGrob(p3, p4, p5, p6, ncol = 2, left = y_lab, bottom = x_lab)
 plot(p)
-ggsave(filename = 'results/plots/figures/FigureS8.svg', p, width = 10, height = 6)
+ggsave(filename = 'results/plots/figures/FigureS9.svg', p, width = 10, height = 6)
