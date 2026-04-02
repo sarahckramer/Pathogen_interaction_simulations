@@ -394,8 +394,13 @@ plot(p.int.impact_supp)
 sens_test <- binom.test(res_corr %>% filter((int_true == 'pos' & int_est == 'pos') | (int_true == 'neg' & int_est == 'neg')) %>% nrow(), res_corr %>% filter(int_true == 'pos' | int_true == 'neg') %>% nrow())
 spec_test <- binom.test(res_corr %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), res_corr %>% filter(int_true == 'none') %>% nrow())
 
+sens_test_P <- binom.test(res_corr %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow(), res_corr %>% filter(int_true == 'pos') %>% nrow())
+sens_test_N <- binom.test(res_corr %>% filter(int_true == 'neg' & int_est == 'neg') %>% nrow(), res_corr %>% filter(int_true == 'neg') %>% nrow())
+
 df_acc <- as_tibble(data.frame(method = 'Corr. Coef.',
                                sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                               sens_p = sens_test_P$estimate, lower_sens_p = sens_test_P$conf.int[1], upper_sens_p = sens_test_P$conf.int[2],
+                               sens_n = sens_test_N$estimate, lower_sens_n = sens_test_N$conf.int[1], upper_sens_n = sens_test_N$conf.int[2],
                                spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
 
 # Sensitivity analysis - remove any runs where GAMs did not fit successfully:
@@ -523,8 +528,13 @@ rm(res_corr, res_corr_sum, acc_corr)
 sens_test <- binom.test(res_gam %>% filter((int_true == 'pos' & int_est == 'pos') | (int_true == 'neg' & int_est == 'neg')) %>% nrow(), res_gam %>% filter(int_true == 'pos' | int_true == 'neg') %>% nrow())
 spec_test <- binom.test(res_gam %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), res_gam %>% filter(int_true == 'none') %>% nrow())
 
+sens_test_P <- binom.test(res_gam %>% filter(int_true == 'pos' & int_est == 'pos') %>% nrow(), res_gam %>% filter(int_true == 'pos') %>% nrow())
+sens_test_N <- binom.test(res_gam %>% filter(int_true == 'neg' & int_est == 'neg') %>% nrow(), res_gam %>% filter(int_true == 'neg') %>% nrow())
+
 df_acc <- bind_rows(df_acc, data.frame(method = 'GAMs',
                                        sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                                       sens_p = sens_test_P$estimate, lower_sens_p = sens_test_P$conf.int[1], upper_sens_p = sens_test_P$conf.int[2],
+                                       sens_n = sens_test_N$estimate, lower_sens_n = sens_test_N$conf.int[1], upper_sens_n = sens_test_N$conf.int[2],
                                        spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
 
 # Calculate sensitivity/specificity (by true params):
@@ -611,8 +621,13 @@ for (i in 1:length(res_granger_LIST)) {
   sens_test <- binom.test(res_granger_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow(), res_granger_LIST[[i]] %>% filter(int_true != 'none') %>% nrow())
   spec_test <- binom.test(res_granger_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), res_granger_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
   
+  sens_test_P <- binom.test(res_granger_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow(), res_granger_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow())
+  sens_test_N <- binom.test(res_granger_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow(), res_granger_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow())
+  
   df_acc <- bind_rows(df_acc, data.frame(method = paste0('GC ', names(res_granger_LIST)[i]),
                                          sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                                         sens_p = sens_test_P$estimate, lower_sens_p = sens_test_P$conf.int[1], upper_sens_p = sens_test_P$conf.int[2],
+                                         sens_n = sens_test_N$estimate, lower_sens_n = sens_test_N$conf.int[1], upper_sens_n = sens_test_N$conf.int[2],
                                          spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   
 }
@@ -791,8 +806,13 @@ for (i in 1:length(res_te_LIST)) {
   sens_test <- binom.test(res_te_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow(), res_te_LIST[[i]] %>% filter(int_true != 'none') %>% nrow())
   spec_test <- binom.test(res_te_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), res_te_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
   
+  sens_test_P <- binom.test(res_te_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow(), res_te_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow())
+  sens_test_N <- binom.test(res_te_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow(), res_te_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow())
+  
   df_acc <- bind_rows(df_acc, data.frame(method = paste0('TE ', names(res_te_LIST)[i]),
                                          sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                                         sens_p = sens_test_P$estimate, lower_sens_p = sens_test_P$conf.int[1], upper_sens_p = sens_test_P$conf.int[2],
+                                         sens_n = sens_test_N$estimate, lower_sens_n = sens_test_N$conf.int[1], upper_sens_n = sens_test_N$conf.int[2],
                                          spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   
 }
@@ -971,8 +991,13 @@ for (i in 1:length(res_ccm_LIST)) {
   sens_test <- binom.test(res_ccm_LIST[[i]] %>% filter(int_true != 'none' & int_est == 'interaction') %>% nrow(), res_ccm_LIST[[i]] %>% filter(int_true != 'none') %>% nrow())
   spec_test <- binom.test(res_ccm_LIST[[i]] %>% filter(int_true == 'none' & int_est == 'none') %>% nrow(), res_ccm_LIST[[i]] %>% filter(int_true == 'none') %>% nrow())
   
+  sens_test_P <- binom.test(res_ccm_LIST[[i]] %>% filter(int_true_dir == 'pos' & int_est == 'interaction') %>% nrow(), res_ccm_LIST[[i]] %>% filter(int_true_dir == 'pos') %>% nrow())
+  sens_test_N <- binom.test(res_ccm_LIST[[i]] %>% filter(int_true_dir == 'neg' & int_est == 'interaction') %>% nrow(), res_ccm_LIST[[i]] %>% filter(int_true_dir == 'neg') %>% nrow())
+  
   df_acc <- bind_rows(df_acc, data.frame(method = paste0('CCM ', names(res_ccm_LIST)[i]),
                                          sens = sens_test$estimate, lower_sens = sens_test$conf.int[1], upper_sens = sens_test$conf.int[2],
+                                         sens_p = sens_test_P$estimate, lower_sens_p = sens_test_P$conf.int[1], upper_sens_p = sens_test_P$conf.int[2],
+                                         sens_n = sens_test_N$estimate, lower_sens_n = sens_test_N$conf.int[1], upper_sens_n = sens_test_N$conf.int[2],
                                          spec = spec_test$estimate, lower_spec = spec_test$conf.int[1], upper_spec = spec_test$conf.int[2]))
   
 }
@@ -1264,10 +1289,10 @@ df_acc %>%
 p.comb.1a <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v1 -> v2') %>%
                       mutate(lab_x = if_else(str_detect(method, 'TE'), sens + 0.03, sens)) %>%
                       mutate(lab_y = if_else(str_detect(method, 'TE'), spec + 0.04, spec)),
-                    aes(x = sens, y = spec, shape = method, col = method)) +
+                    aes(x = sens_p, y = spec, shape = method, col = method)) +
   geom_abline(slope = 1, intercept = 0, lty = 2, col = 'gray70') +
-  geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec)) +
-  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens)) +
+  geom_segment(aes(x = lower_sens_p, xend = upper_sens_p, y = spec)) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens_p)) +
   geom_point(size = 2.5) +
   theme_bw() +
   theme(axis.title = element_text(size = 14),
@@ -1280,14 +1305,14 @@ p.comb.1a <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v
   scale_y_continuous(limits = c(0, 0.8), n.breaks = 6) +
   scale_shape_manual(values = c(18, 17, 15, 16, 4, 4)) +
   scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
-  labs(x = 'Sensitivity', y = 'Specificity', tag = 'A')
+  labs(x = 'Sensitivity (Positive Only)', y = 'Specificity', tag = 'A')
 p.comb.1b <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v2 -> v1') %>%
                       mutate(lab_x = if_else(str_detect(method, 'TE'), sens + 0.03, sens)) %>%
                       mutate(lab_y = if_else(str_detect(method, 'TE'), spec + 0.04, spec)),
-                    aes(x = sens, y = spec, shape = method, col = method)) +
+                    aes(x = sens_p, y = spec, shape = method, col = method)) +
   geom_abline(slope = 1, intercept = 0, lty = 2, col = 'gray70') +
-  geom_segment(aes(x = lower_sens, xend = upper_sens, y = spec)) +
-  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens)) +
+  geom_segment(aes(x = lower_sens_p, xend = upper_sens_p, y = spec)) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens_p)) +
   geom_point(size = 2.5) +
   theme_bw() +
   theme(axis.title = element_text(size = 14),
@@ -1301,7 +1326,7 @@ p.comb.1b <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v
   scale_shape_manual(values = c(18, 17, 15, 16, 4, 4)) +
   # scale_shape_manual(values = c(5, 2, 0, 1, 4, 4)) +
   scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
-  labs(x = 'Sensitivity', y = 'Specificity', tag = 'B')
+  labs(x = 'Sensitivity (Positive Only)', y = 'Specificity', tag = 'B')
 
 p.comb.1.legend <- ggplot(df_acc %>% filter(!is.na(method)),
                           aes(x = sens, y = spec, shape = method, col = method)) +
@@ -1319,6 +1344,94 @@ p.comb.1.legend <- ggplotGrob(p.comb.1.legend)$grobs[[which(sapply(ggplotGrob(p.
 p.comb.1 <- arrangeGrob(p.comb.1.legend, arrangeGrob(p.comb.1a, p.comb.1b, nrow = 1), heights = c(0.15, 1))
 plot(p.comb.1)
 # ggsave(filename = 'results/plots/figures/Figure3.svg', p.comb.1, height = 4.8, width = 7.5)
+
+# Same plot, but separate positive and negative interactions:
+p.comb.POS.a <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v1 -> v2') %>%
+                      mutate(lab_x = if_else(str_detect(method, 'TE'), sens + 0.03, sens)) %>%
+                      mutate(lab_y = if_else(str_detect(method, 'TE'), spec + 0.04, spec)),
+                    aes(x = sens_p, y = spec, shape = method, col = method)) +
+  geom_abline(slope = 1, intercept = 0, lty = 2, col = 'gray70') +
+  geom_segment(aes(x = lower_sens_p, xend = upper_sens_p, y = spec)) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens_p)) +
+  geom_point(size = 2.5) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 24),
+        plot.tag.position = c(0.008, 0.975),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0.4, 1), n.breaks = 4) +
+  scale_y_continuous(limits = c(0, 0.8), n.breaks = 6) +
+  scale_shape_manual(values = c(18, 17, 15, 16, 4, 4)) +
+  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
+  labs(x = 'Sensitivity (Positive Only)', y = 'Specificity', tag = 'A')
+p.comb.POS.b <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v2 -> v1') %>%
+                      mutate(lab_x = if_else(str_detect(method, 'TE'), sens + 0.03, sens)) %>%
+                      mutate(lab_y = if_else(str_detect(method, 'TE'), spec + 0.04, spec)),
+                    aes(x = sens_p, y = spec, shape = method, col = method)) +
+  geom_abline(slope = 1, intercept = 0, lty = 2, col = 'gray70') +
+  geom_segment(aes(x = lower_sens_p, xend = upper_sens_p, y = spec)) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens_p)) +
+  geom_point(size = 2.5) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 24),
+        plot.tag.position = c(0.008, 0.975),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0.4, 1), n.breaks = 4) +
+  scale_y_continuous(limits = c(0, 0.8), n.breaks = 6) +
+  scale_shape_manual(values = c(18, 17, 15, 16, 4, 4)) +
+  # scale_shape_manual(values = c(5, 2, 0, 1, 4, 4)) +
+  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
+  labs(x = 'Sensitivity (Positive Only)', y = 'Specificity', tag = 'B')
+p.comb.NEG.c <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v1 -> v2') %>%
+                         mutate(lab_x = if_else(str_detect(method, 'TE'), sens + 0.03, sens)) %>%
+                         mutate(lab_y = if_else(str_detect(method, 'TE'), spec + 0.04, spec)),
+                       aes(x = sens_n, y = spec, shape = method, col = method)) +
+  geom_abline(slope = 1, intercept = 0, lty = 2, col = 'gray70') +
+  geom_segment(aes(x = lower_sens_n, xend = upper_sens_n, y = spec)) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens_n)) +
+  geom_point(size = 2.5) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 24),
+        plot.tag.position = c(0.008, 0.975),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0.1, 1), n.breaks = 6) +
+  scale_y_continuous(limits = c(0, 0.8), n.breaks = 6) +
+  scale_shape_manual(values = c(18, 17, 15, 16, 4, 4)) +
+  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
+  labs(x = 'Sensitivity (Negative Only)', y = 'Specificity', tag = 'C')
+p.comb.NEG.d <- ggplot(df_acc %>% filter(!is.na(method)) %>% filter(direction == 'v2 -> v1') %>%
+                         mutate(lab_x = if_else(str_detect(method, 'TE'), sens + 0.03, sens)) %>%
+                         mutate(lab_y = if_else(str_detect(method, 'TE'), spec + 0.04, spec)),
+                       aes(x = sens_n, y = spec, shape = method, col = method)) +
+  geom_abline(slope = 1, intercept = 0, lty = 2, col = 'gray70') +
+  geom_segment(aes(x = lower_sens_n, xend = upper_sens_n, y = spec)) +
+  geom_segment(aes(y = lower_spec, yend = upper_spec, x = sens_n)) +
+  geom_point(size = 2.5) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14),
+        axis.text = element_text(size = 12),
+        plot.tag = element_text(size = 24),
+        plot.tag.position = c(0.008, 0.975),
+        panel.grid.minor = element_blank(),
+        legend.position = 'none') +
+  scale_x_continuous(limits = c(0.1, 1), n.breaks = 6) +
+  scale_y_continuous(limits = c(0, 0.8), n.breaks = 6) +
+  scale_shape_manual(values = c(18, 17, 15, 16, 4, 4)) +
+  # scale_shape_manual(values = c(5, 2, 0, 1, 4, 4)) +
+  scale_color_manual(values = c('#ff7f00', '#e31a1c', '#1f78b4', '#6a3d9a', '#33a02c', '#b2df8a')) +
+  labs(x = 'Sensitivity (Negative Only)', y = 'Specificity', tag = 'D')
+
+p.comb.1.sep <- arrangeGrob(p.comb.1.legend, arrangeGrob(p.comb.POS.a, p.comb.POS.b, p.comb.NEG.c, p.comb.NEG.d, nrow = 2), heights = c(0.1, 1))
+plot(p.comb.1.sep)
+ggsave(filename = 'results/plots/figures/Figure3_ALT.svg', p.comb.1.sep, height = 8.5, width = 7.5)
 
 # Plot accuracy by method, strength, and duration:
 x_lab <- textGrob('Strength', gp = gpar(fontsize = 14, hjust = 1))
