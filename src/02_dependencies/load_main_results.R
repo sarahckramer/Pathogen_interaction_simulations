@@ -4,6 +4,10 @@
 
 # Read in all results
 
+if (!exists('sensLagEmbedding')) {
+  sensLagEmbedding <- FALSE
+}
+
 # Get file names:
 res_filenames_T <- list.files(path = 'results/', pattern = 'TRUE', full.names = TRUE) # run locally
 res_filenames_F <- list.files(path = 'results/', pattern = 'FALSE', full.names = TRUE) # run on cluster
