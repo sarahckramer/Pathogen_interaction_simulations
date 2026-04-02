@@ -21,54 +21,6 @@ library(parallel)
 library(doSNOW)
 library(gridExtra)
 
-# dat_can <- get_GSOD(2010:2014, country = 'CANADA')
-# dat_can <- dat_can %>%
-#   select(NAME, ISO2C, LATITUDE, LONGITUDE, YEARMODA:TEMP, MIN, MAX, RH, PRCP) %>%
-#   mutate(ES_CC = 0.611 * exp((2256000 / 461.52) * (1 / 273.15 - 1 / (TEMP + 273.15))),
-#          ES_ARM = 0.61094 * exp((17.625 * (TEMP)) / (TEMP + 243.04)),
-#          EA = (RH / 100) * ES_ARM,
-#          AH = (EA * 1000) * 2.16679 / (TEMP + 273.15)) %>%
-#   select(NAME:MAX, AH, RH:PRCP)
-# dat_can <- dat_can %>%
-#   mutate(WEEK = as.numeric(strftime(YEARMODA, format = '%U'))) %>%
-#   filter(!(YEAR == 2010 & WEEK == 0)) %>%
-#   mutate(YEAR = if_else(YEAR == 2011 & WEEK == 0, 2010, YEAR), WEEK = if_else(YEAR == 2010 & WEEK == 0, 52, WEEK)) %>%
-#   mutate(YEAR = if_else(YEAR == 2012 & WEEK == 53, 2013, YEAR), WEEK = if_else(YEAR == 2013 & WEEK == 53, 0, WEEK)) %>%
-#   mutate(WEEK = if_else(YEAR == 2013, WEEK + 1, WEEK)) %>%
-#   mutate(YEAR = if_else(YEAR == 2013 & WEEK == 53, 2014, YEAR), WEEK = if_else(YEAR == 2014 & WEEK == 53, 0, WEEK)) %>%
-#   mutate(WEEK = if_else(YEAR == 2014, WEEK + 1, WEEK)) %>%
-#   filter(!(YEAR == 2014 & WEEK == 53))
-# # dat_can <- dat_can %>%
-# #   mutate(WEEK = as.numeric(strftime(YEARMODA, format = '%V'))) %>%
-# #   filter(!(YEAR == 2010 & WEEK == 53)) %>%
-# #   mutate(YEAR = if_else(YEAR == 2011 & WEEK == 52 & MONTH == 1, YEAR - 1, YEAR)) %>%
-# #   mutate(YEAR = if_else(YEAR == 2012 & WEEK == 52 & MONTH == 1, YEAR - 1, YEAR)) %>%
-# #   mutate(YEAR = if_else(YEAR == 2012 & WEEK == 1 & MONTH == 12, YEAR + 1, YEAR)) %>%
-# #   mutate(YEAR = if_else(YEAR == 2013 & WEEK == 1 & MONTH == 12, YEAR + 1, YEAR)) %>%
-# #   filter(!(YEAR == 2014 & WEEK == 1 & MONTH == 12))
-# dat_can <- dat_can %>% filter(!is.na(AH))
-# dat_can <- dat_can %>%
-#   group_by(NAME, ISO2C, LATITUDE, LONGITUDE, YEAR, WEEK) %>%
-#   summarise(date = min(YEARMODA),
-#             lat = unique(LATITUDE),
-#             long = unique(LONGITUDE),
-#             temp = mean(TEMP),
-#             min_temp = mean(MIN),
-#             max_temp = mean(MAX),
-#             ah = mean(AH),
-#             rh = mean(RH),
-#             prcp = mean(PRCP)) %>%
-#   rename('stn' = 'NAME',
-#          'iso2c' = 'ISO2C',
-#          'year' = 'YEAR',
-#          'week' = 'WEEK') %>%
-#   ungroup()
-# dat_can <- dat_can %>%
-#   group_by(year, week) %>%
-#   summarise(temp = median(temp),
-#             ah = median(ah),
-#             rh = median(rh))
-
 # ---------------------------------------------------------------------------------------------------------------------
 
 # Prep all data
