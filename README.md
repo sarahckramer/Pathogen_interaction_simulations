@@ -1,5 +1,5 @@
 # Statistical methods for inferring pathogen-pathogen interactions
-Copyright &copy; 2024 Sarah Corinne Kramer
+Copyright &copy; 2026 Sarah Corinne Kramer
 
 [![DOI](https://zenodo.org/badge/820381262.svg)](https://doi.org/10.5281/zenodo.17791159)
 
