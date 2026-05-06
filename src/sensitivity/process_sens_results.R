@@ -830,7 +830,7 @@ p_acc <- arrangeGrob(p_acc_legend,
                                  ncol = 2, left = y_lab, bottom = x_lab),
                      nrow = 2, heights = c(0.08, 1))
 plot(p_acc)
-# ggsave(filename = 'results/plots/figures/FigureS6.svg', p_acc, width = 5.6, height = 15.2)
+# ggsave(filename = 'results/plots/figures/FigureS8.svg', p_acc, width = 5.6, height = 15.2)
 
 # Plot accuracy by true interaction parameters:
 p_acc_corr <- ggplot(data = acc_byparam_corr %>%
@@ -1121,7 +1121,7 @@ p_asym <- ggplot(data = acc_byparam_gam %>%
   scale_color_manual(values = viridis(6, option = 'C')[c(1, 3, 5)]) +
   labs(x = 'True Strength', y = '% Correct')
 print(p_asym)
-# ggsave(filename = 'results/plots/figures/FigureS5.svg', p_asym, width = 5, height = 5)
+# ggsave(filename = 'results/plots/figures/FigureS6.svg', p_asym, width = 5, height = 5)
 
 # Print all plots:
 pdf(file = 'results/plots/plot_sensitivity.pdf', width = 16, height = 12)

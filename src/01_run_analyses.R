@@ -31,6 +31,7 @@ print(detectCores())
 jobid <- as.integer(Sys.getenv("SLURM_ARRAY_TASK_ID")); print(jobid) # based on array size
 run_local <- as.logical(Sys.getenv("RUNLOCAL")); print(run_local)
 sens <- as.character(Sys.getenv("SENS")); print(sens)
+sensLagEmbedding <- as.logical(Sys.getenv("SENSLE")); print(sensLagEmbedding)
 
 #---- run local or on cluster? ----#
 if (is.na(run_local)) {
@@ -42,6 +43,8 @@ if (is.na(run_local)) {
     jobid <- 1
   }
   print(jobid)
+  
+  sensLagEmbedding <- TRUE
   
 }
 
@@ -104,7 +107,7 @@ if (run_local) {
 #---- GAM approach ----#
 source('src/01_methods/gam_cor.R')
 
-if (!run_local) {
+if (!run_local & !sensLagEmbedding) {
   
   # setting up parallelism for the foreach loop
   registerDoMC(50)
@@ -131,9 +134,9 @@ if (!run_local) {
 # apply granger analysis to each simulated data set and save the results
 if (run_local) {
   source('src/01_methods/granger_analysis.R')
-
+  
   tic <- Sys.time()
-  results$granger <- dat %>% group_by(.id) %>% do(granger_func(.))
+  results$granger <- dat %>% group_by(.id) %>% do(granger_func(., sensLagEmbedding))
   toc <- Sys.time()
   etime <- toc - tic
   units(etime) <- 'mins'
@@ -149,7 +152,7 @@ if (run_local) {
   registerDoSNOW(cl)
   res_te_1 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
     source('src/01_methods/transfer_entropy_jidt.R')
-    dat %>% filter(.id == i) %>% te_jidt(., lag = '1') %>% mutate(.id = i)
+    dat %>% filter(.id == i) %>% te_jidt(., lag = '1', sensLagEmbedding) %>% mutate(.id = i)
   }
   stopCluster(cl)
   
@@ -157,7 +160,7 @@ if (run_local) {
   registerDoSNOW(cl)
   res_te_2 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
     source('src/01_methods/transfer_entropy_jidt.R')
-    dat %>% filter(.id == i) %>% te_jidt(., lag = '2') %>% mutate(.id = i)
+    dat %>% filter(.id == i) %>% te_jidt(., lag = '2', sensLagEmbedding) %>% mutate(.id = i)
   }
   stopCluster(cl)
   
@@ -165,7 +168,7 @@ if (run_local) {
   registerDoSNOW(cl)
   res_te_4 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
     source('src/01_methods/transfer_entropy_jidt.R')
-    dat %>% filter(.id == i) %>% te_jidt(., lag = '4') %>% mutate(.id = i)
+    dat %>% filter(.id == i) %>% te_jidt(., lag = '4', sensLagEmbedding) %>% mutate(.id = i)
   }
   stopCluster(cl)
   
@@ -173,10 +176,10 @@ if (run_local) {
   registerDoSNOW(cl)
   res_te_13 <- foreach(i = 1:n_sim, .packages=c('tidyverse')) %dopar% {
     source('src/01_methods/transfer_entropy_jidt.R')
-    dat %>% filter(.id == i) %>% te_jidt(., lag = '13') %>% mutate(.id = i)
+    dat %>% filter(.id == i) %>% te_jidt(., lag = '13', sensLagEmbedding) %>% mutate(.id = i)
   }
   stopCluster(cl)
-
+  
   toc <- Sys.time()
   etime <- toc - tic
   units(etime) <- 'mins'
@@ -185,7 +188,7 @@ if (run_local) {
   # combine results and store
   results$transfer_entropy <- bind_rows(res_te_1, res_te_2, res_te_4, res_te_13)
   rm(res_te_1, res_te_2, res_te_4, res_te_13)
-
+  
 }
 
 #---- Convergent Cross mapping analysis ----#
@@ -193,7 +196,7 @@ source('src/01_methods/CCM.R')
 
 if (!run_local) {
   tic <- Sys.time()
-  results$CCM <- dat %>% group_by(.id) %>% do(ccm_func(.))
+  results$CCM <- dat %>% group_by(.id) %>% do(ccm_func(., sensLagEmbedding))
   toc <- Sys.time()
   etime <- toc - tic
   units(etime) <- 'hours'
@@ -201,7 +204,11 @@ if (!run_local) {
 }
 
 # save out results
-write_rds(results, file=sprintf('results/results_%s_%s_%s.rds', jobid, run_local, sens))
+if (sensLagEmbedding) {
+  write_rds(results, file=sprintf('results/sensLE/results_%s_%s.rds', jobid, run_local))
+} else {
+  write_rds(results, file=sprintf('results/results_%s_%s_%s.rds', jobid, run_local, sens))
+}
 
 #---- Clean up ----#
 toc_all <- Sys.time()

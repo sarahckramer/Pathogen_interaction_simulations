@@ -8,7 +8,7 @@ library(lmtest)
 library(vars)
 library(VARtests)
 
-granger_func <- function(data){
+granger_func <- function(data, sensitivity){
   
   # automatically determine the best lag doing several models with lags
   # 1-12 (approximately 3 month) then choose the best lag number based on BIC
@@ -16,7 +16,11 @@ granger_func <- function(data){
   # determine the number of lags for each simulated dataset
   df <- data %>% dplyr::select(V1_obs_ln, V2_obs_ln)
   
-  lags <- lapply(df, VARselect, lag.max = 20)
+  if (sensitivity) {
+    lags <- lapply(df, VARselect, lag.max = 50)
+  } else {
+    lags <- lapply(df, VARselect, lag.max = 20)
+  }
   
   # pull out the lag with lowest BIC
   # regardless of whether raw of normalised data used the lag chosen is the same
@@ -51,7 +55,11 @@ granger_func <- function(data){
     mutate(seasonal_component = scale(log(seasonal_component), scale = FALSE))
   
   # get lag value for further analyses
-  p <- as.numeric(VARselect(df, lag.max = 20)$selection[3])
+  if (sensitivity) {
+    p <- as.numeric(VARselect(df, lag.max = 50)$selection[3])
+  } else {
+    p <- as.numeric(VARselect(df, lag.max = 20)$selection[3])
+  }
   rm(df)
   
   #---- determine causal effect size ----#
@@ -96,12 +104,14 @@ granger_func <- function(data){
                           confounding = rep(c('none', 'none', 'seasonal', 'seasonal')),
                           granger_p = c(p_gt1_wald, p_gt2_wald, NA, NA),
                           ftest_p = c(p_gt1_ftest, p_gt2_ftest, p_gt1_ftest_confound, p_gt2_ftest_confound),
+                          lag_order = rep(p, 4),
                           adf_p = c(adf_v1$p.value, adf_v2$p.value, NA, NA),
                           kpss_p = c(kpss_v1$p.value, kpss_v2$p.value, NA, NA))) %>%
     as_tibble() %>%
     mutate(logRSS = as.numeric(logRSS),
            granger_p = as.numeric(granger_p),
            ftest_p = as.numeric(ftest_p),
+           lag_order = as.numeric(lag_order),
            adf_p = as.numeric(adf_p),
            kpss_p = as.numeric(kpss_p))
   
