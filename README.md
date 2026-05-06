@@ -1,4 +1,6 @@
 # Statistical methods for inferring pathogen-pathogen interactions
+Copyright &copy; 2024 Sarah Corinne Kramer
+
 [![DOI](https://zenodo.org/badge/820381262.svg)](https://doi.org/10.5281/zenodo.17791159)
 
 Code to test 1) Pearson correlation coefficients, 2) generalized additive models (GAMs), 3) Granger causality, 4) transfer entropy, and 5) convergent cross-mapping (CCM) as methods to determine whether or not an interaction exists between two pathogens
